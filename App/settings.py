@@ -130,6 +130,9 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static')
+]
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 LOGIN_REDIRECT_URL= '/dashboard/'
 LOGOUT_REDIRECT_URL= '/login'
