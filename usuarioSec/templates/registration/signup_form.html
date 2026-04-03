@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cadastro</title>
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Segoe UI", sans-serif;
+      }
+
+      body {
+        height: 100vh;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .container {
+        background: #fff;
+        padding: 40px;
+        width: 400px;
+        border-radius: 20px;
+        box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
+        animation: fadeIn 0.6s ease-in-out;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(25px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      h2 {
+        text-align: center;
+        margin-bottom: 30px;
+        color: #333;
+      }
+
+      .input-group {
+        position: relative;
+        margin-bottom: 18px;
+      }
+
+      .input-group input {
+        width: 100%;
+        padding: 12px 40px;
+        border-radius: 10px;
+        border: 1px solid #ccc;
+        outline: none;
+        transition: 0.3s;
+        font-size: 14px;
+      }
+
+      .input-group input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 10px rgba(102, 126, 234, 0.4);
+      }
+
+      .icon {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        left: 12px;
+        font-size: 16px;
+        color: #888;
+      }
+
+      .toggle-password {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        font-size: 13px;
+        color: #667eea;
+      }
+
+      button {
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        font-size: 16px;
+        cursor: pointer;
+        transition: 0.3s;
+        margin-top: 10px;
+      }
+
+      button:hover {
+        opacity: 0.9;
+        transform: translateY(-2px);
+      }
+
+      .error {
+        background: #ffe5e5;
+        color: #d8000c;
+        padding: 8px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        font-size: 13px;
+        text-align: center;
+      }
+
+      .footer-text {
+        text-align: center;
+        margin-top: 18px;
+        font-size: 13px;
+        color: #666;
+      }
+
+      .footer-text a {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .footer-text a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <h2>Criar Conta</h2>
+
+      {% if form.errors %}
+      <div class="error">Corrija os erros abaixo.</div>
+      {% endif %}
+
+      <form method="POST">
+        {% csrf_token %}
+
+        <div class="input-group">
+          <span class="icon">👤</span>
+          {{ form.username }}
+        </div>
+
+        <div class="input-group">
+          <span class="icon">📧</span>
+          {{ form.email }}
+        </div>
+
+        <div class="input-group">
+          <span class="icon">🔒</span>
+          {{ form.password }}
+          <span class="toggle-password" onclick="togglePassword()"
+            >Mostrar</span
+          >
+        </div>
+
+        <button type="submit">Cadastrar</button>
+      </form>
+
+      <div class="footer-text">
+        Já tem conta? <a href="/accounts/login/">Entrar</a>
+      </div>
+    </div>
+
+    <script>
+      function togglePassword() {
+        const passwordField = document.getElementById("id_password");
+        const toggleText = document.querySelector(".toggle-password");
+
+        if (passwordField.type === "password") {
+          passwordField.type = "text";
+          toggleText.innerText = "Ocultar";
+        } else {
+          passwordField.type = "password";
+          toggleText.innerText = "Mostrar";
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Secretaria - Declaração</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+      :root {
+        --primary: #8b5cf6;
+        --sidebar: #1e1b4b;
+        --bg: #f8fafc;
+        --text: #1e293b;
+        --muted: #64748b;
+        --white: #ffffff;
+        --border: #e2e8f0;
+        --danger: #ef4444;
+        --success: #22c55e;
+        --add:#26cb37;
+        --addh:#009929;
+      }
+      .modal {
+    display: none;
+    position: fixed;
+    z-index: 999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
+}
+
+.modal-content {
+    background: white;
+    width: 600px;
+    margin: 5% auto;
+    padding: 20px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.modal-content input {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.fechar {
+    font-size: 20px;
+    cursor: pointer;
+    text-align: right;
+}
+
+      * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Inter", sans-serif; }
+      body { background: var(--bg); display: flex; min-height: 100vh; }
+
+      /* SIDEBAR */
+      .sidebar { width: 260px; background: var(--sidebar); color: white; padding: 24px; flex-shrink: 0; }
+      .logo { font-size: 1.3rem; font-weight: 700; margin-bottom: 30px; }
+      .logo span { color: var(--primary); }
+      .nav-item { display: flex; align-items: center; gap: 10px; padding: 12px; text-decoration: none; color: #94a3b8; border-radius: 10px; margin-bottom: 5px; transition: 0.2s; cursor: pointer; }
+      .nav-item.active { background: var(--primary); color: white; }
+
+      /* MAIN */
+      .main { flex: 1; padding: 48px; overflow-y: auto; }
+      .header { display: flex; gap: 16px; margin-bottom: 40px; }
+      .header-icon { background: var(--primary); color: white; padding: 12px; border-radius: 12px; display: flex; align-items: center; }
+
+      /* CARD */
+      .card form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* container automático dos botões */
+.card form button,
+.card form a {
+    width: 200px;
+}
+
+/* alinhar os botões */
+.card form button {
+    align-self: flex-start; /* esquerda */
+}
+
+.card form a {
+    align-self: flex-end; /* direita */
+}
+.posi{
+  margin-left: 50% ;
+  background-color: var(--add);
+  color: white; border: none; padding: 13px 20px; border-radius: 8px; cursor: pointer;
+display: flex;
+    justify-content: center; /* centraliza horizontal */
+    align-items: center;     /* centraliza vertical */ }
+  .posi:hover{
+    background-color: var(--addh);
+  }
+
+      .card { background: white; padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04); }
+      select, input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 10px; outline: none; }
+      .btn-primary { background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 10px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+
+      /* TABELA */
+      .results-container { background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04); }
+      table { width: 100%; border-collapse: collapse; }
+      th { background: #f8fafc; padding: 16px 24px; color: var(--muted); font-size: 0.85rem; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+      td { padding: 16px 24px; border-bottom: 1px solid var(--border); }
+
+      /* BOTÕES DE DECLARAÇÃO (ESTILO QUADRADO DA IMAGEM) */
+      .acoes-celula { display: flex; gap: 8px; }
+      .btn-decl { 
+        background: #f3f4f6; color: var(--text); border: none; padding: 8px; border-radius: 8px; 
+        cursor: pointer; display: flex; flex-direction: column; align-items: center; font-size: 10px; width: 60px;
+      }
+      .btn-decl:hover { background: var(--primary); color: white; }
+      .btn-del { background: #fef2f2; color: var(--danger); border: none; padding: 8px; border-radius: 8px; cursor: pointer; }
+
+      /* FORMULÁRIO DE EDIÇÃO */
+      .form-row { background: #fcfcfd; }
+      .form-container { padding: 25px; border-left: 4px solid var(--primary); }
+      .form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;}
+  .full-width {
+  grid-column: span 4;
+}
+
+.half-width {
+  grid-column: span 2;
+}
+.btn-add {
+    background: #16a34a;
+    color: white;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 10px; 
+    cursor: pointer; 
+    font-weight: 600;
+    gap: 8px;
+}
+
+.btn-add:hover {
+    background: #15803d;
+}
+
+      .input-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+      
+      /* CRITICAL: Esconder campos extras por padrão */
+      .campo-extra { display: none; flex-direction: column; }
+
+      .form-actions { margin-top: 20px; display: flex; gap: 10px; border-top: 1px solid var(--border); padding-top: 15px; }
+      .btn-salvar { background: var(--success); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+      .btn-imprimir { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+      .btn-cancelar { background: #e2e8f0; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+    </style>
+  </head>
+
+  <body> <aside class="sidebar">
+      <div class="logo">Secretaria <span>Digital</span></div>
+
+      <a class="nav-item " href="{% url 'dashboard' %}">
+        <i data-lucide="graduation-cap"></i>
+        Matrícula
+      </a>
+
+      <a class="nav-item active" href="{% url 'telaDeclaracao' %}">
+        <i data-lucide="file-text"></i>
+        Declarações
+      </a>
+
+      <a class="nav-item">
+        <i data-lucide="clock"></i>
+        Histórico
+      </a>
+      {% if request.user.username == "Paulo" %}
+    <div class="grupo-botoes">
+         <a class="nav-item" href="{% url 'cadastro' %}">
+        <i data-lucide="user-plus"></i>
+        Cadastrar Usuário
+      </a>
+        <a class="nav-item" href="{% url 'importar_alunos' %}">
+        <i data-lucide="file-up"></i>
+          Upload Dados Declaração
+      </a>
+      <a class="nav-item" href="{% url 'apagar_todos_alunos_matricula' %}" onclick="return confirmarExclusao()">
+        <i data-lucide="folder-x"></i>
+          Apagar dados Matrícula
+      </a>
+       <a class="nav-item" href="{% url 'apagar_todos_alunos' %}" onclick="return confirmarExclusao()">
+        <i data-lucide="file-x"></i>
+          Apagar dados Declaração
+      </a>
+    </div>
+{% endif %}
+
+      <a class="nav-item" href="{% url 'sair' %}">
+        <i data-lucide="log-out"></i>
+        Sair
+      </a>
+
+    </aside>
+
+    <main class="main">
+      <div class="header">
+        <div class="header-icon"><i data-lucide="file-text"></i></div>
+        <div>
+          <h2>Declaração</h2>
+          <p>Pesquise e gerencie declarações de alunos</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Pesquisar Aluno</h3>
+        <form action="{% url 'buscar_dados_declaracao' %} " method="POST">
+          {% csrf_token %}
+          <select name="tipo" id="tipoBusca" onchange="alterarTipoBusca()">
+            <option value="nome">Buscar por Nome</option>
+            <option value="cpf">Buscar por CPF do aluno</option>
+          </select>
+          <input name="busca" id="campoBusca" placeholder="Digite o nome do aluno" />
+          
+          <div class="form-actions">
+                    <button class="btn-primary" type="submit"  ><i data-lucide="search"></i> Pesquisar</button>
+                    <a class="posi" onclick="abrirModalAluno()"><i data-lucide="user-plus"></i> Adicionar Aluno</a>
+                    
+                  </div>
+              
+        </form>
+       
+        
+      </div>
+      <div id="modalAluno" class="modal">
+  <div class="modal-content">
+
+    <span class="fechar" onclick="fecharModalAluno()">&times;</span>
+
+    <h3>Cadastrar Aluno</h3>
+
+    <form method="POST" action="{% url 'cadastrar_aluno' %}">
+  {% csrf_token %}
+
+  <div class="form-grid">
+
+    <div class="input-group full-width">
+      <label>Nome do Aluno</label>
+      <input name="nomeDoAluno" required>
+    </div>
+
+    <div class="input-group">
+      <label>Nacionalidade</label>
+      <input name="nacionaliadeAluno" required>
+    </div>
+
+    <div class="input-group">
+      <label>Naturalidade</label>
+      <input name="natularidadeAluno" required>
+    </div>
+
+    <div class="input-group">
+      <label>UF</label>
+      <input name="ufAluno" required>
+    </div>
+
+    <div class="input-group">
+      <label>Data de Nascimento</label>
+      <input type="date" name="dataNascimentoAluno" required>
+    </div>
+
+    <div class="input-group">
+      <label>Sexo</label>
+      
+      <select name="sexoDoAluno" id="" required>
+        <option value="MASCULINO">Masculino</option>
+        <option value="FEMININO">Feminino</option>
+        <option value="OUTRO">Outro</option>
+        <option value="NÃO DECLARADO">Não Declarado</option>
+      </select>
+    </div>
+
+    <div class="input-group">
+      <label>Turma</label>
+      
+      <select name="turmaDoAluno" id="" required >
+        <option value="1º ANO"> 1º ANO</option>
+        <option value="2º ANO"> 2º ANO</option>
+        <option value="3º ANO"> 3º ANO</option>
+        <option value="4º ANO"> 4º ANO</option>
+        <option value="5º ANO"> 5º ANO</option>
+      </select>
+    </div>
+
+    <div class="input-group">
+      <label>Cartão SUS</label>
+      <input name="cartaoSusDoAluno" required>
+    </div>
+
+    <div class="input-group">
+      <label>CPF</label>
+      <input name="cpfDoAluno" required>
+    </div>
+
+    <div class="input-group half-width">
+      <label>Nome do Pai</label>
+      <input name="nomePai" required>
+    </div>
+
+    <div class="input-group half-width">
+      <label>Nome da Mãe</label>
+      <input name="nomeMae" required>
+    </div>
+
+  </div>
+
+  <button type="submit" class="btn-primary">Salvar</button>
+</form>
+
+  </div>
+</div>
+
+      <div class="results-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome do Aluno</th>
+              <th>Gerar Declarações</th>
+              <th style="text-align: right;">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for aluno in alunos %}
+            <tr id="linha-aluno-{{ aluno.id }}">
+              <td style="font-weight: 600;">{{ aluno.nomeDoAluno|title}}</td>
+              <td>
+                <div class="acoes-celula">
+                  <button class="btn-decl" onclick="abrirFormulario({{ aluno.id }},'Escolaridade')"><div class="header-icon"><i data-lucide="graduation-cap"size="18"></i></div> <div>Escolar</div></button>
+                  <button class="btn-decl" onclick="abrirFormulario({{ aluno.id }}, 'Transferência')"><div class="header-icon"><i data-lucide="folder-sync"size="18"></i></div><div>Transf.</div></button>
+                  <button class="btn-decl" onclick="abrirFormulario({{ aluno.id }},'Bolsa Família')"><div class="header-icon"><i data-lucide="hand-coins" size="18"></i></div><div>Bolsa</div></button>
+                  <button class="btn-decl" onclick="abrirFormulario({{ aluno.id }},'Escolaridade')"><div class="header-icon"><i data-lucide="briefcase-business" size="18"></i></div><div>Empresa</div></button>
+                  <button class="btn-decl" onclick="abrirFormulario({{ aluno.id }},'Comparecimento')"><div class="header-icon"><i data-lucide="map-pin-house" size="18"></i></div><div>Comp.</div></button>
+                </div>
+              </td>
+              <td align="right">
+                <form method="POST" action="{% url 'deletar_aluno_declaracao' aluno.id %}" onsubmit="return confirmarExclusao()">
+  {% csrf_token %}
+                <button class="btn-del" type="submit" ><i data-lucide="trash-2" size="18"></i></button></form>
+              </td>
+            </tr>
+
+            <tr id="form-aluno-{{aluno.id}}" class="form-row" style="display: none;">
+              <td colspan="2">
+                <div class="form-container">
+                  <h3 id="titulo-form-{{aluno.id}}" style="margin-bottom: 15px; font-size: 1rem;">Declaração</h3>
+                  <div class="form-grid">
+                    <div class="input-group full-width ">
+                      <label>Nome Completo:</label>
+                      <input type="text" id="nome-{{ aluno.id }}" value="{{aluno.nomeDoAluno}}">
+                    </div>
+                    <div class="input-group">
+                      <label>Data de Nascimento:</label>
+                      <input type="date" id="nasc-{{ aluno.id }}" value="{{aluno.dataNascimentoAluno|date:'Y-m-d' }}">
+                    </div>
+                    <div class="input-group">
+                      <label>Naturalidade:</label>
+                      <input type="text" id="natur-{{ aluno.id }}" value="{{aluno.natularidadeAluno}}">
+                    </div>
+                    <div class="input-group">
+                      <label>Série:</label>
+                      <input type="text" id="serie-{{ aluno.id }}" value="{{aluno.turmaDoAluno}}">
+                    </div>
+                    <div class="input-group">
+                      <label>Ano que Cursou:</label>
+                      <input type="text" id="ano-{{ aluno.id }}" value="{{ now|date:'Y' }}">
+                    </div>
+                    <div class="input-group campo-extra extra-ano-apto-{{aluno.id}}">
+                      <label>Ano apto a cursar:</label>
+                      <input type="text" id="anoCursa-{{ aluno.id }}" placeholder="Ex: 9º Ano">
+                    </div>
+                    <div class="input-group half-width">
+                      <label>Mãe:</label>
+                      <input type="text" id="mae-{{ aluno.id }}" value="{{aluno.nomeMae}}">
+                    </div>
+                    <div class="input-group half-width">
+                      <label>Pai:</label>
+                      <input type="text" id="pai-{{ aluno.id }}" value="{{aluno.nomePai}}">
+                    </div>
+                    
+                    
+                    <div class="input-group campo-extra extra-comparecimento-{{aluno.id}} full-width">
+                      <label>Responsável que Compareceu:</label>
+                      <input type="text" id="resp-{{ aluno.id }}" placeholder="Nome do responsável">
+                    </div>
+                    
+                  </div>
+
+                  <div class="form-actions">
+                    <button class="btn-salvar" onclick="salvarDeclaracao({{aluno.id}})">Salvar</button>
+                    <button class="btn-imprimir" onclick="imprimirDeclaracao({{aluno.id}},)">Imprimir</button>
+                    <button class="btn-cancelar" onclick="fecharFormulario({{aluno.id}})">Cancelar</button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+    <script>
+      lucide.createIcons();
+
+      let tipoAtual = {};
+      let tipoDec ;
+
+      function abrirFormulario(id, tipo) {
+        tipoAtual[id] = tipo;
+        tipoDec = tipoAtual[id] ;
+        // Fecha qualquer formulário aberto antes de abrir o novo (opcional, mas limpo)
+        document.querySelectorAll('.form-row').forEach(f => f.style.display = 'none');
+
+        let formRow = document.getElementById('form-aluno-' + id);
+        formRow.style.display = 'table-row';
+
+        document.getElementById('titulo-form-' + id).innerText = 'Emitir Declaração de ' + tipo;
+
+        // Esconder todos os extras DESTE formulário específico
+        formRow.querySelectorAll('.campo-extra').forEach(el => el.style.display = 'none');
+
+        // Mostrar apenas o necessário
+        if (tipo === 'Comparecimento') {
+          formRow.querySelector('.extra-comparecimento-' + id).style.display = 'flex';
+        }
+        if (tipo === 'Transferência') {
+          formRow.querySelector('.extra-ano-apto-' + id).style.display = 'flex';
+        }
+      }
+
+      function fecharFormulario(id) {
+        document.getElementById('form-aluno-' + id).style.display = 'none';
+      }
+
+      function deletarAluno(id) {
+        if(confirm("Excluir este aluno?")) {
+           document.getElementById('linha-aluno-' + id).remove();
+           document.getElementById('form-aluno-' + id).remove();
+        }
+      }
+      
+  function salvarDeclaracao(id) {
+
+    const nome = document.getElementById('nome-'+id).value;
+    const nasc = document.getElementById('nasc-'+id).value;
+    const naturalidade = document.getElementById('natur-'+id).value;
+    const serie = document.getElementById('serie-'+id).value;
+    const mae = document.getElementById('mae-'+id).value;
+    const pai = document.getElementById('pai-'+id).value;
+
+    fetch(`/salvar-declaracao/${id}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify({
+            nome: nome,
+            nasc: nasc,
+            naturalidade: naturalidade,
+            serie: serie,
+            mae: mae,
+            pai: pai
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert("✅ Dados salvos com sucesso!");
+    })
+}
+
+ function imprimirDeclaracao(id) {
+  
+    const nome = document.getElementById('nome-'+id).value;
+    const nasc = document.getElementById('nasc-'+id).value;
+    const naturalidade = document.getElementById('natur-'+id).value;
+    const serie = document.getElementById('serie-'+id).value;
+    const mae = document.getElementById('mae-'+id).value;
+    const pai = document.getElementById('pai-'+id).value;
+    const anoCursa = document.getElementById('anoCursa-'+id).value;
+    const responsavel = document.getElementById('resp-'+id).value;
+    const ano = document.getElementById('ano-'+id).value;
+    const tipo  = tipoDec;
+     
+
+    
+    const novaAba = window.open('', '_blank');
+
+    fetch(`/imprimirDeclaracao/${id}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify({
+            nome,
+            nasc,
+            naturalidade,
+            serie,
+            ano,
+            mae,
+            pai,
+            tipo,
+            responsavel,
+            anoCursa 
+            
+        })
+    })
+    .then(res => res.text())
+    .then(html => {
+        novaAba.document.open();
+        novaAba.document.write(html);
+        novaAba.document.close();
+    });  
+}
+function getCSRFToken() {
+    return document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken'))
+        .split('=')[1];
+}
+function confirmarExclusao() {
+
+    return confirm("⚠️ Tem certeza que deseja apagar esta criança do banco de dados?\n\nEssa ação não pode ser desfeita.");
+};
+function abrirModalAluno() {
+    document.getElementById("modalAluno").style.display = "block";
+}
+
+function fecharModalAluno() {
+    document.getElementById("modalAluno").style.display = "none";
+}
+function confirmarExclusao() {
+
+    return confirm("⚠️ Tem certeza que deseja apagar esta criança do banco de dados?\n\nEssa ação não pode ser desfeita.");
+};
+    </script>
+  </body>
+</html>

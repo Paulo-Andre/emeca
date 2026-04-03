@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Secretaria - Matrícula</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+   {% load static %}
+<link rel="stylesheet" href="{% static '/css/dashboard.css' %}">
+<style>/* BLOCO IMPORTAR ALUNOS */
+.importar-container {
+    background-color: #ffffff;
+    padding: 2.5rem;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    width: 100%;
+    max-width: 420px;
+    margin: auto;
+    text-align: center;
+}
+
+/* TÍTULO */
+.importar-title {
+    margin-bottom: 1.5rem;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+/* ÁREA DE UPLOAD */
+.importar-upload-area {
+    display: block;
+    border: 2px dashed #d1d5db;
+    padding: 30px 20px;
+    border-radius: 10px;
+    margin-bottom: 1.5rem;
+    transition: 0.3s;
+    cursor: pointer;
+    position: relative;
+}
+
+.importar-upload-area:hover {
+    border-color: #4f46e5;
+    background: #eef2ff;
+}
+
+/* ÍCONE */
+.importar-upload-icon {
+    font-size: 40px;
+    margin-bottom: 10px;
+}
+
+/* TEXTO */
+.importar-upload-text {
+    font-size: 0.95rem;
+    color: #6b7280;
+}
+
+/* INPUT ESCONDIDO */
+.importar-upload-area input[type="file"] {
+    display: none;
+}
+
+/* NOME DO ARQUIVO */
+.importar-file-name {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: #4f46e5;
+    font-weight: 500;
+}
+
+/* BOTÃO */
+.importar-btn {
+    width: 100%;
+    background-color: #4f46e5;
+    color: white;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.importar-btn:hover {
+    background-color: #4338ca;
+}
+
+.importar-btn:active {
+    transform: scale(0.98);
+}
+
+/* TEXTO DE AJUDA */
+.importar-hint {
+    display: block;
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+.alert {
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    font-weight: 500;
+}
+
+.success {
+    background: #dcfce7;
+    color: #166534;
+}</style>
+
+
+    
+
+  </head>
+
+  <body>
+     <aside class="sidebar">
+      <div class="logo">Secretaria <span>Digital</span></div>
+
+      <a class="nav-item " href="{% url 'dashboard' %}">
+        <i data-lucide="graduation-cap"></i>
+        Matrícula
+      </a>
+
+      <a class="nav-item" href="{% url 'telaDeclaracao' %}">
+        <i data-lucide="file-text"></i>
+        Declarações
+      </a>
+
+      <a class="nav-item">
+        <i data-lucide="clock"></i>
+        Histórico
+      </a>
+      {% if request.user.username == "Paulo" %}
+    <div class="grupo-botoes">
+         <a class="nav-item" href="{% url 'cadastro' %}">
+        <i data-lucide="user-plus"></i>
+        Cadastrar Usuário
+      </a>
+        <a class="nav-item active" href="{% url 'importar_alunos' %}">
+        <i data-lucide="file-up"></i>
+          Upload Dados Declaração
+      </a>
+      <a class="nav-item" href="{% url 'apagar_todos_alunos_matricula' %}" onclick="return confirmarExclusao()">
+        <i data-lucide="folder-x"></i>
+          Apagar dados Matrícula
+      </a>
+       <a class="nav-item" href="{% url 'apagar_todos_alunos' %}" onclick="return confirmarExclusao()">
+        <i data-lucide="file-x"></i>
+          Apagar dados Declaração
+      </a>
+    </div>
+{% endif %}
+
+      <a class="nav-item" href="{% url 'sair' %}">
+        <i data-lucide="log-out"></i>
+        Sair
+      </a>
+
+    </aside>
+
+     <main class="main">
+        
+
+   <div class="importar-container">
+    <h2 class="importar-title">📥 Importar Alunos</h2>
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert success">
+        {{ message }}
+    </div>
+  {% endfor %}
+{% endif %}
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <label class="importar-upload-area" id="uploadArea">
+            <div class="importar-upload-icon">📄</div>
+            <div class="importar-upload-text">
+                Clique ou arraste o arquivo aqui
+            </div>
+
+            <input type="file" name="arquivo" id="arquivo" required>
+            <div class="importar-file-name" id="fileName"></div>
+        </label>
+
+        <button type="submit" class="importar-btn">
+            Enviar Planilha
+        </button>
+    </form>
+
+    <span class="importar-hint">
+        Formatos aceitos: .xlsx, .csv
+    </span>
+</div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const inputFile = document.getElementById('arquivo');
+        const fileName = document.getElementById('fileName');
+
+        
+        // Mostrar nome do arquivo
+        inputFile.addEventListener('change', () => {
+            if (inputFile.files.length > 0) {
+                fileName.textContent = inputFile.files[0].name;
+            }
+        });
+
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+
+            inputFile.files = e.dataTransfer.files;
+            fileName.textContent = e.dataTransfer.files[0].name;
+        });
+
+
+    lucide.createIcons();
+function confirmarExclusao() {
+
+    return confirm("⚠️ Tem certeza que deseja apagar esta criança do banco de dados?\n\nEssa ação não pode ser desfeita.");
+};
+    </script>
+
+</body>
+</html>
+     </main>

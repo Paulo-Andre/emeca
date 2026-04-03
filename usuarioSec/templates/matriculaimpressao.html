@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+{% load static %}
+<title>Ficha de Matrícula</title>
+
+<style>
+
+@page{
+size:A4;
+
+}
+
+body{
+font-family:Arial, Helvetica, sans-serif;
+font-size:10px;
+padding:3mm 5mm 0 3mm;
+
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+margin:auto;
+
+}
+
+td{
+border:1px solid #000;
+padding:3px;
+vertical-align:top;
+font-weight:500;
+}
+
+
+.header{
+text-align:center;
+font-weight:bold;
+font-size:13px;
+}
+
+.section>td{
+background:#87CEFA;
+font-weight:bold;
+text-align:center;
+font-size: 15px;
+padding: 0;
+}
+.section2>td{
+background:#87CEFA;
+font-weight:bold;
+text-align:center;
+font-size: 13px;
+padding: 0;
+}
+
+
+
+.label{
+font-weight:bold;
+font-size:10px;
+}
+
+.checkbox{
+display:inline-block;
+width:10px;
+height:10px;
+border:1px solid #000;
+margin-right:4px;
+}
+
+.field{
+
+  font-size: 12px;
+}
+tr,td{
+    height:25px;
+}
+
+.page-break{
+page-break-before:always;
+margin-top: 10mm;
+}
+
+.print{
+position:fixed;
+right:10px;
+top:10px;
+padding:10px 20px;
+}
+.header img{
+width:100%;
+height:auto;
+}
+.titulo{
+  font-size:medium;
+  font-weight: bold;
+}
+@media print{
+.print{display:none}
+*{
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
+
+</style>
+
+</head>
+
+<body>
+
+<button class="print" onclick="window.print()">IMPRIMIR</button>
+
+<table>
+    <colgroup>
+<col style="width:16.66%">
+<col style="width:16.66%">
+<col style="width:16.66%">
+<col style="width:16.66%">
+<col style="width:16.66%">
+<col style="width:16.66%">
+</colgroup>
+
+<tr>
+<td colspan="6" class="header">
+
+<img src="{% static 'imagens/timbragem.jpeg' %}" alt="">
+<p class="titulo">FICHA DE MATRÍCULA 1º AO 5º ANO FUNDAMENTAL I</p>
+
+</td>
+</tr>
+<tr class="section">
+<td colspan="6">DADOS DO ALUNO</td>
+</tr>
+
+<tr>
+<td colspan="3"><b>NOME DO ALUNO:</b> <div class="field">{{ aluno.nomeDoAluno }}</div></td>
+<td colspan="1">DATA DE NASCIMENTO:<div class="field">{{ aluno.dataNascimentoAluno|date:'d-m-Y' }} </div></td>
+<td colspan="1">CPF:<div class="field">{{aluno.cpfDoAluno}}</div></td>
+<td colspan="1">NIS:<div class="field">{{aluno.numeroNisAluno}}</div></td>
+</tr>
+
+<tr>
+<td colspan="1">SEXO: <div class="field">{{aluno.sexoDoAluno}}</div></td>
+<td colspan="1">NACIONALIDADE: <div class="field">{{aluno.nacionaliadeAluno}}</div></td>
+<td colspan="2">NATURALIDADE:<div class="field">{{aluno.natularidadeAluno}}</div></td>
+<td colspan="1">UF:<div class="field">{{aluno.ufAluno}}</div></td>
+<td colspan="1">CARTÃO SUS:<div class="field">{{ aluno.cartaoSusDoAluno}}</div></td>
+</tr>
+
+
+<tr>
+<td colspan="1">RG:<div class="field">{{aluno.rgAluno}}</div></td>
+<td colspan="3">DATA EXP./ORGÃO EMISSOR-UF:<div class="field">{{aluno.dataExpedicaoAluno|date:'d-m-Y' }} / {{ aluno.orgaoEmissorAluno }}  </div></td >
+<td colspan="2">RAÇA/COR:<div class="field">{{aluno.racaCorDoAluno}}</div></b></td>
+</tr>
+
+<tr>
+<td colspan="3">POSSUI ALGUM TIPO DE ALERGIA?<br> <div class="field">
+    {% if aluno.alergiaAluno == "SIM" %}
+     Sim -  {{ aluno.descricaoAlergia}}
+    {% else %}
+      Não
+    {% endif %}
+  </div> </td>
+<td colspan="3">POSSUI LAUDO?ESPECIFIQUE O LAUDO: <div class="field">
+    {% if aluno.laudoAluno == "SIM" %}
+     Sim -  {{ aluno.descricaoLaudo}}
+    {% else %}
+      Não
+    {% endif %}
+  </div></td>
+</tr>
+
+<tr>
+<td colspan="2">
+  BENEFÍCIOS SOCIAIS:
+  <div class="field">
+    {% if aluno.recebeBeneficioAluno == "SIM" %}
+     Sim -  {{ aluno.descricaoBeneficio }}
+    {% else %}
+      Não
+    {% endif %}
+  </div>
+</td>
+<td colspan="4">IRMÃO NA ESCOLA:<div class="field">{{ aluno.temIrmaosEscola }} - {{ aluno.nomeIrmao }}</div></td>
+</tr>
+
+<tr class="section">
+<td colspan="6">FILIAÇÃO</td>
+</tr>
+
+
+<tr>
+<td colspan="2"><b>NOME DA MÃE:</b><div class="field">{{aluno.nomeMae}}</div></td>
+<td colspan="1">DATA DE NASCIMENTO:<div class="field">{{aluno.dataDeNascimentoMae|date:'d-m-Y' }}</div></td>
+<td colspan="1">NACIONALIDADE: <div class="field">{{aluno.nacionalidadeMae }}</div></td>
+<td colspan="2">NATURALIDADE/UF:<div class="field">{{aluno.natularidadeMae}} / {{aluno.ufMae}}</div></td>
+</tr>
+<tr>
+<td colspan="2">RG/DATA EXP (MÃE) / EMISSOR-UF:<div class="field">{{ aluno.rgMae }} / {{ aluno.dataExpedicaoMae|date:'d-m-Y' }} / {{ aluno.orgaoEmissorMae }}</div></td>
+<td colspan="1">CPF:<div class="field">{{ aluno.cpfMae}}</div></td>
+<td colspan="1">PROFISSÃO:<div class="field">{{aluno.profissaoMae}}</div></td>
+<td colspan="1">TELEFONE:<div class="field">{{ aluno.telefoneMae}}</div></td>
+<td colspan="1">WHATSAPP:<div class="field">{{aluno.whatsappMae}}</div></td>
+</tr>
+
+
+<tr>
+<td colspan="2">
+<b>NOME DO PAI:</b><div class="field">{{aluno.nomePai}}</div></td>
+<td colspan="1">DATA DE NASCIMENTO:<div class="field">{{aluno.dataDeNascimentoPai|date:'d-m-Y' }}</div></td>
+<td colspan="1">NACIONALIDADE: <div class="field">{{aluno.nacionalidadePai }}</div></td>
+<td colspan="2">NATURALIDADE/UF:<div class="field">{{aluno.natularidadePai}} / {{aluno.ufPai}}</div></td>
+</tr>
+<tr>
+<td colspan="2">RG/DATA EXP (PAI) / EMISSOR-UF:<div class="field">{{aluno.rgPai}} / {{ aluno.dataExpedicaoPai|date:'d-m-Y' }} / {{aluno.orgaoEmissorPai  }}</div></td>
+<td colspan="1">CPF:<div class="field">{{aluno.cpfPai}}</div></td>
+<td colspan="1">PROFISSÃO:<div class="field">{{aluno.profissaoPai}}</div></td>
+<td colspan="1">TELEFONE:<div class="field">{{aluno.telefonePai}}</div></td>
+<td colspan="1">WHATSAPP:<div class="field">{{aluno.whatsappPai}}</div></td>
+</tr>
+
+<tr>
+<td colspan="6">ESTADO CIVIL DOS PAIS: <div class="field">{{aluno.estadoCivilPais}}</div></td>
+</tr>
+
+<tr class="section">
+<td colspan="6">REPRESENTANTE LEGAL / RESPONSÁVEL</td>
+</tr>
+
+<tr><td colspan="2"><b>É O REPRESENTANTE LEGAL? </b> <div class="field">{{aluno.quemResponsavel}}</div></td>
+  <td colspan="4">NOME DO RESPONSÁVEL (SE NÃO FOR PAI OU MÃE):<div class="field">{{aluno.nomeResponsavel }}</div></td>
+</tr>
+
+<tr>
+<td colspan="1">CPF:<div class="field">{{aluno.cpfResponsavel}}</div></td>
+<td colspan="3">PARENTESCO:<div class="field">{{aluno.parentesco}}</div></td>
+<td colspan="2">PROFISSÃO:<div class="field">{{ aluno.profissaoResponsavel }}</div></td>
+</tr>
+
+<tr>
+<td colspan="3">RG/DATA EXP (RESP) / EMISSOR-UF:<div class="field">{{aluno.rgResponsavel}} / {{ aluno.dataExpedicaoResponsavel|date:'d-m-Y' }} / {{aluno.orgaoEmissorResponsavel}}</div></td>
+<td colspan="1"> TELEFONE:<div class="field">{{ aluno.telefoneResponsavel}}</div></td>
+<td colspan="2">WHATSAPP:<div class="field">{{ aluno.whatsappResponsavel}}</div></td>
+</tr>
+  
+
+</tr>
+<tr class="section">
+<td colspan="6">OUTROS TELEFONES</td>
+</tr>
+
+<tr>
+<td colspan="1">CONTATO 1:<div class="field">{{aluno.nomeEmergencia1}}</div></td>
+<td colspan="1">TELEFONE 1:<div class="field">{{aluno.telefoneEmergencia1}}</div></td>
+<td colspan="1">CONTATO 2:<div class="field">{{aluno.nomeEmergencia2}}</div></td>
+<td colspan="1">TELEFONE 2:<div class="field">{{aluno.telefoneEmergencia2}}</div></td>
+<td colspan="1">CONTATO 3:<div class="field">{{aluno.nomeEmergencia3}}</div></td>
+<td colspan="1">TELEFONE 3:<div class="field">{{aluno.telefoneEmergencia3 }}</div></td>
+</tr>
+
+
+
+
+<tr class="section">
+<td colspan="6">ENDEREÇO</td>
+</tr>
+
+<tr>
+<td colspan="3">RUA:<div class="field">{{aluno.rua }}</div></td>
+<td colspan="2">BAIRRO:<div class="field">{{ aluno.bairro }}</div></td>
+<td colspan="1">CEP:<div class="field">{{ aluno.cep }}</div></td>
+</tr>
+
+<tr>
+<td colspan="3">CIDADE:<div class="field">{{ aluno.cidade }}</div></td>
+<td colspan="3">TIPO DE MORADIA:<div class="field">{{aluno.situacaoCasa }}</div></td>
+</tr>
+<tr class="section">
+<td colspan="6"> MUDANÇA DE ENDEREÇO</td>
+</tr>
+
+<tr>
+<td colspan="3">RUA:</td>
+<td colspan="2">BAIRRO:</td>
+<td colspan="1">CEP:</td>
+</tr>
+  
+<tr>
+<td colspan="3">CIDADE:</td>
+<td colspan="3">TIPO DE MORADIA:</td>
+</tr>
+
+<tr class="section">
+<td colspan="6">MATRÍCULA</td>
+</tr>
+
+<tr>
+<td colspan="2">ANO/PERÍODO:</td>
+<td>DATA MATRÍCULA:</td>
+<td colspan="3" style="font-size: 15px; font-weight: 900;">TURNO: ( ) M  ( ) V </td>
+</tr>
+
+<tr>
+<td colspan="6">ESCOLA DE ORIGEM:</td>
+</tr>
+
+<tr style="height:50px">
+<td colspan="3">ASS. DO RESPONSÁVEL:</td>
+<td colspan="3">ASS. DO FUNCIONÁRIO:</td>
+</tr>
+
+</table>
+
+<table>
+<colgroup>
+<col style="width:16.66%">
+<col style="width:16.66%">
+<col style="width:16.66%">
+<col style="width:16.66%">
+<col style="width:16.66%">
+<col style="width:16.66%">
+</colgroup>
+<div class="page-break"></div>
+<tr class="section2">
+<td colspan="6">RENOVAÇÕES DE MATRÍCULA</td>
+</tr>
+
+<tr>
+<td colspan="2">MATRÍCULA RENOVADA PARA O ANO DE:</td>
+<td colspan="1"  >DATA:</td>
+<td colspan="3" >SITUAÇÃO FINAL:<br>(&nbsp;&nbsp;&nbsp;)APROVADO ( &nbsp;&nbsp;)REPROVADO (&nbsp;&nbsp;)EVADIDO ( &nbsp;&nbsp;)AP.-PROGRESSÃO PARCIAL</td>
+</tr>
+
+<tr>
+<td colspan="3">ASSINATURA RESPONSÁVEL:</td>
+<td colspan="3">FUNCIONÁRIO / MATR: </td>
+</tr>
+
+<tr class="section2">
+<td colspan="6">RENOVAÇÕES DE MATRÍCULA</td>
+</tr>
+
+<tr>
+<td colspan="2">MATRÍCULA RENOVADA PARA O ANO DE:</td>
+<td colspan="1"  >DATA:</td>
+<td colspan="3" >SITUAÇÃO FINAL:<br>(&nbsp;&nbsp;&nbsp;)APROVADO ( &nbsp;&nbsp;)REPROVADO (&nbsp;&nbsp;)EVADIDO ( &nbsp;&nbsp;)AP.-PROGRESSÃO PARCIAL</td>
+</tr>
+
+<tr>
+<td colspan="3">ASSINATURA RESPONSÁVEL:</td>
+<td colspan="3">FUNCIONÁRIO / MATR: </td>
+</tr>
+
+<tr class="section2">
+<td colspan="6">RENOVAÇÕES DE MATRÍCULA</td>
+</tr>
+
+<tr>
+<td colspan="2">MATRÍCULA RENOVADA PARA O ANO DE:</td>
+<td colspan="1"  >DATA:</td>
+<td colspan="3" >SITUAÇÃO FINAL:<br>(&nbsp;&nbsp;&nbsp;)APROVADO ( &nbsp;&nbsp;)REPROVADO (&nbsp;&nbsp;)EVADIDO ( &nbsp;&nbsp;)AP.-PROGRESSÃO PARCIAL</td>
+</tr>
+
+<tr>
+<td colspan="3">ASSINATURA RESPONSÁVEL:</td>
+<td colspan="3">FUNCIONÁRIO / MATR: </td>
+</tr>
+
+<tr class="section2">
+<td colspan="6">RENOVAÇÕES DE MATRÍCULA</td>
+</tr>
+
+<tr>
+<td colspan="2">MATRÍCULA RENOVADA PARA O ANO DE:</td>
+<td colspan="1"  >DATA:</td>
+<td colspan="3" >SITUAÇÃO FINAL:<br>(&nbsp;&nbsp;&nbsp;)APROVADO ( &nbsp;&nbsp;)REPROVADO (&nbsp;&nbsp;)EVADIDO ( &nbsp;&nbsp;)AP.-PROGRESSÃO PARCIAL</td>
+</tr>
+
+<tr>
+<td colspan="3">ASSINATURA RESPONSÁVEL:</td>
+<td colspan="3">FUNCIONÁRIO / MATR: </td>
+</tr>
+
+<tr class="section2">
+<td colspan="6">HISTÓRICO DA CRIANÇA</td>
+</tr>
+
+<tr>
+<td colspan="3">A CRIANÇA APRESENTA ALGUM PROBLEMA DE SAÚDE? <div class="field">{{ aluno.problemaSaude }}</div></td>
+  <td colspan="3">QUAL?<div class="field">{{ aluno.problemaSaudeQual}}</div></td>
+</tr>
+
+<tr>
+<td colspan="3">FAZ USO DE MEDICAMENTO?<div class="field">{{ aluno.medicamento}}</div></td>
+<td colspan="3">QUAL? <div class="field">{{ aluno.medicamentoQual}}</div></td>
+</tr>
+
+<tr>
+<td colspan="3">FAZ ALGUM TRATAMENTO?<div class="field">{{ aluno.tratamentoSaude }}</div></td>
+<td colspan="3">QUAL ?<div class="field">{{ aluno.tratamentoSaudeQual }}</div></td>
+</tr>
+
+<tr>
+<td colspan="3">JÁ ESTEVE INTERNADO?<div class="field">{{aluno.internado}}</div></td>
+<td colspan="3">QUAL MOTIVO? <div class="field">{{aluno.internadoMotivo}}</div></td></tr>
+
+<tr>
+<td colspan="3">NECESSIDADE ESPECIAL?<div class="field">{{ aluno.necessidadeEspecial}}</div></td>
+<td colspan="3">QUAL ?  <div class="field">{{ aluno.necessidadeEspecialQual}}</div></td>
+</tr>
+
+<tr>
+<td colspan="3">RECEBE ATENDIMENTO EDUCACIONAL ESPECIALIZADO?<div class="field">{{ aluno.atendimentoEspecializado }}</div></td>
+<td colspan="3">QUAL MOTIVO?<div class="field">{{ aluno.atendimentoEspecializadoMotivo}}</div></td>
+</tr>
+
+<tr>
+<td colspan="3">ATENDIMENTO EDUCACIONAL ESPECIALIZADO – SALA DE RECURSOS:<div class="field">{{ aluno.salaRecurso }}</div></td>
+<td colspan="3">QUAL MOTIVO? <div class="field">{{aluno.salaRecursoMotivo }}</div></td>
+</tr>
+
+<tr>
+<td colspan="6">COMO FOI O PARTO?<div class="field">{{aluno.tipoDeParto}}</div></td>  
+</tr>
+
+<tr>
+<td colspan="3">GESTAÇÃO TEVE COMPLICAÇÃO?<div class="field">{{ aluno.gestacao}}</div></td>
+<td colspan="3">QUAL MOTIVO?<div class="field">{{ aluno.gestacaoMotivo }}</div></td>
+</tr>
+
+<tr>
+<td colspan="3">É ACOMPANHADO PELO CRAS?<div class="field">{{aluno.cras}}</div></td>
+<td colspan="3">QUAL MOTIVO?<div class="field">{{aluno.crasMotivo }}</div></td>
+</tr>
+
+<tr>
+<td colspan="3">RECEBE VISITA ASSISTENTE SOCIAL?<div class="field">{{aluno.visitaSocial }}</div></td>
+ <td colspan="3">QUAL MOTIVO?<div class="field">{{ aluno.visitaSocialMotivo }}</div></td>
+</tr>
+
+<tr>
+<td colspan="3">RECEBE VISITA DO CONSELHO TUTELAR?<div class="field">{{aluno.conselhoTutelar}}</div></td>
+<td colspan="3">QUAL MOTIVO?<div class="field">{{aluno.conselhoTutelarMotivo}}</div></td>
+</tr>
+
+<tr>
+<td colspan="3">RECEBE ATENDIMENTO DOMICILIAR?<div class="field">{{ aluno.atendimentoDomiciliar }}</div></td>
+<td colspan="3">QUAL MOTIVO?<div class="field">{{aluno.atendimentoDomiciliarMotivo}}</div></td>
+</tr>
+
+<tr class="section2">
+<td colspan="6">DADOS VARIÁVEIS</td>
+</tr>
+
+<tr>
+<td colspan="6">FAZ USO DE TRANSPORTE ESCOLAR?<div class="field">
+    {% if aluno.trasporteEscolar == "SIM" %}
+     Sim -  {{ aluno.trasporteEscolarMotivo}}
+    {% else %}
+      Não
+    {% endif %}
+  </div></td>
+</tr>
+
+<tr>
+<td colspan="6"style="height:200px">OBSERVAÇÕES:</td>
+</tr>
+
+</table>
+
+</body>
+</html>

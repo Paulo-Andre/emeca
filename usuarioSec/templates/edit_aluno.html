@@ -1,0 +1,1285 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Secretaria - Cadastro Completo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      :root {
+        --primary: #8b5cf6;
+        --sidebar: #1e1b4b;
+        --bg: #f8fafc;
+        --text: #1e293b;
+        --muted: #64748b;
+        --border: #e2e8f0;
+        --white: #ffffff;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Inter", sans-serif;
+      }
+      body {
+        background: var(--bg);
+        display: flex;
+        min-height: 100vh;
+        color: var(--text);
+      }
+
+      .sidebar {
+        width: 260px;
+        background: var(--sidebar);
+        color: white;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        flex-shrink: 0;
+      }
+      .logo {
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 30px;
+      }
+      .logo span {
+        color: var(--primary);
+      }
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px;
+        text-decoration: none;
+        color: #94a3b8;
+        border-radius: 10px;
+        margin-bottom: 5px;
+        transition: 0.2s;
+      }
+      .header-icon {
+        background: var(--primary);
+        color: white;
+        padding: 12px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .nav-item.active {
+        background: var(--primary);
+        color: white;
+      }
+
+      .main {
+        flex: 1;
+        padding: 40px;
+        overflow-y: auto;
+      }
+      .header {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 40px;
+      }
+      .header h2 {
+        font-size: 2rem;
+        color: var(--text);
+      }
+
+      .header p {
+        color: var(--muted);
+      }
+
+      .form-container {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        max-width: 1200px;
+        padding-bottom: 100px;
+      }
+      .section-card {
+        background: var(--white);
+        border-radius: 16px;
+        padding: 25px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      }
+      .section-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--bg);
+        color: var(--primary);
+        font-weight: 700;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+      }
+
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+      }
+      .input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .full {
+        grid-column: span 3;
+      }
+      .span-2 {
+        grid-column: span 2;
+      }
+
+      /* Alinhamento Ficha Saúde */
+      .health-grid-item {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 15px;
+        grid-column: span 3;
+        align-items: flex-end;
+      }
+
+      label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--muted);
+        text-transform: uppercase;
+      }
+      input,
+      select {
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #fcfcfd;
+        font-size: 0.9rem;
+        outline: none;
+        transition: 0.2s;
+        width: 100%;
+      }
+      input:focus {
+        border-color: var(--primary);
+        background: white;
+        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+      }
+
+      .conditional-input {
+        display: none;
+        animation: fadeIn 0.4s ease forwards;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-5px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .actions {
+        position: fixed;
+        bottom: 0;
+        right: 0;
+        width: calc(100% - 260px);
+        background: white;
+        padding: 15px 40px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: flex-end;
+        gap: 15px;
+        z-index: 100;
+      }
+      .btn {
+        padding: 12px 24px;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+      }
+      .btn-primary {
+        background: var(--primary);
+        color: white;
+      }
+
+      @media (max-width: 1024px) {
+        .grid-3,
+        .health-grid-item {
+          grid-template-columns: 1fr;
+        }
+        .full,
+        .span-2 {
+          grid-column: span 1;
+        }
+      }
+      
+.cpf-status{
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.cpf-valido{
+    color: #22c55e;
+}
+
+.cpf-invalido{
+    color: #ef4444;
+}
+
+    </style>
+  </head>
+  <body>
+  <aside class="sidebar">
+      <div class="logo">Secretaria <span>Digital</span></div>
+
+      <a class="nav-item active" href="{% url 'dashboard' %}">
+        <i data-lucide="graduation-cap"></i>
+        Matrícula
+      </a>
+
+      <a class="nav-item" href="{% url 'telaDeclaracao' %}">
+        <i data-lucide="file-text"></i>
+        Declarações
+      </a>
+
+      <a class="nav-item">
+        <i data-lucide="clock"></i>
+        Histórico
+      </a>
+      {% if request.user.username == "Paulo" %}
+    <div class="grupo-botoes">
+         <a class="nav-item" href="{% url 'cadastro' %}">
+        <i data-lucide="user-plus"></i>
+        Cadastrar Usuário
+      </a>
+        <a class="nav-item" href="{% url 'importar_alunos' %}">
+        <i data-lucide="file-up"></i>
+          Upload Dados Declaração
+      </a>
+      <a class="nav-item" href="{% url 'apagar_todos_alunos_matricula' %}" onclick="return confirmarExclusao()">
+        <i data-lucide="folder-x"></i>
+          Apagar dados Matrícula
+      </a>
+       <a class="nav-item" href="{% url 'apagar_todos_alunos' %}" onclick="return confirmarExclusao()">
+        <i data-lucide="file-x"></i>
+          Apagar dados Declaração
+      </a>
+    </div>
+{% endif %}
+
+      <a class="nav-item" href="{% url 'sair' %}">
+        <i data-lucide="log-out"></i>
+        Sair
+      </a>
+
+    </aside>
+
+    <main class="main">
+      <div class="header">
+        <div class="header-icon">
+          <i data-lucide="form"></i>
+        </div>
+
+        <div>
+          <h2>Formulário de Cadastro</h2>
+          <p>Edite as matrículas dos alunos</p>
+        </div>
+      </div>
+
+      <form class="form-container" method="POST">
+        {% csrf_token %}
+
+        <section class="section-card">
+          <div class="section-header">
+            <i data-lucide="user"></i> Dados do Aluno
+          </div>
+          <div class="grid-3">
+            <div class="input-group full">
+              <label>Nome do Aluno</label
+              ><input
+                type="text"
+                name="nomeDoAluno"
+                value="{{ aluno.nomeDoAluno }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>Nacionalidade</label
+              ><input
+                type="text"
+                name="nacionaliadeAluno"
+                value="{{ aluno.nacionaliadeAluno }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>Naturalidade</label
+              ><input
+                type="text"
+                name="natularidadeAluno"
+                value="{{ aluno.natularidadeAluno }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>UF</label
+              ><input type="text" name="ufAluno" value="{{ aluno.ufAluno }}" />
+            </div>
+            <div class="input-group">
+              <label>Data Nascimento</label
+              ><input
+                type="date"
+                name="dataNascimentoAluno"
+                value="{{ aluno.dataNascimentoAluno|date:'Y-m-d' }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>Sexo</label
+              ><input
+                type="text"
+                name="sexoDoAluno"
+                value="{{ aluno.sexoDoAluno }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>Raça/Cor</label
+              ><input
+                type="text"
+                name="racaCorDoAluno"
+                value="{{ aluno.racaCorDoAluno }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>Cartão SUS</label
+              ><input
+                type="text"
+                name="cartaoSusDoAluno"
+                value="{{ aluno.cartaoSusDoAluno }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>CPF Aluno</label
+              ><input
+                type="text"
+                name="cpfDoAluno"
+                value="{{ aluno.cpfDoAluno }}"
+                class="cpf-input" 
+                placeholder="000.000.000-00"
+              />
+              <div class="cpf-status"></div>
+            </div>
+            <div class="input-group">
+              <label>RG Aluno</label
+              ><input type="text" name="rgAluno" value="{{ aluno.rgAluno }}" />
+            </div>
+            <div class="input-group">
+              <label>Órgão Emissor</label
+              ><input
+                type="text"
+                name="orgaoEmissorAluno"
+                value="{{ aluno.orgaoEmissorAluno }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>Data Expedição</label
+              ><input
+                type="date"
+                name="dataExpedicaoAluno"
+                value="{{ aluno.dataExpedicaoAluno|date:'Y-m-d' }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>Recebe Benefício</label
+              ><input
+                type="text"
+                name="recebeBeneficioAluno"
+                value="{{ aluno.recebeBeneficioAluno }}"
+              />
+            </div>
+             <div class="input-group">
+              <label>Qual Benefício</label
+              ><input
+                type="text"
+                name="descricaoBeneficio"
+                value="{{ aluno.descricaoBeneficio }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>Nº NIS</label
+              ><input
+                type="text"
+                name="numeroNisAluno"
+                value="{{ aluno.numeroNisAluno }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>Alergia</label
+              ><input
+                type="text"
+                name="alergiaAluno"
+                value="{{ aluno.alergiaAluno }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>Qual Alergia</label
+              ><input
+                type="text"
+                name="descricaoAlergia"
+                value="{{ aluno.descricaoAlergia }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>Laudo Aluno</label
+              ><input
+                type="text"
+                name="laudoAluno"
+                value="{{ aluno.laudoAluno }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>Laudo Aluno</label
+              ><input
+                type="text"
+                name="DescricaoLaudo"
+                value="{{ aluno.DescricaoLaudo }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>Tem Irmãos na Escola?</label>
+              <select name="temIrmaosEscola" id="selectIrmao">
+
+  <option value="NAO" {% if aluno.temIrmaosEscola == "NAO" %}selected{% endif %}>
+    Não
+  </option>
+
+  <option value="SIM" {% if aluno.temIrmaosEscola == "SIM" %}selected{% endif %}>
+    Sim
+  </option>
+
+</select>
+            </div>
+            <div class="input-group span-2 conditional-input" id="inputIrmao">
+              <label>Nome do Irmão</label
+              ><input
+                type="text"
+                name="nomeIrmao"
+                value="{{ aluno.nomeIrmao }}"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section class="section-card">
+          <div class="section-header">
+            <i data-lucide="users"></i> Dados do Pai
+          </div>
+
+          <div class="grid-3">
+            <div class="input-group full">
+              <label>Nome do Pai</label
+              ><input type="text" name="nomePai" value="{{ aluno.nomePai }}" />
+            </div>
+            <div class="input-group">
+              <label>Nacionalidade Pai</label
+              ><input
+                type="text"
+                name="nacionalidadePai"
+                value="{{ aluno.nacionalidadePai }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>Naturalidade Pai</label
+              ><input
+                type="text"
+                name="natularidadePai"
+                value="{{ aluno.natularidadePai }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>UF Pai</label
+              ><input type="text" name="ufPai" value="{{ aluno.ufPai }}" />
+            </div>
+            <div class="input-group">
+              <label>Nascimento Pai</label
+              ><input
+                type="date"
+                name="dataDeNascimentoPai"
+                value="{{ aluno.dataDeNascimentoPai|date:'Y-m-d' }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>CPF Pai</label
+              ><input type="text" name="cpfPai" value="{{ aluno.cpfPai }}"  class="cpf-input" 
+                placeholder="000.000.000-00"
+              />
+              <div class="cpf-status"></div>
+            </div>
+            <div class="input-group">
+              <label>RG Pai</label
+              ><input type="text" name="rgPai" value="{{ aluno.rgPai }}" />
+            </div>
+            <div class="input-group">
+              <label>Órgão Emissor Pai</label
+              ><input
+                type="text"
+                name="orgaoEmissorPai"
+                value="{{ aluno.orgaoEmissorPai }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>Data Expedição Pai</label
+              ><input
+                type="date"
+                name="dataExpedicaoPai"
+                value="{{ aluno.dataExpedicaoPai |date:'Y-m-d'}}"
+              />
+            </div>
+            <div class="input-group">
+              <label>Profissão Pai</label
+              ><input
+                type="text"
+                name="profissaoPai"
+                value="{{ aluno.profissaoPai }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>Telefone Pai</label
+              ><input
+                type="text"
+                name="telefonePai"
+                value="{{ aluno.telefonePai }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>WhatsApp Pai</label
+              ><input
+                type="text"
+                name="whatsappPai"
+                value="{{ aluno.whatsappPai }}"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section class="section-card">
+          <div class="section-header">
+            <i data-lucide="users-2"></i> Dados da Mãe
+          </div>
+          <div class="grid-3">
+            <div class="input-group full">
+              <label>Nome da Mãe</label
+              ><input type="text" name="nomeMae" value="{{ aluno.nomeMae }}" />
+            </div>
+            <div class="input-group">
+              <label>Nacionalidade Mãe</label>
+              <input
+                type="text"
+                name="nacionalidadeMae"
+                value="{{ aluno.nacionalidadeMae }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>Naturalidade Mãe</label
+              ><input
+                type="text"
+                name="natularidadeMae"
+                value="{{ aluno.natularidadeMae }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>UF Mãe</label
+              ><input type="text" name="ufMae" value="{{ aluno.ufMae }}" />
+            </div>
+            <div class="input-group">
+              <label>Nascimento Mãe</label
+              ><input
+                type="date"
+                name="dataDeNascimentoMae"
+                value="{{ aluno.dataDeNascimentoMae |date:'Y-m-d'}}"
+              />
+            </div>
+            <div class="input-group">
+              <label>CPF Mãe</label
+              ><input type="text" name="cpfMae" value="{{ aluno.cpfMae }}"  class="cpf-input" 
+                placeholder="000.000.000-00"
+              />
+              <div class="cpf-status"></div>
+            </div>
+            <div class="input-group">
+              <label>RG Mãe</label
+              ><input type="text" name="rgMae" value="{{ aluno.rgMae }}" />
+            </div>
+            <div class="input-group">
+              <label>Órgão Emissor Mãe</label
+              ><input
+                type="text"
+                name="orgaoEmissorMae"
+                value="{{ aluno.orgaoEmissorMae }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>Data Expedição Mãe</label
+              ><input
+                type="date"
+                name="dataExpedicaoMae"
+                value="{{ aluno.dataExpedicaoMae|date:'Y-m-d' }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>Profissão Mãe</label
+              ><input
+                type="text"
+                name="profissaoMae"
+                value="{{ aluno.profissaoMae }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>Telefone Mãe</label
+              ><input
+                type="text"
+                name="telefoneMae"
+                value="{{ aluno.telefoneMae }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>WhatsApp Mãe</label
+              ><input
+                type="text"
+                name="whatsappMae"
+                value="{{ aluno.whatsappMae }}"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section class="section-card">
+          <div class="section-header">
+            <i data-lucide="heart"></i> Estado Civil Pais
+          </div>
+          <div class="grid-3">
+            <div class="input-group span-2">
+              <label>Situação</label>
+             <select name="estadoCivilPais">
+
+  <option value="Solteiro(a)" {% if aluno.estadoCivilPais|lower  == "solteiro(a)" %}selected{% endif %}>
+    Solteiro(a)
+  </option>
+
+  <option value="Casado(a)" {% if aluno.estadoCivilPais|lower   == "casado(a)" %}selected{% endif %}>
+    Casado(a)
+  </option>
+
+  <option value="Divorciado(a)" {% if aluno.estadoCivilPais|lower  == "divorciado(a)" %}selected{% endif %}>
+    Divorciado(a)
+  </option>
+
+  <option value="Separado(a)" {% if aluno.estadoCivilPais|lower  == "separado(a)" %}selected{% endif %}>
+    Separado(a)
+  </option>
+
+  <option value="Viúvo(a)" {% if aluno.estadoCivilPais|lower  == "viúvo(a)" %}selected{% endif %}>
+    Viúvo(a)
+  </option>
+
+  <option value="União estável" {% if aluno.estadoCivilPais|lower  == "união estável" %}selected{% endif %}>
+    União estável
+  </option>
+
+</select>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-card">
+          <div class="section-header">
+            <i data-lucide="shield-check"></i> Dados do Responsável
+          </div>
+          <div class="grid-3">
+            <div class="input-group full">
+              <label>Responsável por este aluno:</label>
+              <select name="responsavel" id="selectResp">
+
+  <option value="PAIS" {% if aluno.tipoResponsavel == "PAIS" %}selected{% endif %}>
+    Pais
+  </option>
+
+  <option value="OUTRO" {% if aluno.tipoResponsavel == "OUTRO" %}selected{% endif %}>
+    Outro
+  </option>
+
+</select>
+            </div>
+            <div
+              id="cardResp"
+              class="full grid-3 conditional-input"
+              style="padding-top: 15px"
+            >
+              <div class="input-group full">
+                <label>Nome Responsável</label
+                ><input
+                  type="text"
+                  name="nomeResponsavel"
+                  value="{{ aluno.nomeResponsavel }}"
+                />
+              </div>
+              <div class="input-group">
+                <label>Parentesco</label
+                ><input
+                  type="text"
+                  name="parentesco"
+                  value="{{ aluno.parentesco }}"
+                />
+              </div>
+              <div class="input-group">
+                <label>CPF Responsável</label
+                ><input
+                  type="text"
+                  name="cpfResponsavel"
+                  value="{{ aluno.cpfResponsavel }}" class="cpf-input" 
+                placeholder="000.000.000-00"
+              />
+              <div class="cpf-status"></div>
+              </div>
+              <div class="input-group">
+                <label>RG Responsável</label
+                ><input
+                  type="text"
+                  name="rgResponsavel"
+                  value="{{ aluno.rgResponsavel }}"
+                />
+              </div>
+              <div class="input-group">
+                <label>Órgão Emissor</label
+                ><input
+                  type="text"
+                  name="orgaoEmissorResponsavel"
+                  value="{{ aluno.orgaoEmissorResponsavel }}"
+                />
+              </div>
+              <div class="input-group">
+                <label>Data Expedição</label
+                ><input
+                  type="date"
+                  name="dataExpedicaoResponsavel"
+                  value="{{ aluno.dataExpedicaoResponsavel|date:'Y-m-d' }}"
+                />
+              </div>
+              <div class="input-group">
+                <label>Profissão Responsável</label
+                ><input
+                  type="text"
+                  name="profissaoResponsavel"
+                  value="{{ aluno.profissaoResponsavel }}"
+                />
+              </div>
+              <div class="input-group">
+                <label>Telefone Responsável</label
+                ><input
+                  type="text"
+                  name="telefoneResponsavel"
+                  value="{{ aluno.telefoneResponsavel }}"
+                />
+              </div>
+              <div class="input-group">
+                <label>WhatsApp Responsável</label
+                ><input
+                  type="text"
+                  name="whatsappResponsavel"
+                  value="{{ aluno.whatsappResponsavel }}"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+<section class="section-card">
+  <div class="section-header">
+    <i data-lucide="map-pin"></i> Endereço
+  </div>
+
+  <div class="grid-3">
+
+    <div class="input-group full">
+      <label>Rua</label>
+      <input type="text" name="rua" value="{{ aluno.rua }}">
+    </div>
+
+    <div class="input-group">
+      <label>Bairro</label>
+      <input type="text" name="bairro" value="{{ aluno.bairro }}">
+    </div>
+
+    <div class="input-group">
+      <label>Cidade</label>
+      <input type="text" name="cidade" value="{{ aluno.cidade }}">
+    </div>
+
+    <div class="input-group">
+      <label>Estado</label>
+      <input type="text" name="estado" value="{{ aluno.estado }}">
+    </div>
+
+    <div class="input-group">
+      <label>CEP</label>
+      <input type="text" name="cep" value="{{ aluno.cep }}">
+    </div>
+
+    <div class="input-group">
+      <label>Situação Casa</label>
+
+      <select name="situacaoCasa">
+        <option value="Própria (quitada)" {% if aluno.situacaoCasa == "Própria (quitada)" %}selected{% endif %}>
+          Própria (quitada)
+        </option>
+
+        <option value="Alugada" {% if aluno.situacaoCasa == "Alugada" %}selected{% endif %}>
+          Alugada
+        </option>
+
+        <option value="Arrendada" {% if aluno.situacaoCasa == "Arrendada" %}selected{% endif %}>
+          Arrendada
+        </option>
+
+        <option value="Cedida" {% if aluno.situacaoCasa == "Cedida" %}selected{% endif %}>
+          Cedida
+        </option>
+
+        <option value="Cedida pelo empregador" {% if aluno.situacaoCasa == "Cedida pelo empregador" %}selected{% endif %}>
+          Cedida pelo empregador
+        </option>
+
+        <option value="Herdada" {% if aluno.situacaoCasa == "Herdada" %}selected{% endif %}>
+          Herdada
+        </option>
+
+        <option value="Ocupada / Posse" {% if aluno.situacaoCasa == "Ocupada / Posse" %}selected{% endif %}>
+          Ocupada / Posse
+        </option>
+
+      </select>
+    </div>
+
+  </div>
+</section>
+
+        <section class="section-card">
+          <div class="section-header">
+            <i data-lucide="phone-call"></i> Contatos de Emergência
+          </div>
+          <div class="grid-3">
+            <div class="input-group">
+              <label>Emergência 1 (Nome)</label
+              ><input
+                type="text"
+                name="nomeEmergencia1"
+                value="{{ aluno.nomeEmergencia1 }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>Telefone 1</label
+              ><input
+                type="text"
+                name="telefoneEmergencia1"
+                value="{{ aluno.telefoneEmergencia1 }}"
+              />
+            </div>
+            <div></div>
+            <div class="input-group">
+              <label>Emergência 2 (Nome)</label
+              ><input
+                type="text"
+                name="nomeEmergencia2"
+                value="{{ aluno.nomeEmergencia2 }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>Telefone 2</label
+              ><input
+                type="text"
+                name="telefoneEmergencia2"
+                value="{{ aluno.telefoneEmergencia2 }}"
+              />
+            </div>
+            <div></div>
+            <div class="input-group">
+              <label>Emergência 3 (Nome)</label
+              ><input
+                type="text"
+                name="nomeEmergencia3"
+                value="{{ aluno.nomeEmergencia3 }}"
+              />
+            </div>
+            <div class="input-group">
+              <label>Telefone 3</label
+              ><input
+                type="text"
+                name="telefoneEmergencia3"
+                value="{{ aluno.telefoneEmergencia3 }}"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section class="section-card">
+  <div class="section-header">
+    <i data-lucide="heart-pulse"></i> Ficha de Saúde e Social
+  </div>
+
+  <div class="grid-3">
+
+    <!-- Problema Saúde -->
+    <div class="health-grid-item">
+      <div class="input-group">
+        <label>Problema Saúde?</label>
+        <select name="problemaSaude" class="toggle-health">
+          <option value="NAO" {% if aluno.problemaSaude == "NAO" %}selected{% endif %}>Não</option>
+          <option value="SIM" {% if aluno.problemaSaude == "SIM" %}selected{% endif %}>Sim</option>
+        </select>
+      </div>
+      <div class="input-group conditional-input">
+        <label>Qual Problema?</label>
+        <input type="text" name="problemaSaudeQual" value="{{ aluno.problemaSaudeQual }}">
+      </div>
+    </div>
+
+    <!-- Tratamento -->
+    <div class="health-grid-item">
+      <div class="input-group">
+        <label>Tratamento Saúde?</label>
+        <select name="tratamentoSaude" class="toggle-health">
+  <option value="NAO" {% if aluno.tratamentoSaude == "NAO" %}selected{% endif %}>Não</option>
+  <option value="SIM" {% if aluno.tratamentoSaude == "SIM" %}selected{% endif %}>Sim</option>
+</select>
+      </div>
+      <div class="input-group conditional-input">
+        <label>Qual Tratamento?</label>
+        <input type="text" name="tratamentoSaudeQual" value="{{ aluno.tratamentoSaudeQual }}">
+      </div>
+    </div>
+
+    <!-- Necessidade Especial -->
+    <div class="health-grid-item">
+      <div class="input-group">
+        <label>Necessidade Especial?</label>
+        <select name="necessidadeEspecial" class="toggle-health">
+          <option value="NAO" {% if aluno.necessidadeEspecial == "NAO" %}selected{% endif %}>Não</option>
+          <option value="SIM" {% if aluno.necessidadeEspecial == "SIM" %}selected{% endif %}>Sim</option>
+        </select>
+      </div>
+      <div class="input-group conditional-input">
+        <label>Qual Necessidade?</label>
+        <input type="text" name="necessidadeEspecialQual" value="{{ aluno.necessidadeEspecialQual }}">
+      </div>
+    </div>
+
+    <!-- Medicamento -->
+    <div class="health-grid-item">
+      <div class="input-group">
+        <label>Medicamento?</label>
+        <select name="medicamento" class="toggle-health">
+          <option value="NAO" {% if aluno.medicamento == "NAO" %}selected{% endif %}>Não</option>
+          <option value="SIM" {% if aluno.medicamento == "SIM" %}selected{% endif %}>Sim</option>
+        </select>
+      </div>
+      <div class="input-group conditional-input">
+        <label>Qual Medicamento?</label>
+        <input type="text" name="medicamentoQual" value="{{ aluno.medicamentoQual }}">
+      </div>
+    </div>
+
+    <!-- Internado -->
+    <div class="health-grid-item">
+      <div class="input-group">
+        <label>Já foi Internado?</label>
+        <select name="internado" class="toggle-health">
+          <option value="NAO" {% if aluno.internado == "NAO" %}selected{% endif %}>Não</option>
+          <option value="SIM" {% if aluno.internado == "SIM" %}selected{% endif %}>Sim</option>
+        </select>
+      </div>
+      <div class="input-group conditional-input">
+        <label>Motivo Internação</label>
+        <input type="text" name="internadoMotivo" value="{{ aluno.internadoMotivo }}">
+      </div>
+    </div>
+
+    <!-- Atendimento Especializado -->
+    <div class="health-grid-item">
+      <div class="input-group">
+        <label>Atend. Especializado?</label>
+        <select name="atendimentoEspecializado" class="toggle-health">
+          <option value="NAO" {% if aluno.atendimentoEspecializado == "NAO" %}selected{% endif %}>Não</option>
+          <option value="SIM" {% if aluno.atendimentoEspecializado == "SIM" %}selected{% endif %}>Sim</option>
+        </select>
+      </div>
+      <div class="input-group conditional-input">
+        <label>Motivo Atendimento</label>
+        <input type="text" name="atendimentoEspecializadoMotivo" value="{{ aluno.atendimentoEspecializadoMotivo }}">
+      </div>
+    </div>
+
+    <!-- Sala Recurso -->
+    <div class="health-grid-item">
+      <div class="input-group">
+        <label>Sala Recurso?</label>
+        <select name="salaRecurso" class="toggle-health">
+          <option value="NAO" {% if aluno.salaRecurso == "NAO" %}selected{% endif %}>Não</option>
+          <option value="SIM" {% if aluno.salaRecurso == "SIM" %}selected{% endif %}>Sim</option>
+        </select>
+      </div>
+      <div class="input-group conditional-input">
+        <label>Motivo Sala Recurso</label>
+        <input type="text" name="salaRecursoMotivo" value="{{ aluno.salaRecursoMotivo }}">
+      </div>
+    </div>
+
+    <!-- Gestação -->
+    <div class="health-grid-item">
+      <div class="input-group">
+        <label>Gestação?</label>
+        <select name="gestacao" class="toggle-health">
+          <option value="NAO" {% if aluno.gestacao == "NAO" %}selected{% endif %}>Não</option>
+          <option value="SIM" {% if aluno.gestacao == "SIM" %}selected{% endif %}>Sim</option>
+        </select>
+      </div>
+      <div class="input-group conditional-input">
+        <label>Motivo Gestação</label>
+        <input type="text" name="gestacaoMotivo" value="{{ aluno.gestacaoMotivo }}">
+      </div>
+    </div>
+
+    <!-- Tipo de Parto -->
+    <div class="input-group">
+      <label>Tipo de Parto</label>
+      <select name="tipoDeParto">
+        <option value="">Selecione...</option>
+        <option value="Parto normal (vaginal)" {% if aluno.tipoDeParto == "Parto normal (vaginal)" %}selected{% endif %}>Parto normal (vaginal)</option>
+        <option value="Parto natural" {% if aluno.tipoDeParto == "Parto natural" %}selected{% endif %}>Parto natural</option>
+        <option value="Parto cesáreo (cesariana)" {% if aluno.tipoDeParto == "Parto cesáreo (cesariana)" %}selected{% endif %}>Parto cesáreo (cesariana)</option>
+        <option value="Parto induzido" {% if aluno.tipoDeParto == "Parto induzido" %}selected{% endif %}>Parto induzido</option>
+        <option value="Parto fórceps" {% if aluno.tipoDeParto == "Parto fórceps" %}selected{% endif %}>Parto fórceps</option>
+        <option value="Parto com vácuo extrator" {% if aluno.tipoDeParto == "Parto com vácuo extrator" %}selected{% endif %}>Parto com vácuo extrator</option>
+        <option value="Parto domiciliar" {% if aluno.tipoDeParto == "Parto domiciliar" %}selected{% endif %}>Parto domiciliar</option>
+      </select>
+    </div>
+
+    <!-- CRAS -->
+    <div class="health-grid-item">
+      <div class="input-group">
+        <label>CRAS?</label>
+        <select name="cras" class="toggle-health">
+          <option value="NAO" {% if aluno.cras == "NAO" %}selected{% endif %}>Não</option>
+          <option value="SIM" {% if aluno.cras == "SIM" %}selected{% endif %}>Sim</option>
+        </select>
+      </div>
+      <div class="input-group conditional-input">
+        <label>Motivo CRAS</label>
+        <input type="text" name="crasMotivo" value="{{ aluno.crasMotivo }}">
+      </div>
+    </div>
+
+    <!-- Visita Social -->
+    <div class="health-grid-item">
+      <div class="input-group">
+        <label>Visita Social?</label>
+        <select name="visitaSocial" class="toggle-health">
+          <option value="NAO" {% if aluno.visitaSocial == "NAO" %}selected{% endif %}>Não</option>
+          <option value="SIM" {% if aluno.visitaSocial == "SIM" %}selected{% endif %}>Sim</option>
+        </select>
+      </div>
+      <div class="input-group conditional-input">
+        <label>Motivo Visita</label>
+        <input type="text" name="visitaSocialMotivo" value="{{ aluno.visitaSocialMotivo }}">
+      </div>
+    </div>
+
+    <!-- Conselho Tutelar -->
+    <div class="health-grid-item">
+      <div class="input-group">
+        <label>Conselho Tutelar?</label>
+        <select name="conselhoTutelar" class="toggle-health">
+          <option value="NAO" {% if aluno.conselhoTutelar == "NAO" %}selected{% endif %}>Não</option>
+          <option value="SIM" {% if aluno.conselhoTutelar == "SIM" %}selected{% endif %}>Sim</option>
+        </select>
+      </div>
+      <div class="input-group conditional-input">
+        <label>Motivo Conselho</label>
+        <input type="text" name="conselhoTutelarMotivo" value="{{ aluno.conselhoTutelarMotivo }}">
+      </div>
+    </div>
+    <!-- Conselho Tutelar -->
+    <div class="health-grid-item">
+      <div class="input-group">
+        <label>Recebe atendimento domiciliar?</label>
+        <select name="atendimentoDomiciliar" class="toggle-health">
+          <option value="NAO" {% if aluno.atendimentoDomiciliar == "NAO" %}selected{% endif %}>Não</option>
+          <option value="SIM" {% if aluno.atendimentoDomiciliar == "SIM" %}selected{% endif %}>Sim</option>
+        </select>
+      </div>
+      <div class="input-group conditional-input">
+        <label>Motivo ?</label>
+        <input type="text" name="atendimentoDomiciliarMotivo" value="{{ aluno.atendimentoDomiciliarMotivo}}">
+      </div>
+    </div>
+
+    <!-- Transporte -->
+    <div class="health-grid-item">
+      <div class="input-group">
+        <label>Transporte Escolar?</label>
+        <select name="trasporteEscolar" class="toggle-health">
+          <option value="NAO" {% if aluno.trasporteEscolar == "NAO" %}selected{% endif %}>Não</option>
+          <option value="SIM" {% if aluno.trasporteEscolar == "SIM" %}selected{% endif %}>Sim</option>
+        </select>
+      </div>
+      <div class="input-group conditional-input">
+        <label>Motivo Transporte</label>
+        <input type="text" name="trasporteEscolarMotivo" value="{{ aluno.trasporteEscolarMotivo }}">
+      </div>
+    </div>
+
+  </div>
+</section>
+        <div class="actions">
+          <button type="submit" class="btn btn-primary">Salvar Cadastro</button>
+        </div>
+      </form>
+    </main>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+  lucide.createIcons();
+
+  // IRMÃO
+  const selectIrmao = document.getElementById("selectIrmao");
+  const inputIrmao = document.getElementById("inputIrmao");
+
+  function verificarIrmao(){
+      if(selectIrmao){
+          inputIrmao.style.display =
+          selectIrmao.value.toUpperCase() === "SIM" ? "flex" : "none";
+      }
+  }
+
+  if(selectIrmao){
+      selectIrmao.addEventListener("change", verificarIrmao);
+      verificarIrmao();
+  }
+
+
+  // RESPONSÁVEL
+  const selectResp = document.getElementById("selectResp");
+  const cardResp = document.getElementById("cardResp");
+
+  function verificarResp(){
+      if(selectResp){
+          cardResp.style.display =
+          selectResp.value === "OUTRO" ? "grid" : "none";
+      }
+  }
+
+  if(selectResp){
+      selectResp.addEventListener("change", verificarResp);
+      verificarResp();
+  }
+
+
+  // SAÚDE
+  document.querySelectorAll(".toggle-health").forEach((select) => {
+
+      const container = select.closest(".health-grid-item");
+      const input = container.querySelector(".conditional-input");
+
+      function verificar(){
+          if(input){
+              const valor = select.value.toUpperCase();
+              input.style.display = valor === "SIM" ? "flex" : "none";
+          }
+      }
+
+      select.addEventListener("change", verificar);
+      verificar();
+
+  });
+
+});
+const camposCPF = document.querySelectorAll(".cpf-input");
+
+camposCPF.forEach(function(campo){
+
+    const status = campo.nextElementSibling;
+
+    campo.addEventListener("input", function(){
+
+        let numeros = campo.value.replace(/\D/g,"");
+
+        if(numeros.length > 11){
+            numeros = numeros.slice(0,11);
+        }
+
+        let valor = numeros;
+        valor = valor.replace(/(\d{3})(\d)/, "$1.$2");
+        valor = valor.replace(/(\d{3})(\d)/, "$1.$2");
+        valor = valor.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+
+        campo.value = valor;
+
+        if(numeros.length === 11){
+
+            if(validarCPF(numeros)){
+                status.textContent = "CPF válido";
+                status.className = "cpf-status cpf-valido";
+            }
+            else{
+                status.textContent = "CPF inválido";
+                status.className = "cpf-status cpf-invalido";
+            }
+
+        }else{
+            status.textContent = "";
+        }
+
+    });
+
+});
+function validarCPF(cpf){
+
+    if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
+
+    let soma = 0;
+    let resto;
+
+    for (let i = 1; i <= 9; i++)
+        soma += parseInt(cpf.substring(i - 1, i)) * (11 - i);
+
+    resto = (soma * 10) % 11;
+
+    if (resto === 10 || resto === 11) resto = 0;
+
+    if (resto !== parseInt(cpf.substring(9, 10))) return false;
+
+    soma = 0;
+
+    for (let i = 1; i <= 10; i++)
+        soma += parseInt(cpf.substring(i - 1, i)) * (12 - i);
+
+    resto = (soma * 10) % 11;
+
+    if (resto === 10 || resto === 11) resto = 0;
+
+    return resto === parseInt(cpf.substring(10, 11));
+}
+function confirmarExclusao() {
+
+    return confirm("⚠️ Tem certeza que deseja apagar esta criança do banco de dados?\n\nEssa ação não pode ser desfeita.");
+};
+</script>
+  </body>
+</html>
