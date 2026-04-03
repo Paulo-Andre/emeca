@@ -2,10 +2,11 @@ from django.contrib import admin
 from django.urls import path, include
 from .views import AccountCreateView
 from .import views 
+from django.shortcuts import redirect
 
 
 urlpatterns = [
-   
+    path('', lambda request: redirect('dashboard/')),  # 👈 AQUI
     path('cadastro', AccountCreateView.as_view(), name="cadastro"),
     path('dashboard/',views.dashboard, name="dashboard"),
     path('buscar/', views.buscar_cadrasto, name="buscar_cadrasto"),
