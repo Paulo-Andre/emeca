@@ -185,7 +185,14 @@ height:auto;
     {% endif %}
   </div>
 </td>
-<td colspan="4">IRMÃO NA ESCOLA:<div class="field">{{ aluno.temIrmaosEscola }} - {{ aluno.nomeIrmao }}</div></td>
+<td colspan="4">IRMÃO NA ESCOLA:<div class="field">
+  
+{% if aluno.temIrmaosEscola == "SIM" %}
+    {{ aluno.nomeIrmao}}
+    {% else %}
+      Não
+    {% endif %}
+</div></td>
 </tr>
 
 <tr class="section">
