@@ -101,6 +101,7 @@ def edit_aluno(request, id):
         aluno.alergiaAluno = request.POST.get('alergiaAluno', '').strip().upper()
         aluno.temIrmaosEscola = request.POST.get('temIrmaosEscola', '').strip().upper()
         aluno.nomeIrmao = request.POST.get('nomeIrmao', '').strip().upper()
+        aluno.escolaAnteriorAluno = request.POST.get('escolaAnteriorAluno', '').strip().upper()
 
         # ================= PAI =================
         aluno.nomePai = request.POST.get('nomePai', '').strip().upper()
@@ -230,6 +231,7 @@ def historico(request):
 
 
 def transferencia(request):
+    
     return render(request, "declaracoes/transferencia.html")
 def escolaridade(request):
     return render(request, "declaracoes/escolaridade.html")
@@ -344,7 +346,9 @@ def imprimirDeclaracao(request, id):
         "anoCursa": data.get("anoCursa"),
         "responsavel": data.get("responsavel"),
         "ano":data.get("ano"),
-        "data_atual": timezone.now()
+        "data_atual": timezone.now(),
+        "mostrar_assinatura": str(data.get("assinatura")).lower() == "true",
+        "mostrar_carimbo": str(data.get("carimbo")).lower() == "true",
     }
     mapa_templates = {
     "Escolaridade": "declaracoes/escolaridade.html",

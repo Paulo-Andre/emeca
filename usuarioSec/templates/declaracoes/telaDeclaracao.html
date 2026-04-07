@@ -151,10 +151,42 @@ display: flex;
     gap: 8px;
 }
 
+
 .btn-add:hover {
     background: #15803d;
 }
+/* CONTAINER */
+.check-assinatura label,
+.check-carimbo label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #333;
+}
 
+/* CHECKBOX BASE */
+.check-assinatura input[type="checkbox"],
+.check-carimbo input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #000; /* cor moderna */
+    cursor: pointer;
+    transition: transform 0.1s ease;
+}
+
+/* CLICK EFFECT */
+.check-assinatura input[type="checkbox"]:active,
+.check-carimbo input[type="checkbox"]:active {
+    transform: scale(0.9);
+}
+
+/* HOVER SUAVE */
+.check-assinatura label:hover,
+.check-carimbo label:hover {
+    color: #000;
+}
       .input-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
       
       /* CRITICAL: Esconder campos extras por padrão */
@@ -395,6 +427,19 @@ display: flex;
                       <label>Pai:</label>
                       <input type="text" id="pai-{{ aluno.id }}" value="{{aluno.nomePai}}">
                     </div>
+                    <div class="input-group full-width check-assinatura">
+  <label>
+    <input type="checkbox" id="assinatura-{{ aluno.id }}">
+    <span>Incluir Assinatura</span>
+  </label>
+</div>
+
+<div class="input-group full-width check-carimbo">
+  <label>
+    <input type="checkbox" id="carimbo-{{ aluno.id }}">
+    <span>Incluir Carimbo</span>
+  </label>
+</div>
                     
                     
                     <div class="input-group campo-extra extra-comparecimento-{{aluno.id}} full-width">
@@ -500,6 +545,8 @@ display: flex;
     const responsavel = document.getElementById('resp-'+id).value;
     const ano = document.getElementById('ano-'+id).value;
     const tipo  = tipoDec;
+    const assinatura = document.getElementById('assinatura-'+id).checked;
+const carimbo = document.getElementById('carimbo-'+id).checked;
      
 
     
@@ -521,7 +568,9 @@ display: flex;
             pai,
             tipo,
             responsavel,
-            anoCursa 
+            anoCursa,
+            assinatura,
+            carimbo
             
         })
     })

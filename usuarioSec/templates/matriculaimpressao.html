@@ -89,7 +89,7 @@ right:10px;
 top:10px;
 padding:10px 20px;
 }
-.header img{
+.header img, .autor{
 width:100%;
 height:auto;
 }
@@ -194,6 +194,9 @@ height:auto;
     {% endif %}
 </div></td>
 </tr>
+
+   
+  
 
 <tr class="section">
 <td colspan="6">FILIAÇÃO</td>
@@ -312,7 +315,11 @@ height:auto;
 </tr>
 
 <tr>
-<td colspan="6">ESCOLA DE ORIGEM:</td>
+<td colspan="6">ESCOLA DE ORIGEM: {% if aluno.escolaAnteriorAluno  %}
+      {{ aluno.escolaAnteriorAluno}}
+    {% else %}
+    
+    {% endif %}</td>
 </tr>
 
 <tr style="height:50px">
@@ -321,7 +328,7 @@ height:auto;
 </tr>
 
 </table>
-
+<div class="page-break"></div>
 <table>
 <colgroup>
 <col style="width:16.66%">
@@ -331,7 +338,7 @@ height:auto;
 <col style="width:16.66%">
 <col style="width:16.66%">
 </colgroup>
-<div class="page-break"></div>
+
 <tr class="section2">
 <td colspan="6">RENOVAÇÕES DE MATRÍCULA</td>
 </tr>
@@ -478,6 +485,65 @@ height:auto;
 </tr>
 
 </table>
+<div class="page-break"></div>
+
+<div style="font-family: Arial, sans-serif; margin: 40px; color: #000;">
+
+  <div style="max-width: 800px; margin: auto;">
+<img src="{% static 'imagens/timbragem.jpeg' %}" alt="" class="autor">
+    <h1 style="text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 30px;">
+      TERMO DE AUTORIZAÇÃO
+    </h1>
+
+    <p style="font-size: 16px; margin: 10px 0;">
+      Eu 
+      <span style="display: inline-block; border-bottom: 1px solid #000; min-width: 600px; height: 18px;"></span>
+    </p>
+
+    <p style="font-size: 16px; margin: 10px 0;">
+      na qualidade de responsável pelo(a) aluno(a)
+      <span style="display: inline-block; border-bottom: 1px solid #000; min-width: 300px; height: 18px;"></span>
+    </p>
+
+    
+
+    <p style="font-size: 16px; margin: 10px 0;">
+      venho através deste comunicar sobre a ENTRADA e SAÍDA do(a) referido(a) aluno(a) na escola.
+    </p>
+
+    <div style="margin: 15px 0; font-size: 16px;">
+      ( ) <strong style="font-weight: bold;">AUTORIZO</strong> a entrada e saída do(a) aluno(a) sem acompanhante.
+    </div>
+
+    <div style="margin: 15px 0; font-size: 16px;">
+      ( ) <strong style="font-weight: bold;">AUTORIZO</strong> o(a) aluno(a) a sair acompanhado das pessoas abaixo relacionadas, e na hipótese de exclusão de qualquer uma delas, a escola será imediatamente informada por escrito.
+    </div>
+
+    <p style="font-size: 16px; margin: 10px 0;">
+      1 
+      <span style="display: inline-block; border-bottom: 1px solid #000; min-width: 600px; height: 18px;"></span>
+    </p>
+
+    <p style="font-size: 16px; margin: 10px 0;">
+      2 
+      <span style="display: inline-block; border-bottom: 1px solid #000; min-width: 600px; height: 18px;"></span>
+    </p>
+
+    <p style="font-size: 16px; margin-top: 30px;">
+      Montes Claros _______/______/______
+    </p>
+
+    <div style="margin-top: 60px; text-align: center;">
+      <p style="margin-bottom: 5px;">
+        <span style="display: inline-block; border-bottom: 1px solid #000; min-width: 400px; height: 18px;"></span>
+      </p>
+      <p style="font-size: 14px;">Assinatura do Responsável</p>
+    </div>
+
+  </div>
+
+</div>
+
 
 </body>
 </html>

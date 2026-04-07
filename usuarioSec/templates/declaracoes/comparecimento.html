@@ -132,34 +132,46 @@ body {
 
 /* ASSINATURA */
 .signature-area {
-    margin-top: 100px;
-    margin-left:auto ;
-    margin-right:auto ;
-   
+    margin-top: 80px;
+    text-align: center;
+}
+.signature {
+    margin-bottom: 40px;
 }
 
-.signature {
-    text-align: center;
+.assinatura-box {
+    position: relative;
+    width: 300px;
+    margin: 0 auto;
 }
 
 .signature-line {
-    width: 280px;
     border-top: 1px solid #000;
-    margin-bottom: 5px;
-    margin-left:auto ;
-    margin-right:auto ;
+    margin-top: 30px;
+    margin:auto;
+    width:300px
 }
 
-.carimbo {
-    border: 1px dashed #999;
-    width: 140px;
-    height: 80px;
-    display: flex;
-    font-size: 9pt;
-    color: #555;
-    margin-left:auto ;
-    margin-right:auto ;
-    margin-top: 80px;
+.img-assinatura {
+    position: absolute;
+    top: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 180px;
+}
+
+/* CARIMBO */
+.carimbo-box {
+    margin-top: 20px;
+}
+
+.img-carimbo {
+    width: 220px;
+    position: relative;
+    top: -40px;
+    left: 10%;
+    transform: translateX(-50%);
+    
 }
 
 /* BOTÃO */
@@ -255,17 +267,29 @@ body {
     </div>
 
     <!-- ASSINATURA -->
-    <div class="signature-area">
-        <div class="signature">
-            <div class="signature-line"></div>
-            Funcionário Responsável
-        </div>
+      
+  <div class="signature-area">
 
-        <div class="carimbo">
-            Carimbo
+    <!-- ASSINATURA -->
+    {% if mostrar_assinatura %}
+    <div class="signature">
+        <div class="assinatura-box">
+            <img src="{% static 'imagens/assinatura.png' %}" class="img-assinatura">
+            
         </div>
+       
     </div>
+    {% endif %}
+<div class="signature-line"></div>
+Funcionário Responsável
+    <!-- CARIMBO -->
+    {% if mostrar_carimbo %}
+    <div class="carimbo-box">
+        <img src="{% static 'imagens/carimbo.png' %}" class="img-carimbo">
+    </div>
+    {% endif %}
 
+</div>
 </div>
 
 </body>

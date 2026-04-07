@@ -39,6 +39,7 @@ def cadastrar(request):
                 descricaoLaudo=dados.get('descricaoLaudo', '').strip().upper(),
                 descricaoBeneficio=dados.get('descricaoBeneficio', '').strip().upper(),
                 descricaoAlergia=dados.get('descricaoAlergia', '').strip().upper(),
+                escolaAnteriorAluno=dados.get('escolaAnteriorAluno', '').strip().upper(),
 
                 # ================= PAI =================
                 nomePai=dados.get('nomePai', '').strip().upper(),
