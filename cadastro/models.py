@@ -36,6 +36,7 @@ class matricula(models.Model):
 
     temIrmaosEscola = models.CharField(max_length=3, choices=SIM_NAO)
     nomeIrmao = models.CharField(max_length=255, blank=True, null=True)
+    escolaAnteriorAluno=models.CharField(max_length=255, blank=True, null=True)
 
     # ================= PAI =================
     nomePai = models.CharField(max_length=255, blank=True, null=True)
