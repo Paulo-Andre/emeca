@@ -223,21 +223,21 @@ body {
     <table class="student-data">
         <tr>
             <td class="label">Aluno(a)</td>
-            <td>LUCAS GABRIEL CONQUISTA DA SILVA</td>
+           <td>{{nome}}</td>
         </tr>
         <tr>
             <td class="label">Data de Nascimento</td>
-            <td>02/04/2014</td>
+             <td>{{nasc}}</td>
         </tr>
         <tr>
             <td class="label">Naturalidade</td>
-            <td>MONTES CLAROS - MG</td>
+            <td>{{naturalidade}}</td>
         </tr>
         <tr>
             <td class="label">Filiação</td>
-            <td>
-                CARLA GRACIELE SANTOS SILVA<br>
-                JURACI GOMES CONQUISTA
+             <td>
+                {{pai}}<br>
+                {{mae}}
             </td>
         </tr>
     </table>
@@ -265,13 +265,13 @@ body {
     </table> -->  
     
      <div class="content-text final">
-        Acima  identificado(a) <u><strong>COMCLUIU  em  2024 o 4º ANO DO ENSINO FUNDAMENTAL</u></strong><br>e está apto(a) a ingressar no <strong>5º ano do Ensino Fundamental</strong>.
+        Acima  identificado(a) <u><strong>COMCLUIU  em  {{ano}} o {{serie}}º ANO DO ENSINO FUNDAMENTAL</u></strong><br>e está apto(a) a ingressar no <strong>{{anoCursa}}º ano do Ensino Fundamental</strong>.
     </div>
-
+ 
 
     <!-- RODAPÉ -->
     <div class="footer">
-        Montes Claros, 5 de maio de 2025
+         Montes Claros, {{ data_atual|date:"d \\d\\e F \\d\\e Y" }}
     </div>
 
     <!-- ASSINATURA -->
