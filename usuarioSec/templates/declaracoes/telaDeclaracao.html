@@ -448,7 +448,9 @@ display: flex;
                       <label>Data que Compareceu:</label>
                       <input type="text" id="data-{{ aluno.id }}" placeholder="Data que Compareceu">
                       <label>Horário que Compareceu:</label>
-                      <input type="text" id="horario-{{ aluno.id }}" placeholder="Horario que Compareceu">
+                      <input type="text" id="horarioin-{{ aluno.id }}" placeholder="Horario que Compareceu">
+                      <label>Horário que terminou:</label>
+                      <input type="text" id="horariofim-{{ aluno.id }}" placeholder="Horario que Compareceu">
                     </div>
                     
                   </div>
@@ -547,12 +549,13 @@ display: flex;
     const pai = document.getElementById('pai-'+id).value;
     const anoCursa = document.getElementById('anoCursa-'+id).value;
     const responsavel = document.getElementById('resp-'+id).value;
-    const horario = document.getElementById('horario-'+id).value;
+    const horarioin = document.getElementById('horarioin-'+id).value;
+    const horariofim = document.getElementById('horariofim-'+id).value;
     const datareuniao = document.getElementById('data-'+id).value;
     const ano = document.getElementById('ano-'+id).value;
     const tipo  = tipoDec;
     const assinatura = document.getElementById('assinatura-'+id).checked;
-const carimbo = document.getElementById('carimbo-'+id).checked;
+   const carimbo = document.getElementById('carimbo-'+id).checked;
      
 
     
@@ -578,7 +581,8 @@ const carimbo = document.getElementById('carimbo-'+id).checked;
             assinatura,
             carimbo,
             datareuniao,
-            horario
+            horarioin,
+            horariofim,
             
         })
     })
