@@ -349,6 +349,9 @@ def imprimirDeclaracao(request, id):
         "data_atual": timezone.now(),
         "mostrar_assinatura": str(data.get("assinatura")).lower() == "true",
         "mostrar_carimbo": str(data.get("carimbo")).lower() == "true",
+        "horarioin": data.get("horarioin"),
+        "horariofim": data.get("horariofim"),
+        "datareuniao": data.get("datareuniao"),
     }
     mapa_templates = {
     "Escolaridade": "declaracoes/escolaridade.html",
