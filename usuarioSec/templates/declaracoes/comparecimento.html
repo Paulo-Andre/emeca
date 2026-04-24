@@ -218,18 +218,18 @@ body {
 
     <!-- TEXTO -->
     <div class="content-text">
-        Declaramos, para os devidos fins, que <strong><u>GRACIELE SANTOS SILVA</u></strong>, responsável legal pelo(a) estudante:
+        Declaramos, para os devidos fins, que <strong><u>{{responsavel}}</u></strong>, responsável legal pelo(a) estudante:
     </div>
 
     <!-- DADOS -->
     <table class="student-data">
         <tr>
             <td class="label">Aluno(a)</td>
-            <td>LUCAS GABRIEL CONQUISTA DA SILVA</td>
+              <td>{{nome}}</td>
         </tr>
         <tr>
             <td class="label">Data de Nascimento</td>
-            <td>02/04/2014</td>
+              <td>{{nasc}}</td>
         </tr>
         
     </table>
@@ -263,7 +263,7 @@ body {
 
     <!-- RODAPÉ -->
     <div class="footer">
-        Montes Claros, 5 de maio de 2025
+        Montes Claros, {{ data_atual|date:"d \\d\\e F \\d\\e Y" }}
     </div>
 
     <!-- ASSINATURA -->
