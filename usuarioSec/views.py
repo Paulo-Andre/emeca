@@ -333,8 +333,28 @@ def imprimirDeclaracao(request, id):
         nasc_formatado = datetime.strptime(nasc_str, "%Y-%m-%d").strftime("%d / %m / %Y")
     except:
         nasc_formatado = ""
+    # DATA REUNIÃO
+    datareuniao_str = data.get("datareuniao")
+    try:
+        datareuniao = datetime.strptime(datareuniao_str, "%Y-%m-%d").date()
+    except:
+        datareuniao = None
+
+    # HORÁRIOS
+    horarioin_str = data.get("horarioin")
+    horariofim_str = data.get("horariofim")
     
-   
+    try:
+        horarioin = datetime.strptime(horarioin_str, "%H:%M").time()
+    except:
+        horarioin = None
+    
+    try:
+        horariofim = datetime.strptime(horariofim_str, "%H:%M").time()
+    except:
+        horariofim = None
+        
+       
     
     contexto = {
         "nome": data.get("nome"),
@@ -349,9 +369,9 @@ def imprimirDeclaracao(request, id):
         "data_atual": timezone.now(),
         "mostrar_assinatura": str(data.get("assinatura")).lower() == "true",
         "mostrar_carimbo": str(data.get("carimbo")).lower() == "true",
-        "horarioin": data.get("horarioin"),
-        "horariofim": data.get("horariofim"),
-        "datareuniao": data.get("datareuniao"),
+        "horarioin": horarioin,
+        "horariofim": horariofim,
+        "datareuniao": datareuniao,
     }
     mapa_templates = {
     "Escolaridade": "declaracoes/escolaridade.html",
