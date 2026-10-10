@@ -180,11 +180,11 @@ function DuvidasMatricula() {
       {/* HEADER */}
       <header className="matricula-header">
         <div className="matricula-header-container">
-          <img src="/logo1.png" alt="Logo" className="matricula-logo" />
+          <img src="/static/matricula/logo1.png" alt="Logo" className="matricula-logo" />
 
           <nav className="matricula-nav">
             
-              <a href="https://emeca.pythonanywhere.com/"className="matricula-btn-nav">  Login</a>
+              <a href="/login/"className="matricula-btn-nav">  Login</a>
           </nav>
         </div>
       </header>
