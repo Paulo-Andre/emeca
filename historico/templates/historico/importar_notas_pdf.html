@@ -1,0 +1,239 @@
+{% extends 'historico/base.html' %}
+{% load static %}
+
+{% block title %}Importar notas por PDF{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'historico/css/importacao-alunos.css' %}?v=20261010-03">
+{% endblock %}
+
+{% block content %}
+<section class="import-heading">
+  <div>
+    <span class="eyebrow">ATUALIZAÇÃO ACADÊMICA</span>
+    <h1>Importar notas por PDF</h1>
+    <p>
+      Envie a ATA/PDF com nome do aluno, turma, ano letivo, série e, quando existirem, notas.
+      Cada turma é tratada como uma relação acadêmica própria. Transferências e registros
+      sem nota também são preservados.
+    </p>
+  </div>
+  <a class="btn" href="{% url 'historico:inicio' %}">Voltar</a>
+</section>
+
+<div class="safety-banner">
+  <strong>Histórico preservado.</strong>
+  <span>
+    Notas existentes nunca são substituídas. Se o mesmo aluno aparecer em outra turma
+    da mesma série, o sistema cria outra relação e mantém a anterior. Relações sem notas
+    são guardadas como inativas no histórico oficial.
+  </span>
+</div>
+
+{% if erro %}
+<div class="import-notice import-notice--error">
+  <strong>Não foi possível processar o PDF.</strong>
+  <span>{{ erro }}</span>
+</div>
+{% endif %}
+
+{% if resultado %}
+<section class="result-card">
+  <div class="result-card__icon">✓</div>
+  <div>
+    <h2>Importação concluída</h2>
+    <p>Os dados reconhecidos foram associados aos respectivos anos escolares.</p>
+    <div class="result-stats">
+      <span><strong>{{ resultado.alunos_criados }}</strong> alunos criados</span>
+      <span><strong>{{ resultado.alunos_localizados }}</strong> alunos localizados</span>
+      <span><strong>{{ resultado.registros_criados }}</strong> relações criadas</span>
+      <span><strong>{{ resultado.registros_existentes }}</strong> relações já existentes</span>
+      <span><strong>{{ resultado.notas_adicionadas }}</strong> notas adicionadas</span>
+      <span><strong>{{ resultado.notas_preservadas }}</strong> notas já existentes preservadas</span>
+      <span><strong>{{ resultado.conflitos|length }}</strong> conflitos</span>
+    </div>
+  </div>
+</section>
+
+{% if resultado.conflitos %}
+<section class="import-card">
+  <h2>Itens não aplicados</h2>
+  <div class="table-wrap">
+    <table class="preview-table">
+      <thead><tr><th>Aluno</th><th>Ano</th><th>Série</th><th>Motivo</th></tr></thead>
+      <tbody>
+      {% for item in resultado.conflitos %}
+        <tr>
+          <td>{{ item.nome }}</td>
+          <td>{{ item.ano }}</td>
+          <td>{{ item.serie }}º</td>
+          <td>{{ item.erro }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<section class="import-card import-card--compact">
+  <a class="btn primary" href="{% url 'historico:importar_notas_pdf' %}">Importar outro PDF</a>
+</section>
+
+{% else %}
+<section class="import-card">
+  <div class="import-card__heading">
+    <div>
+      <span class="step-number">01</span>
+      <div>
+        <h2>Selecione o PDF</h2>
+        <p>O PDF deve possuir texto selecionável e identificar ao menos aluno, ano e série. Linhas sem notas também podem representar uma relação válida.</p>
+      </div>
+    </div>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="upload-form">
+    {% csrf_token %}
+    <input type="hidden" name="acao" value="previsualizar">
+
+    <label class="upload-area">
+      <div class="upload-area__icon">PDF</div>
+      <div>
+        <strong>Escolher PDF de notas</strong>
+        <span id="arquivo-selecionado">Nenhum arquivo selecionado</span>
+        <small>Limite de 25 MB. Nada é alterado antes da confirmação.</small>
+      </div>
+      {{ formulario.arquivo }}
+    </label>
+    {{ formulario.arquivo.errors }}
+
+    <div class="upload-actions">
+      <button type="submit" class="btn primary" id="btn-analisar">Analisar PDF</button>
+    </div>
+  </form>
+</section>
+
+{% if previa %}
+<section class="import-card">
+  <div class="import-card__heading">
+    <div>
+      <span class="step-number">02</span>
+      <div>
+        <h2>Prévia da importação</h2>
+        <p>{{ arquivo_nome }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="preview-stats">
+    <div><span>Registros</span><strong>{{ previa.total }}</strong></div>
+    <div><span>Alunos existentes</span><strong>{{ previa.alunos_existentes }}</strong></div>
+    <div><span>Novos alunos</span><strong>{{ previa.alunos_novos }}</strong></div>
+    <div><span>Novas relações</span><strong>{{ previa.registros_novos }}</strong></div>
+  </div>
+
+  <div class="apply-warning">
+    <strong>Regra importante:</strong>
+    <span>
+      o sistema procura o aluno exclusivamente pelo nome no cadastro de alunos.
+      Se o nome já existir, usa esse mesmo aluno. Se não existir, cria um novo cadastro.
+      Cada combinação de aluno + ano + série + turma é tratada separadamente.
+      Nenhuma nota, turma ou relação antiga é apagada ou sobrescrita. Relações sem
+      notas são mantidas no banco, mas não entram no histórico oficial até serem ativadas.
+    </span>
+  </div>
+
+  <div class="table-wrap">
+    <table class="preview-table">
+      <thead>
+        <tr>
+          <th>Aluno</th>
+          <th>Turma</th>
+          <th>Ano</th>
+          <th>Série</th>
+          <th>Notas</th>
+          <th>Ação</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for item in previa.itens|slice:":60" %}
+        <tr>
+          <td>{{ item.nome }}</td>
+          <td>{{ item.turma|default:"—" }}</td>
+          <td>{{ item.ano }}</td>
+          <td>{{ item.serie }}º</td>
+          <td>
+            {% if item.quantidade_notas %}
+              <details>
+                <summary>{{ item.quantidade_notas }} nota(s)</summary>
+                {% for nota in item.notas_legiveis %}
+                  <div>
+                    {{ nota.componente }}: {{ nota.valor }}
+                    {% if nota.ja_existe %}<small>— já existe, será preservada</small>{% endif %}
+                  </div>
+                {% endfor %}
+              </details>
+            {% else %}
+              <span class="status-badge status-badge--warning">Sem notas · relação preservada</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if item.status == "completar" %}
+              <span class="status-badge status-badge--update">Adicionar apenas o que faltar</span>
+            {% elif item.status == "novo_registro" %}
+              <span class="status-badge status-badge--new">Criar relação de turma</span>
+            {% elif item.status == "novo_aluno" %}
+              <span class="status-badge status-badge--new">Criar aluno + relação</span>
+            {% else %}
+              <span class="status-badge status-badge--warning">Conferir</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="confirm-actions">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="acao" value="cancelar">
+      <button type="submit" class="btn">Cancelar</button>
+    </form>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="acao" value="aplicar">
+      <button type="submit" class="btn primary">Aplicar relações e notas ao banco</button>
+    </form>
+  </div>
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const input = document.querySelector('input[type="file"][name="arquivo"]');
+  const nome = document.getElementById("arquivo-selecionado");
+  const form = document.querySelector(".upload-form");
+  const botao = document.getElementById("btn-analisar");
+
+  if (input && nome) {
+    input.addEventListener("change", function () {
+      nome.textContent = input.files && input.files.length
+        ? input.files[0].name
+        : "Nenhum arquivo selecionado";
+    });
+  }
+
+  if (form && botao) {
+    form.addEventListener("submit", function () {
+      if (!input || !input.files || !input.files.length) return;
+      botao.disabled = true;
+      botao.textContent = "Carregando e analisando...";
+    });
+  }
+})();
+</script>
+{% endblock %}

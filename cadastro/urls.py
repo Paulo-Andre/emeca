@@ -1,11 +1,17 @@
+from django.urls import path, re_path
 
-from django.urls import path 
 from . import views
 
+
 urlpatterns = [
-    path('matricula/',views.cadastrar, name="matricula"),
-    
-    
-    
-   
+    path(
+        "api/public/matricula/",
+        views.cadastrar,
+        name="matricula_api",
+    ),
+    re_path(
+        r"^matricula(?:/(?P<subpath>.*))?$",
+        views.matricula_publica,
+        name="matricula_publica",
+    ),
 ]

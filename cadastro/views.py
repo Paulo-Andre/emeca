@@ -1,10 +1,23 @@
 import json
+import logging
+
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from .models import matricula  
+from django.shortcuts import render
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.http import require_POST
+
+from .models import matricula
 
 
-@csrf_exempt
+logger = logging.getLogger(__name__)
+
+
+@ensure_csrf_cookie
+def matricula_publica(request, subpath=""):
+    return render(request, "cadastro/matricula_publica.html")
+
+
+@require_POST
 def cadastrar(request):
     if request.method == 'POST':
         try:
@@ -127,13 +140,25 @@ def cadastrar(request):
                 trasporteEscolar=dados.get('transporteEscolar', '').upper(),
                 trasporteEscolarMotivo=dados.get('transporteEscolarMotivo', '').strip().upper(),
             )
-            print("📦 RECEBIDO:", dados)
             nova_matricula.save()
 
             return JsonResponse({"status": "sucesso"}, status=201)
 
-        except Exception as e:
-            return JsonResponse({"status": "erro", "mensagem": str(e)}, status=400)
-
-    return JsonResponse({"status": "erro"}, status=405)
+        except (json.JSONDecodeError, TypeError, ValueError, AttributeError):
+            return JsonResponse(
+                {
+                    "status": "erro",
+                    "mensagem": "Não foi possível validar os dados enviados.",
+                },
+                status=400,
+            )
+        except Exception:
+            logger.exception("Falha ao registrar matrícula pública.")
+            return JsonResponse(
+                {
+                    "status": "erro",
+                    "mensagem": "Não foi possível concluir a matrícula.",
+                },
+                status=500,
+            )
 

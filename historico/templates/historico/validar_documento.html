@@ -1,0 +1,73 @@
+{% extends 'historico/base.html' %}
+{% load privacy %}
+
+{% block title %}Validar Histórico Escolar{% endblock %}
+
+{% block content %}
+<section class="validation-shell">
+  <div class="validation-card">
+    <div class="validation-card__seal {% if validacao.valido %}is-valid{% else %}is-invalid{% endif %}">
+      {% if validacao.valido %}✓{% else %}!{% endif %}
+    </div>
+
+    <div class="validation-card__content">
+      <span class="eyebrow">VALIDAÇÃO PÚBLICA</span>
+      <h1>
+        {% if validacao.valido %}
+          Documento autêntico
+        {% elif validacao.revogado %}
+          Documento revogado
+        {% else %}
+          Documento com falha de integridade
+        {% endif %}
+      </h1>
+
+      <p>
+        Esta página confirma a autenticidade criptográfica do histórico emitido
+        pela Escola Municipal Egídio Cordeiro Aquino.
+      </p>
+
+      <dl class="validation-grid">
+        <div>
+          <dt>Aluno</dt>
+          <dd>{{ nome_mascarado }}</dd>
+        </div>
+        <div>
+          <dt>Código</dt>
+          <dd>{{ codigo_mascarado }}</dd>
+        </div>
+        <div>
+          <dt>Emitido em</dt>
+          <dd>{{ documento.emitido_em|date:"d/m/Y H:i" }}</dd>
+        </div>
+        <div>
+          <dt>Última série</dt>
+          <dd>{% if ultima_serie %}{{ ultima_serie }}º ano{% else %}—{% endif %}</dd>
+        </div>
+        <div>
+          <dt>Data de conclusão</dt>
+          <dd>{{ data_conclusao|default:"—" }}</dd>
+        </div>
+        <div>
+          <dt>Integridade SHA-256</dt>
+          <dd><code>{{ documento.hash_sha256|slice:":20" }}…</code></dd>
+        </div>
+      </dl>
+
+      {% if documento.revogado %}
+      <div class="validation-warning">
+        <strong>Este documento foi revogado.</strong>
+        {% if documento.motivo_revogacao %}
+          <span>{{ documento.motivo_revogacao }}</span>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <p class="validation-privacy">
+        Por privacidade e LGPD, esta página pública exibe apenas dados mínimos e mascarados.
+        CPF, filiação, endereço, notas e demais dados acadêmicos não são expostos.
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}
