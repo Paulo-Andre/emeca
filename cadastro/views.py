@@ -1,7 +1,10 @@
 import json
+import logging
 from django.http import JsonResponse, FileResponse, HttpResponseNotFound
 from django.views.decorators.csrf import csrf_exempt
 from .models import matricula  
+
+logger = logging.getLogger(__name__)
 from django.conf import settings
 from pathlib import Path
 
@@ -9,14 +12,39 @@ from pathlib import Path
 @csrf_exempt
 def cadastrar(request):
     if request.method == 'POST':
+        if request.content_type != "application/json":
+            return JsonResponse(
+                {"status": "erro", "mensagem": "Conteúdo deve ser JSON."},
+                status=415,
+            )
+
+        tamanho = request.META.get("CONTENT_LENGTH")
+        if tamanho and int(tamanho) > 256 * 1024:
+            return JsonResponse(
+                {"status": "erro", "mensagem": "Dados enviados excedem o limite permitido."},
+                status=413,
+            )
+
         try:
-            dados = json.loads(request.body.decode('utf-8'))
+            dados = json.loads(request.body.decode("utf-8"))
+            if not isinstance(dados, dict):
+                return JsonResponse(
+                    {"status": "erro", "mensagem": "Formato de dados inválido."},
+                    status=400,
+                )
+
+            nome_aluno = str(dados.get("nomeDoAluno", "")).strip()
+            if not nome_aluno:
+                return JsonResponse(
+                    {"status": "erro", "mensagem": "Informe o nome do aluno."},
+                    status=400,
+                )
             
 
             nova_matricula = matricula(
 
                 # ================= ALUNO =================
-                nomeDoAluno=dados.get('nomeDoAluno', '').strip().upper(),
+                nomeDoAluno=nome_aluno.upper(),
                 nacionaliadeAluno=dados.get('nacionalidadeAluno', '').strip().upper(),
                 natularidadeAluno=dados.get('naturalidadeAluno', '').strip().upper(),
                 ufAluno=dados.get('ufAluno', '').strip().upper(),
@@ -33,7 +61,7 @@ def cadastrar(request):
                 cepAluno=dados.get('cepAluno'),
 
                 laudoAluno=dados.get('possuiLaudoAluno', '').upper(),
-                recebeBeneficioAluno=dados.get('recebeBeneficioAluno').upper(),
+                recebeBeneficioAluno=dados.get('recebeBeneficioAluno', '').upper(),
                 alergiaAluno=dados.get('alergiaAluno', '').upper(),
                 temIrmaosEscola=dados.get('temIrmaosEscola', '').upper(),
                 nomeIrmao=dados.get('nomeIrmao', '').strip().upper(),
@@ -129,13 +157,22 @@ def cadastrar(request):
                 trasporteEscolar=dados.get('transporteEscolar', '').upper(),
                 trasporteEscolarMotivo=dados.get('transporteEscolarMotivo', '').strip().upper(),
             )
-            print("📦 RECEBIDO:", dados)
+            nova_matricula.full_clean()
             nova_matricula.save()
 
             return JsonResponse({"status": "sucesso"}, status=201)
 
-        except Exception as e:
-            return JsonResponse({"status": "erro", "mensagem": str(e)}, status=400)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return JsonResponse(
+                {"status": "erro", "mensagem": "JSON inválido."},
+                status=400,
+            )
+        except Exception:
+            logger.exception("Falha ao processar matrícula pública.")
+            return JsonResponse(
+                {"status": "erro", "mensagem": "Não foi possível salvar a matrícula."},
+                status=400,
+            )
 
     return JsonResponse({"status": "erro"}, status=405)
 
