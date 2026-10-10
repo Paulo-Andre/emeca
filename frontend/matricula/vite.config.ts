@@ -1,14 +1,28 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
-// https://vite.dev/config/
 export default defineConfig({
-   plugins: [react()],
+  base: "/static/matricula/",
+  plugins: [react()],
+  build: {
+    outDir: "../../App/static/matricula",
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        entryFileNames: "app.js",
+        chunkFileNames: "chunks/[name]-[hash].js",
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name?.endsWith(".css")) {
+            return "app.css";
+          }
+          return "assets/[name][extname]";
+        },
+      },
+    },
+  },
   server: {
     watch: {
-      usePolling: true
-    }
-  }
-})
-
-
+      usePolling: true,
+    },
+  },
+});
