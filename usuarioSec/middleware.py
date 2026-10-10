@@ -1,21 +1,18 @@
-# middleware.py
-
 from django.shortcuts import redirect
 from django.urls import reverse
 
 class LoginRequiredMiddleware:
+    PUBLIC_PREFIXES = ("/static/", "/historico/validar/", "/matricula-online/")
+
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        allowed_urls = [
-            reverse('login'),
-            reverse('matricula'),
-            
-            
-        ]
+        if request.user.is_authenticated:
+            return self.get_response(request)
 
-        if not request.user.is_authenticated and request.path not in allowed_urls:
-            return redirect('login')
+        allowed_urls = {reverse("login"), reverse("matricula")}
+        if request.path in allowed_urls or request.path.startswith(self.PUBLIC_PREFIXES):
+            return self.get_response(request)
 
-        return self.get_response(request)
+        return redirect(f"{reverse('login')}?next={request.get_full_path()}")

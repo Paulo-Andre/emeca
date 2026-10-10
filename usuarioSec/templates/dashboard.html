@@ -33,11 +33,11 @@
         Declarações
       </a>
 
-      <a class="nav-item">
+      <a class="nav-item" href="{% url 'historico:inicio' %}">
         <i data-lucide="clock"></i>
-        Histórico
+        Histórico Escolar
       </a>
-      {% if request.user.username == "Paulo" %}
+      {% if request.user.is_superuser or perms.auth.add_user %}
     <div class="grupo-botoes">
          <a class="nav-item" href="{% url 'cadastro' %}">
         <i data-lucide="user-plus"></i>
@@ -104,7 +104,8 @@
       </div>
 
       <div class="results-container">
-        {% if True %}
+        {% if pesquisa_realizada %}
+          {% if alunos %}
         <table>
           <thead>
             <tr>
@@ -137,8 +138,10 @@
                 </div>
               </td>
             </tr>
-            {% endfor %}            
-        {% else %}
+            {% endfor %}
+          </tbody>
+        </table>
+          {% else %}
         <div class="empty-state">
           <i
             data-lucide="search-x"
@@ -146,6 +149,12 @@
             style="margin-bottom: 10px; opacity: 0.5"
           ></i>
           <p>Nenhum aluno encontrado para esta pesquisa.</p>
+        </div>
+          {% endif %}
+        {% else %}
+        <div class="empty-state">
+          <i data-lucide="search" size="48" style="margin-bottom: 10px; opacity: 0.5"></i>
+          <p>Digite um nome ou CPF e clique em Pesquisar.</p>
         </div>
         {% endif %}
       </div>

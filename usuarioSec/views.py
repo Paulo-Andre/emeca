@@ -22,14 +22,18 @@ from django.utils.decorators import method_decorator
 
 User = get_user_model()
 
-def apenas_paulo(view_func):
+def usuario_administrador(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
-        if request.user.username != "Paulo":
+        if not (
+            request.user.is_authenticated
+            and (request.user.is_superuser or request.user.has_perm("auth.add_user"))
+        ):
             return HttpResponseForbidden("Acesso negado")
         return view_func(request, *args, **kwargs)
     return _wrapped_view
-@method_decorator(apenas_paulo, name='dispatch') 
+
+@method_decorator(usuario_administrador, name='dispatch')
 class AccountCreateView(CreateView):
     model = User
     template_name = 'registration/signup_form.html'
@@ -43,7 +47,10 @@ class AccountCreateView(CreateView):
         return super().form_valid(form)
     
 def dashboard(request):
-    return render(request, 'dashboard.html')
+    return render(request, "dashboard.html", {
+        "alunos": None,
+        "pesquisa_realizada": False,
+    })
 
 
 def buscar_cadrasto(request):
@@ -71,7 +78,8 @@ def buscar_cadrasto(request):
             )
 
     contexto = {
-        "alunos": resultados
+        "alunos": resultados,
+        "pesquisa_realizada": bool(valor),
     }
     # fallback normal
     return render(request, "dashboard.html", contexto)
@@ -241,7 +249,7 @@ def comparecimento(request):
     return render(request, "declaracoes/comparecimento.html")
 def telaDeclaracao(request):
     return render(request, "declaracoes/telaDeclaracao.html")
-@apenas_paulo 
+@usuario_administrador 
 def importar_alunos(request):
 
     if request.method == "POST":
@@ -410,7 +418,7 @@ def cadastrar_aluno(request):
             nomeMae=request.POST.get("nomeMae"),
         )
         return redirect('telaDeclaracao')  
-@apenas_paulo   
+@usuario_administrador   
 def apagar_todos_alunos(request):
         if request.user.is_superuser:
 
@@ -421,7 +429,7 @@ def apagar_todos_alunos(request):
                 messages.success(request, "Todos os alunos foram apagados com sucesso!")
 
         return redirect('dashboard')
-@apenas_paulo    
+@usuario_administrador    
 def apagar_todos_alunos_matricula(request):
         if request.user.is_superuser:
 

@@ -1,0 +1,246 @@
+{% extends 'historico/base.html' %}
+{% load static %}
+
+{% block title %}Atualizar lista de alunos{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'historico/css/importacao-alunos.css' %}?v=20261010-01">
+{% endblock %}
+
+{% block content %}
+<section class="import-heading">
+  <div>
+    <span class="eyebrow">ATUALIZAÇÃO EM LOTE</span>
+    <h1>Atualizar lista de alunos</h1>
+    <p>
+      Envie a lista oficial em XLS ou XLSX. Alunos encontrados são atualizados,
+      novos alunos são cadastrados e alunos que já estão no banco mas não aparecem
+      no arquivo permanecem normalmente no sistema.
+    </p>
+  </div>
+  <a class="btn" href="{% url 'historico:inicio' %}">Voltar</a>
+</section>
+
+<div class="safety-banner">
+  <strong>Nenhum aluno é excluído por esta importação.</strong>
+  <span>Uma célula vazia na planilha também não apaga um dado já cadastrado.</span>
+</div>
+
+{% if erro %}
+<div class="import-notice import-notice--error">
+  <strong>Não foi possível processar a lista.</strong>
+  <span>{{ erro }}</span>
+</div>
+{% endif %}
+
+{% if resultado %}
+<section class="result-card">
+  <div class="result-card__icon">✓</div>
+  <div>
+    <h2>Atualização concluída</h2>
+    <p>A lista foi processada sem excluir os alunos que não estavam no arquivo.</p>
+    <div class="result-stats">
+      <span><strong>{{ resultado.criados }}</strong> novos alunos</span>
+      <span><strong>{{ resultado.atualizados }}</strong> atualizados</span>
+      <span><strong>{{ resultado.sem_alteracao }}</strong> sem alteração</span>
+      <span><strong>{{ resultado.conflitos|length }}</strong> conflitos ignorados</span>
+    </div>
+  </div>
+</section>
+
+{% if resultado.conflitos %}
+<section class="import-card">
+  <h2>Linhas que precisam de conferência</h2>
+  <p class="muted">Essas linhas não foram aplicadas para evitar atualizar o aluno errado.</p>
+  <div class="table-wrap">
+    <table class="preview-table">
+      <thead>
+        <tr><th>Linha</th><th>Aluno</th><th>Motivo</th></tr>
+      </thead>
+      <tbody>
+        {% for item in resultado.conflitos %}
+        <tr>
+          <td>{{ item.linha }}</td>
+          <td>{{ item.nome }}</td>
+          <td>{{ item.erro }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<section class="import-card import-card--compact">
+  <a class="btn primary" href="{% url 'historico:importar_lista_alunos' %}">Enviar outra lista</a>
+</section>
+{% else %}
+
+<section class="import-card">
+  <div class="import-card__heading">
+    <div>
+      <span class="step-number">01</span>
+      <div>
+        <h2>Selecione a lista</h2>
+        <p>O sistema identifica automaticamente a linha de cabeçalho e as colunas conhecidas.</p>
+      </div>
+    </div>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="upload-form">
+    {% csrf_token %}
+    <input type="hidden" name="acao" value="previsualizar">
+    <label class="upload-area">
+      <div class="upload-area__icon">XLS</div>
+      <div>
+        <strong>Escolher arquivo .xls ou .xlsx</strong>
+        <span id="arquivo-selecionado">Nenhum arquivo selecionado</span>
+        <small>Limite de 15 MB. Nenhum dado é alterado nesta primeira etapa.</small>
+      </div>
+      {{ formulario.arquivo }}
+    </label>
+    {{ formulario.arquivo.errors }}
+    <div class="upload-actions">
+      <button type="submit" class="btn primary" id="btn-analisar">Analisar lista</button>
+    </div>
+  </form>
+</section>
+
+{% if previa and leitura %}
+<section class="import-card">
+  <div class="import-card__heading">
+    <div>
+      <span class="step-number">02</span>
+      <div>
+        <h2>Prévia antes de atualizar</h2>
+        <p>{{ arquivo_nome }} · Planilha “{{ leitura.planilha }}” · cabeçalho na linha {{ leitura.linha_cabecalho }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="preview-stats">
+    <div><span>Total da lista</span><strong>{{ previa.total }}</strong></div>
+    <div><span>Já existentes</span><strong>{{ previa.existentes }}</strong></div>
+    <div><span>Novos</span><strong>{{ previa.novos }}</strong></div>
+    <div class="{% if previa.conflitos %}has-warning{% endif %}">
+      <span>Conflitos</span><strong>{{ previa.conflitos }}</strong>
+    </div>
+  </div>
+
+  <div class="detected-fields">
+    <strong>Colunas reconhecidas:</strong>
+    {% for campo in leitura.campos_rotulos %}
+      <span>{{ campo }}</span>
+    {% endfor %}
+  </div>
+
+  {% if leitura.ignorados %}
+  <details class="ignored-fields">
+    <summary>Ver cabeçalhos não utilizados</summary>
+    <p>
+      {% for campo in leitura.ignorados %}
+        <code>{{ campo }}</code>{% if not forloop.last %}, {% endif %}
+      {% endfor %}
+    </p>
+  </details>
+  {% endif %}
+
+  <div class="table-wrap">
+    <table class="preview-table">
+      <thead>
+        <tr>
+          <th>Linha</th>
+          <th>Nome</th>
+          <th>Nascimento</th>
+          <th>Ação prevista</th>
+          <th>Como foi localizado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in previa.itens|slice:":40" %}
+        <tr>
+          <td>{{ item.linha }}</td>
+          <td>{{ item.nome }}</td>
+          <td>{{ item.nascimento|default:"—" }}</td>
+          <td>
+            {% if item.status == "atualizar" %}
+              <span class="status-badge status-badge--update">Atualizar</span>
+            {% elif item.status == "novo" %}
+              <span class="status-badge status-badge--new">Cadastrar</span>
+            {% else %}
+              <span class="status-badge status-badge--warning">Conferir</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if item.erro %}
+              {{ item.erro }}
+            {% elif item.criterio %}
+              {{ item.criterio }}{% if item.aluno_codigo %} · cód. {{ item.aluno_codigo }}{% endif %}
+            {% else %}
+              Novo cadastro
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if previa.total > 40 %}
+  <p class="preview-more">Mostrando as primeiras 40 linhas de {{ previa.total }}.</p>
+  {% endif %}
+
+  <div class="apply-warning">
+    <strong>O que acontecerá ao confirmar:</strong>
+    <span>
+      os alunos existentes serão atualizados somente com valores preenchidos na lista;
+      {{ previa.novos }} aluno(s) novo(s) serão cadastrados;
+      nenhum aluno fora da lista será apagado ou desativado.
+    </span>
+  </div>
+
+  <div class="confirm-actions">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="acao" value="cancelar">
+      <button type="submit" class="btn">Cancelar prévia</button>
+    </form>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="acao" value="aplicar">
+      <button type="submit" class="btn primary">Aplicar atualização</button>
+    </form>
+  </div>
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+(function () {
+  const input = document.querySelector('input[type="file"][name="arquivo"]');
+  const nome = document.getElementById("arquivo-selecionado");
+  const form = document.querySelector(".upload-form");
+  const botao = document.getElementById("btn-analisar");
+
+  if (input && nome) {
+    input.addEventListener("change", function () {
+      nome.textContent = input.files && input.files.length
+        ? input.files[0].name
+        : "Nenhum arquivo selecionado";
+    });
+  }
+
+  if (form && botao) {
+    form.addEventListener("submit", function () {
+      if (!input || !input.files || !input.files.length) return;
+      botao.disabled = true;
+      botao.textContent = "Carregando e analisando...";
+      form.classList.add("is-loading");
+    });
+  }
+})();
+</script>
+{% endblock %}

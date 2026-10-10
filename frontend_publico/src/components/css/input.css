@@ -1,0 +1,53 @@
+@media (max-width: 768px) {
+}
+@media (min-width: 769px) {
+  /* computador */
+}
+.campo {
+  position: relative;
+  margin: 20px auto;
+  width: 90%;
+}
+.campo select {
+  background-color: #e9eef2;
+  width: 82%;
+}
+.campo input {
+  width: 80%;
+}
+.campo input,
+.campo select {
+  padding: 10px 10px;
+  border: 2px solid #ccc;
+  border-radius: 10px;
+  outline: none;
+  font-size: 1rem;
+}
+
+.campo label {
+  position: absolute;
+  left: 10%;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: #e9eef2;
+  padding: 0 5px;
+  color: #828282;
+  transition: 0.2s ease;
+  pointer-events: none;
+}
+
+/* 🔥 Funciona para date */
+.campo input:focus + label,
+.campo select:focus + label,
+.campo select:valid + label,
+.campo input:valid + label {
+  top: 0;
+  font-size: 0.8rem;
+  color: #fff5f5;
+  background-color: #6ae08b;
+  border-radius: 50px;
+}
+option,
+select {
+  color: #828282;
+}

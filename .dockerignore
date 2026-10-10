@@ -1,0 +1,11 @@
+.git
+.gitignore
+.github
+__pycache__
+*.py[cod]
+*.sqlite3
+.env
+node_modules
+frontend_publico/node_modules
+frontend_publico/dist
+staticfiles

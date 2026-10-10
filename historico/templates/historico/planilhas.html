@@ -1,0 +1,1 @@
+{% extends 'historico/base.html' %}{% block content %}<h1>Planilhas preservadas do Excel</h1><div class="sheet-grid">{% for a in abas %}<a href="{% url 'historico:aba' a.pk %}" class="sheet-card"><b>{{ a.nome }}</b><span>{{ a.max_linha }} linhas × {{ a.max_coluna }} colunas</span></a>{% endfor %}</div>{% endblock %}
