@@ -1,0 +1,121 @@
+{% extends 'historico/base.html' %}
+
+{% block title %}Relatórios · Histórico Escolar{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+  <div>
+    <span class="eyebrow">DOCUMENTOS ACADÊMICOS</span>
+    <h1>Relatórios de alunos</h1>
+    <p>Localize o aluno e emita um relatório completo com cadastro, relações de turma, professor(a), notas e vida escolar.</p>
+  </div>
+  <a class="btn" href="{% url 'historico:inicio' %}">Voltar ao dashboard</a>
+</section>
+
+<section class="card report-filter-card">
+  <form method="get" class="report-filter-grid">
+    <label class="filter-field filter-field--wide">
+      <span>Aluno</span>
+      <input type="search" name="q" value="{{ q }}" placeholder="Nome, código ou matrícula">
+    </label>
+
+    <label class="filter-field">
+      <span>Ano letivo</span>
+      <select name="ano">
+        <option value="">Todos</option>
+        {% for item in anos_disponiveis %}
+          <option value="{{ item }}"{% if ano == item|stringformat:"s" %} selected{% endif %}>{{ item }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label class="filter-field">
+      <span>Série</span>
+      <select name="serie">
+        <option value="">Todas</option>
+        {% for n in "12345" %}
+          <option value="{{ n }}"{% if serie == n %} selected{% endif %}>{{ n }}º ano</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label class="filter-field">
+      <span>Turma</span>
+      <input type="text" name="turma" value="{{ turma }}" placeholder="Ex.: Azul">
+    </label>
+
+    <label class="filter-field">
+      <span>Status da relação</span>
+      <select name="status">
+        <option value="">Todos</option>
+        <option value="ativa"{% if status == "ativa" %} selected{% endif %}>Ativa no histórico</option>
+        <option value="inativa"{% if status == "inativa" %} selected{% endif %}>Inativa</option>
+      </select>
+    </label>
+
+    <div class="report-filter-actions">
+      <button type="submit" class="btn primary">Filtrar</button>
+      <a class="btn" href="{% url 'historico:relatorios' %}">Limpar</a>
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <div class="section-title-row">
+    <div>
+      <h2>Alunos encontrados</h2>
+      {% if pesquisa_realizada %}
+        <p>{{ total_resultados }} resultado(s). A tela mostra até 100 alunos por consulta.</p>
+      {% else %}
+        <p>Os alunos só serão carregados depois que você informar pelo menos um filtro.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if pesquisa_realizada %}
+    {% if alunos %}
+    <div class="table-scroll">
+      <table class="report-list-table">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Aluno</th>
+            <th>Matrícula</th>
+            <th>Relações</th>
+            <th>Ativas</th>
+            <th class="actions-column">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for aluno in alunos %}
+          <tr>
+            <td>{{ aluno.codigo }}</td>
+            <td><strong>{{ aluno.nome }}</strong></td>
+            <td>{{ aluno.matricula|default:"—" }}</td>
+            <td>{{ aluno.total_relacoes }}</td>
+            <td>{{ aluno.relacoes_ativas }}</td>
+            <td>
+              <div class="table-actions">
+                <a class="btn btn-small" href="{% url 'historico:aluno' aluno.codigo %}">Prontuário</a>
+                <a class="btn primary btn-small" href="{% url 'historico:relatorio_aluno' aluno.codigo %}">Emitir relatório</a>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <div class="empty-state">
+        <strong>Nenhum aluno encontrado.</strong>
+        <span>Altere os filtros e tente novamente.</span>
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="empty-state empty-state--search">
+      <strong>Faça uma pesquisa para localizar o aluno.</strong>
+      <span>Você pode usar nome, código, matrícula, ano, série, turma ou status da relação.</span>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
