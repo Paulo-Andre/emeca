@@ -132,6 +132,13 @@ class HistoricoEditorJsonTests(TestCase):
 
 
 class CertificadoConclusaoEditavelTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="certificado",
+            password="senha-forte-teste",
+        )
+        self.client.force_login(self.user)
+
     def test_campos_de_conclusao_ficam_editaveis_mesmo_sem_registro(self):
         aluno = Aluno.objects.create(
             codigo=11,
@@ -224,14 +231,16 @@ class AlunoCadastroEdicaoTests(TestCase):
         self.assertContains(response, "Cadastrar novo aluno")
         self.assertContains(response, "Vida escolar e notas")
 
-    def test_edicao_abre_sem_login_nesta_fase_de_integracao(self):
+    def test_edicao_exige_login(self):
         aluno = Aluno.objects.create(codigo=20, nome="Aluno Integração")
+        self.client.logout()
 
         response = self.client.get(
             reverse("historico:aluno_editar", args=[aluno.codigo])
         )
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response["Location"].startswith("/login/"))
 
     def test_cadastra_aluno_registro_e_notas_na_mesma_tela(self):
         self.client.login(username="secretaria", password="senha-teste")
@@ -382,10 +391,11 @@ class DadosExtrasAnuaisTests(TestCase):
         self.assertContains(response, "Dias letivos")
         self.assertContains(response, "Data de conclusão")
 
-    def test_dados_anuais_abrem_sem_login_nesta_fase_de_integracao(self):
+    def test_dados_anuais_exigem_login(self):
         response = self.client.get(reverse("historico:dados_extras_anuais"))
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response["Location"].startswith("/login/"))
 
     def test_cadastra_configuracao_anual(self):
         self.client.login(username="configurador", password="senha-teste")
@@ -1011,6 +1021,11 @@ class RelatorioCompletoAlunoTests(TestCase):
             componente=Nota.HISTORIA,
             valor="81",
         )
+        self.user = get_user_model().objects.create_user(
+            username="relatorios",
+            password="senha-forte-teste",
+        )
+        self.client.force_login(self.user)
 
     def test_relatorio_exibe_dados_vida_escolar_professores_e_notas(self):
         response = self.client.get(
@@ -1098,6 +1113,11 @@ class RelacoesAcademicasAtivasTests(TestCase):
             componente=Nota.MATEMATICA,
             valor="92",
         )
+        self.user = get_user_model().objects.create_user(
+            username="relacoes",
+            password="senha-forte-teste",
+        )
+        self.client.force_login(self.user)
 
     def test_historico_oficial_usa_somente_relacao_ativa(self):
         documento = historico_oficial_do_aluno(self.aluno)
@@ -1356,15 +1376,15 @@ class DocumentoAutenticadoTests(TestCase):
         self.assertContains(pagina, "Histórico autenticado")
         self.assertContains(pagina, "data:image/svg+xml;base64")
 
-    def test_emissao_tambem_funciona_sem_login_nesta_fase(self):
+    def test_emissao_exige_login(self):
         self.client.logout()
         response = self.client.post(
             reverse("historico:emitir_historico", args=[self.aluno.codigo])
         )
 
         self.assertEqual(response.status_code, 302)
-        documento = DocumentoHistorico.objects.latest("emitido_em")
-        self.assertIsNone(documento.emitido_por)
+        self.assertTrue(response["Location"].startswith("/login/"))
+        self.assertFalse(DocumentoHistorico.objects.exists())
 
     def test_validacao_publica_mascara_dados(self):
         self.client.login(username="emissor", password="senha-teste")
