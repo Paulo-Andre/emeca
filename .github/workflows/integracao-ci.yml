@@ -35,10 +35,11 @@ jobs:
           cache: "npm"
           cache-dependency-path: frontend_publico/package-lock.json
 
-      - name: Compilar área pública
+      - name: Compilar e auditar área pública
         working-directory: frontend_publico
         run: |
           npm ci
+          npm audit --omit=dev --audit-level=high
           npm run build
 
       - name: Verificar Django
