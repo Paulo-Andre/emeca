@@ -39,9 +39,9 @@ class SecurityAuditMiddleware:
             "form-action 'self'; "
             "object-src 'none'; "
             "img-src 'self' data:; "
-            "font-src 'self' data:; "
-            "style-src 'self' 'unsafe-inline'; "
-            "script-src 'self' 'unsafe-inline'"
+            "font-src 'self' data: https://fonts.gstatic.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "script-src 'self' 'unsafe-inline' https://unpkg.com"
         )
 
         if (
