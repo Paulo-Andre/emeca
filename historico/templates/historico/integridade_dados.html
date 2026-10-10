@@ -1,0 +1,112 @@
+{% extends 'historico/base.html' %}
+
+{% block title %}Integridade dos dados{% endblock %}
+
+{% block content %}
+<section class="toolbar">
+  <div>
+    <span class="eyebrow">QUALIDADE E GOVERNANÇA</span>
+    <h1>Integridade dos dados</h1>
+    <p style="color:var(--muted);margin:0">
+      Verificações automáticas para reduzir históricos incompletos, inconsistências e erros de associação.
+    </p>
+  </div>
+  <a class="btn" href="{% url 'historico:inicio' %}">Voltar ao dashboard</a>
+</section>
+
+<section class="dashboard-metrics">
+  <div class="metric-card {% if relatorio.totais.alunos_incompletos %}is-warning{% endif %}">
+    <span>Cadastros incompletos</span>
+    <strong>{{ relatorio.totais.alunos_incompletos }}</strong>
+  </div>
+  <div class="metric-card {% if relatorio.totais.registros_sem_notas %}is-warning{% endif %}">
+    <span>Anos sem notas</span>
+    <strong>{{ relatorio.totais.registros_sem_notas }}</strong>
+  </div>
+  <div class="metric-card {% if relatorio.totais.registros_sem_matriz %}is-warning{% endif %}">
+    <span>Sem matriz curricular</span>
+    <strong>{{ relatorio.totais.registros_sem_matriz }}</strong>
+  </div>
+  <div class="metric-card {% if relatorio.totais.nomes_duplicados %}is-warning{% endif %}">
+    <span>Nomes duplicados</span>
+    <strong>{{ relatorio.totais.nomes_duplicados }}</strong>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Alunos com dados essenciais incompletos</h2>
+  {% if relatorio.alunos_incompletos %}
+  <table>
+    <thead><tr><th>Código</th><th>Aluno</th><th>Nascimento</th><th>Naturalidade</th><th>Mãe</th><th></th></tr></thead>
+    <tbody>
+      {% for aluno in relatorio.alunos_incompletos %}
+      <tr>
+        <td>{{ aluno.codigo }}</td>
+        <td>{{ aluno.nome|default:"—" }}</td>
+        <td>{{ aluno.nascimento|default:"—" }}</td>
+        <td>{{ aluno.naturalidade|default:"—" }}</td>
+        <td>{{ aluno.mae|default:"—" }}</td>
+        <td><a class="btn" href="{% url 'historico:aluno_editar' aluno.codigo %}">Corrigir</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p>Nenhuma pendência encontrada.</p>{% endif %}
+</section>
+
+<section class="card">
+  <h2>Registros acadêmicos sem notas</h2>
+  {% if relatorio.registros_sem_notas %}
+  <table>
+    <thead><tr><th>Ano</th><th>Série</th><th>Aluno</th><th>Turma</th><th></th></tr></thead>
+    <tbody>
+      {% for registro in relatorio.registros_sem_notas %}
+      <tr>
+        <td>{{ registro.ano }}</td>
+        <td>{{ registro.serie|default:"—" }}</td>
+        <td>{{ registro.aluno.nome|default:registro.nome_original }}</td>
+        <td>{{ registro.turma|default:"—" }}</td>
+        <td>{% if registro.aluno %}<a class="btn" href="{% url 'historico:aluno_editar' registro.aluno.codigo %}">Revisar</a>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p>Nenhuma pendência encontrada.</p>{% endif %}
+</section>
+
+<section class="card">
+  <h2>Registros sem versão de matriz curricular</h2>
+  <p style="color:var(--muted)">
+    O histórico continua funcionando, mas vincular a versão da matriz congela pesos, componentes e carga horária usados naquele período.
+  </p>
+  {% if relatorio.registros_sem_matriz %}
+  <table>
+    <thead><tr><th>Ano</th><th>Série</th><th>Aluno</th><th>Turma</th></tr></thead>
+    <tbody>
+      {% for registro in relatorio.registros_sem_matriz %}
+      <tr>
+        <td>{{ registro.ano }}</td>
+        <td>{{ registro.serie|default:"—" }}</td>
+        <td>{{ registro.aluno.nome|default:registro.nome_original }}</td>
+        <td>{{ registro.turma|default:"—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p>Todos os registros exibidos estão vinculados a uma matriz.</p>{% endif %}
+</section>
+
+<section class="card">
+  <h2>Nomes duplicados</h2>
+  {% if relatorio.nomes_duplicados %}
+  <table>
+    <thead><tr><th>Nome</th><th>Quantidade</th></tr></thead>
+    <tbody>
+      {% for item in relatorio.nomes_duplicados %}
+      <tr><td>{{ item.nome }}</td><td>{{ item.qtd }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p>Nenhum nome exatamente duplicado encontrado.</p>{% endif %}
+</section>
+{% endblock %}

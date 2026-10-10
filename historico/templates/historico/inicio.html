@@ -1,0 +1,155 @@
+{% extends 'historico/base.html' %}
+{% load privacy %}
+
+{% block title %}Início · Histórico Escolar{% endblock %}
+
+{% block content %}
+<section class="dashboard-welcome">
+  <div class="dashboard-welcome__copy">
+    <span class="eyebrow">SECRETARIA ACADÊMICA</span>
+    <h1>Histórico Escolar</h1>
+    <p>Consulte o prontuário do aluno, emita relatórios e acompanhe a organização da vida escolar.</p>
+  </div>
+  <div class="dashboard-welcome__actions">
+    <a class="btn" href="{% url 'historico:relatorios' %}">Relatórios</a>
+    <a class="btn primary" href="{% url 'historico:aluno_novo' %}">Novo aluno</a>
+  </div>
+</section>
+
+<section class="student-search-panel">
+  <div class="student-search-panel__intro">
+    <span class="student-search-panel__icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" focusable="false">
+        <circle cx="10.5" cy="10.5" r="5.5"></circle>
+        <path d="m15 15 4.2 4.2"></path>
+        <path d="M8.5 10.5h4M10.5 8.5v4"></path>
+      </svg>
+    </span>
+    <div>
+      <strong>Localizar aluno</strong>
+      <span>Digite o nome ou código. Nenhum dado individual é exibido antes da pesquisa.</span>
+    </div>
+  </div>
+
+  <form method="get" role="search" class="dashboard-search-form">
+    <input
+      name="q"
+      value="{{ q }}"
+      maxlength="120"
+      placeholder="Nome ou código do aluno"
+      autocomplete="off"
+      autofocus
+    >
+    <button class="btn primary" type="submit">Pesquisar</button>
+  </form>
+</section>
+
+<section class="dashboard-overview" aria-label="Resumo do sistema">
+  <article class="overview-card overview-card--primary">
+    <span class="overview-card__label">Alunos cadastrados</span>
+    <strong>{{ painel.alunos_total }}</strong>
+    <small>Total de cadastros preservados no sistema.</small>
+  </article>
+
+  <article class="overview-card">
+    <span class="overview-card__label">Relações acadêmicas</span>
+    <strong>{{ painel.registros_total }}</strong>
+    <small>Vínculos de ano, série e turma.</small>
+  </article>
+
+  <article class="overview-card">
+    <span class="overview-card__label">Relações ativas</span>
+    <strong>{{ painel.relacoes_ativas }}</strong>
+    <small>Relações consideradas no histórico oficial.</small>
+  </article>
+
+  <article class="overview-card">
+    <span class="overview-card__label">Notas armazenadas</span>
+    <strong>{{ painel.notas_total }}</strong>
+    <small>Notas preservadas em todas as relações.</small>
+  </article>
+</section>
+
+<section class="data-quality-strip" aria-label="Qualidade dos dados">
+  <div class="data-quality-strip__title">
+    <span class="eyebrow">CONFERÊNCIA</span>
+    <strong>Qualidade dos dados</strong>
+  </div>
+
+  <a href="{% url 'historico:integridade_dados' %}" class="quality-item {% if painel.alunos_incompletos %}is-warning{% endif %}">
+    <span>Cadastros incompletos</span>
+    <strong>{{ painel.alunos_incompletos }}</strong>
+  </a>
+
+  <a href="{% url 'historico:integridade_dados' %}" class="quality-item {% if painel.registros_sem_notas %}is-warning{% endif %}">
+    <span>Relações sem notas</span>
+    <strong>{{ painel.registros_sem_notas }}</strong>
+  </a>
+
+  <a href="{% url 'historico:integridade_dados' %}" class="quality-item {% if painel.registros_sem_matriz %}is-warning{% endif %}">
+    <span>Sem matriz curricular</span>
+    <strong>{{ painel.registros_sem_matriz }}</strong>
+  </a>
+
+  <div class="quality-item">
+    <span>Relações inativas</span>
+    <strong>{{ painel.relacoes_inativas }}</strong>
+  </div>
+</section>
+
+{% if q %}
+<section class="card search-results-card">
+  <div class="section-title-row">
+    <div>
+      <span class="eyebrow">RESULTADO DA PESQUISA</span>
+      <h2>Aluno(s) encontrado(s)</h2>
+      <p>Os dados aparecem somente porque uma pesquisa foi realizada.</p>
+    </div>
+    <a class="btn" href="{% url 'historico:inicio' %}">Limpar pesquisa</a>
+  </div>
+
+  {% if alunos %}
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Cód.</th>
+          <th>Nome</th>
+          <th>Nascimento</th>
+          <th class="actions-column">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for a in alunos %}
+        <tr>
+          <td>{{ a.codigo }}</td>
+          <td><strong>{{ a.nome }}</strong></td>
+          <td>{{ a.nascimento|mask_birth }}</td>
+          <td>
+            <div class="table-actions">
+              <a class="btn btn-small" href="{% url 'historico:aluno' a.codigo %}">Prontuário</a>
+              <a class="btn primary btn-small" href="{% url 'historico:relatorio_aluno' a.codigo %}">Relatório</a>
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="empty-state">
+      <strong>Nenhum aluno encontrado.</strong>
+      <span>Confira o nome ou código informado.</span>
+    </div>
+  {% endif %}
+</section>
+{% else %}
+<section class="dashboard-privacy-note">
+  <span class="dashboard-privacy-note__icon">i</span>
+  <div>
+    <strong>Consulta sob demanda</strong>
+    <p>O painel mostra apenas números gerais. Nomes e demais dados individuais só aparecem depois que você pesquisa um aluno.</p>
+  </div>
+</section>
+{% endif %}
+{% endblock %}
