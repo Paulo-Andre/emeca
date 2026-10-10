@@ -106,7 +106,7 @@ console.log("tipo:", typeof setDados);
         {/* HEADER */}                        
           <header className="formulario-header">
                   <div className="header-snd">
-                    <img src="logo_escola.svg" alt="Logo" className="header-logo" />
+                    <img src="/static/matricula/logo_escola.svg" alt="Logo" className="header-logo" />
                     <div className="header-text">
                       <h1>Ficha de Matrícula</h1>
               <p>Dados do Aluno</p>
