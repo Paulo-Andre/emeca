@@ -1277,18 +1277,24 @@ class LimpezaTotalNotasAdminTests(TestCase):
 
 
 
-class AcessoTemporariamenteLivreTests(TestCase):
+class AcessoAutenticadoTests(TestCase):
     def setUp(self):
         self.aluno = Aluno.objects.create(
             codigo=700,
-            nome="ALUNO ACESSO TEMPORARIO",
+            nome="ALUNO ACESSO AUTENTICADO",
+        )
+        self.user = get_user_model().objects.create_user(
+            username="acesso-historico",
+            password="senha-forte-teste",
         )
 
-    def test_dashboard_abre_sem_login_durante_integracao(self):
+    def test_dashboard_exige_login(self):
         response = self.client.get(reverse("historico:inicio"))
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response["Location"].startswith("/login/"))
 
     def test_dashboard_nao_exibe_aluno_sem_pesquisa(self):
+        self.client.force_login(self.user)
         response = self.client.get(reverse("historico:inicio"))
 
         self.assertEqual(response.status_code, 200)
@@ -1303,25 +1309,28 @@ class AcessoTemporariamenteLivreTests(TestCase):
         )
 
     def test_dashboard_exibe_aluno_somente_apos_pesquisa(self):
+        self.client.force_login(self.user)
         response = self.client.get(
             reverse("historico:inicio"),
-            {"q": "ALUNO ACESSO TEMPORARIO"},
+            {"q": "ALUNO ACESSO AUTENTICADO"},
         )
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.aluno.nome)
 
-    def test_prontuario_abre_sem_login_durante_integracao(self):
+    def test_prontuario_exige_login(self):
         response = self.client.get(
             reverse("historico:aluno", args=[self.aluno.codigo])
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response["Location"].startswith("/login/"))
 
-    def test_tela_de_edicao_abre_sem_login_durante_integracao(self):
+    def test_tela_de_edicao_exige_login(self):
         response = self.client.get(
             reverse("historico:aluno_editar", args=[self.aluno.codigo])
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response["Location"].startswith("/login/"))
 
 
 class DocumentoAutenticadoTests(TestCase):
