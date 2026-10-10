@@ -180,7 +180,7 @@ function DuvidasMatricula() {
       {/* HEADER */}
       <header className="matricula-header">
         <div className="matricula-header-container">
-          <img src="/logo1.png" alt="Logo" className="matricula-logo" />
+          <img src="/logo_escola.svg" alt="Logo" className="matricula-logo" />
 
           <nav className="matricula-nav">
             
