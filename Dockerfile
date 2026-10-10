@@ -1,7 +1,7 @@
 FROM node:22-alpine AS frontend
 WORKDIR /frontend
 COPY frontend_publico/package*.json ./
-RUN npm ci
+RUN npm install
 COPY frontend_publico/ ./
 RUN npm run build
 
