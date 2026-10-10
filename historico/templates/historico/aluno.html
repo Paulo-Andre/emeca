@@ -1,0 +1,176 @@
+{% extends 'historico/base.html' %}
+{% block title %}{{ aluno.nome }}{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+  <div>
+    <span class="eyebrow">PRONTUÁRIO ACADÊMICO</span>
+    <h1>{{ aluno.nome }}</h1>
+  </div>
+  <div class="toolbar-actions">
+    <a class="btn" href="{% url 'historico:aluno_editar' aluno.codigo %}">Editar dados e notas</a>
+    <a class="btn" href="{% url 'historico:historico' aluno.codigo %}">Histórico oficial</a>
+    <a class="btn primary" href="{% url 'historico:relatorio_aluno' aluno.codigo %}">Emitir relatório completo</a>
+  </div>
+</div>
+
+{% if request.GET.relacao == "ativada" %}
+<div class="notice success">
+  Relação ativada. Se havia outra relação ativa da mesma série, ela foi desativada automaticamente. Nenhuma nota foi apagada.
+</div>
+{% elif request.GET.relacao == "desativada" %}
+<div class="notice success">
+  Relação desativada do Histórico Escolar. O registro e todas as notas continuam preservados no banco.
+</div>
+{% endif %}
+
+<section class="student-insights" aria-label="Indicadores do aluno">
+  <div class="student-insight">
+    <span>Relações cadastradas</span>
+    <strong>{{ indicadores.relacoes_total }}</strong>
+  </div>
+  <div class="student-insight">
+    <span>Relações ativas</span>
+    <strong>{{ indicadores.relacoes_ativas }}</strong>
+  </div>
+  <div class="student-insight">
+    <span>Notas preservadas</span>
+    <strong>{{ indicadores.total_notas }}</strong>
+  </div>
+  <div class="student-insight">
+    <span>Média das relações ativas</span>
+    <strong>{{ indicadores.media_geral|default:"—" }}</strong>
+  </div>
+  <div class="student-insight">
+    <span>Alertas ativos</span>
+    <strong>{{ indicadores.alertas|length }}</strong>
+  </div>
+</section>
+
+<section class="card grid">
+  <div><b>Código</b><span>{{ aluno.codigo }}</span></div>
+  <div><b>Matrícula</b><span>{{ aluno.matricula|default:"—" }}</span></div>
+  <div><b>Sexo</b><span>{{ aluno.sexo|default:"—" }}</span></div>
+  <div><b>Nascimento</b><span>{{ aluno.nascimento|default:"—" }}</span></div>
+  <div><b>Naturalidade / UF</b><span>{{ aluno.naturalidade }}{% if aluno.uf %} / {{ aluno.uf }}{% endif %}</span></div>
+  <div><b>Nacionalidade</b><span>{{ aluno.nacionalidade|default:"—" }}</span></div>
+  <div class="wide"><b>Pai</b><span>{{ aluno.pai|default:"—" }}</span></div>
+  <div class="wide"><b>Mãe</b><span>{{ aluno.mae|default:"—" }}</span></div>
+</section>
+
+<section class="card relation-card">
+  <div class="toolbar">
+    <div>
+      <h2>Relações de turma</h2>
+      <p class="muted-copy">
+        Todas as relações são mantidas, inclusive transferências e turmas sem notas.
+        Somente a relação marcada como <strong>Ativa no histórico</strong> é usada no Histórico Escolar oficial.
+      </p>
+    </div>
+  </div>
+
+  {% if indicadores.registros %}
+  <div class="relation-table-wrap">
+    <table class="relation-table">
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>Ano</th>
+          <th>Série</th>
+          <th>Turma</th>
+          <th>Professor(a)</th>
+          <th>Notas</th>
+          <th>Faltas</th>
+          <th>Frequência</th>
+          <th>Resultado</th>
+          <th>Média</th>
+          <th>Matriz</th>
+          <th>Ação</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for item in indicadores.registros %}
+        <tr class="{% if item.registro.ativo_no_historico %}relation-row--active{% else %}relation-row--inactive{% endif %}">
+          <td>
+            {% if item.registro.ativo_no_historico %}
+              <span class="status-chip status-chip--active">Ativa no histórico</span>
+            {% else %}
+              <span class="status-chip status-chip--inactive">Inativa</span>
+            {% endif %}
+          </td>
+          <td>{{ item.registro.ano }}</td>
+          <td>{% if item.registro.serie %}{{ item.registro.serie }}º ano{% else %}—{% endif %}</td>
+          <td>{{ item.registro.turma|default:"—" }}</td>
+          <td>{{ item.registro.professor_responsavel|default:"—" }}</td>
+          <td>
+            <strong>{{ item.quantidade_notas }}</strong>
+            {% if item.quantidade_notas == 0 %}
+              <span class="relation-warning">Sem notas</span>
+            {% endif %}
+          </td>
+          <td>{{ item.registro.faltas|default:"—" }}</td>
+          <td>{{ item.registro.frequencia|default:"—" }}</td>
+          <td>{{ item.registro.resultado|default:"—" }}</td>
+          <td>{{ item.media|default:"—" }}</td>
+          <td>
+            {% if item.registro.matriz_curricular %}
+              {{ item.registro.matriz_curricular.codigo }}
+            {% else %}
+              <span class="relation-warning">Não vinculada</span>
+            {% endif %}
+          </td>
+          <td>
+            <form method="post"
+                  action="{% url 'historico:alternar_relacao_academica' aluno.codigo item.registro.id %}"
+                  class="relation-status-form">
+              {% csrf_token %}
+              {% if item.registro.ativo_no_historico %}
+                <input type="hidden" name="acao" value="desativar">
+                <button type="submit" class="btn relation-action relation-action--deactivate">
+                  Desativar
+                </button>
+              {% else %}
+                <input type="hidden" name="acao" value="ativar">
+                <button type="submit" class="btn primary relation-action">
+                  Ativar no histórico
+                </button>
+              {% endif %}
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="relation-rule-note">
+    <strong>Regra:</strong> ao ativar uma relação de uma série, qualquer outra relação ativa da mesma série é desativada automaticamente.
+    As notas antigas permanecem intactas e podem ser consultadas a qualquer momento.
+  </div>
+  {% else %}
+    <p>Não há relações acadêmicas vinculadas a este aluno.</p>
+  {% endif %}
+</section>
+
+{% if indicadores.alertas %}
+<section class="card">
+  <h2>Alertas acadêmicos das relações ativas</h2>
+  <p class="muted-copy">
+    Relações inativas não entram nos cálculos nem geram alertas do histórico oficial.
+  </p>
+  <div class="alert-list">
+    {% for alerta in indicadores.alertas %}
+    <div class="alert-item {% if alerta.nivel == 'alto' %}is-high{% endif %}">
+      <strong>
+        {{ alerta.ano }}
+        {% if alerta.serie %} · {{ alerta.serie }}º ano{% endif %}
+        {% if alerta.turma %} · {{ alerta.turma }}{% endif %}
+        — {{ alerta.titulo }}
+      </strong>
+      <span>{{ alerta.detalhe }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

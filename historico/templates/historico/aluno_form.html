@@ -1,0 +1,315 @@
+{% extends 'historico/base.html' %}
+{% load static %}
+
+{% block title %}{% if aluno %}Editar {{ aluno.nome }}{% else %}Cadastrar aluno{% endif %}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'historico/css/aluno-form.css' %}?v=20261010-01">
+{% endblock %}
+
+{% block content %}
+<section class="student-editor-heading">
+  <div>
+    <span class="eyebrow">GESTÃO ACADÊMICA</span>
+    <h1>{% if aluno %}Editar dados e notas{% else %}Cadastrar novo aluno{% endif %}</h1>
+    <p>
+      {% if aluno %}
+        Atualize os dados pessoais, a vida escolar e as notas do aluno.
+      {% else %}
+        Cadastre o aluno e, na mesma tela, informe os anos cursados e suas notas.
+      {% endif %}
+    </p>
+  </div>
+  <div class="student-editor-heading__actions">
+    {% if aluno %}
+      <a class="btn" href="{% url 'historico:aluno' aluno.codigo %}">Voltar ao aluno</a>
+      <a class="btn" href="{% url 'historico:historico' aluno.codigo %}">Abrir histórico</a>
+    {% else %}
+      <a class="btn" href="{% url 'historico:inicio' %}">Cancelar</a>
+    {% endif %}
+  </div>
+</section>
+
+{% if salvo or criado %}
+<div class="notice success">
+  {% if criado %}Aluno cadastrado com sucesso.{% else %}Dados e notas salvos com sucesso.{% endif %}
+</div>
+{% endif %}
+
+{% if form.errors or erros_anos %}
+<div class="notice error">
+  <strong>Revise os campos destacados.</strong>
+  {% for erro in erros_anos %}<div>{{ erro }}</div>{% endfor %}
+  {{ form.non_field_errors }}
+</div>
+{% endif %}
+
+<form method="post" class="student-form" novalidate>
+  {% csrf_token %}
+
+  <section class="editor-card">
+    <div class="section-heading">
+      <div>
+        <span class="section-number">01</span>
+        <div>
+          <h2>Dados do aluno</h2>
+          <p>Informações utilizadas no cadastro e no certificado do histórico.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <label class="field field--small">
+        <span>{{ form.codigo.label }}</span>
+        {{ form.codigo }}
+        {{ form.codigo.errors }}
+      </label>
+
+      <label class="field field--wide">
+        <span>{{ form.nome.label }}</span>
+        {{ form.nome }}
+        {{ form.nome.errors }}
+      </label>
+
+      <label class="field">
+        <span>{{ form.matricula.label }}</span>
+        {{ form.matricula }}
+        {{ form.matricula.errors }}
+      </label>
+
+      <label class="field">
+        <span>{{ form.cpf.label }}</span>
+        {{ form.cpf }}
+        {{ form.cpf.errors }}
+      </label>
+
+      <label class="field field--wide">
+        <span>{{ form.curso.label }}</span>
+        {{ form.curso }}
+        {{ form.curso.errors }}
+      </label>
+
+      <label class="field">
+        <span>{{ form.identidade.label }}</span>
+        {{ form.identidade }}
+        {{ form.identidade.errors }}
+      </label>
+
+      <label class="field">
+        <span>{{ form.orgao_expedidor.label }}</span>
+        {{ form.orgao_expedidor }}
+        {{ form.orgao_expedidor.errors }}
+      </label>
+
+      <label class="field">
+        <span>{{ form.nascimento.label }}</span>
+        {{ form.nascimento }}
+        {{ form.nascimento.errors }}
+      </label>
+
+      <label class="field">
+        <span>{{ form.sexo.label }}</span>
+        {{ form.sexo }}
+        {{ form.sexo.errors }}
+      </label>
+
+      <label class="field field--wide">
+        <span>{{ form.naturalidade.label }}</span>
+        {{ form.naturalidade }}
+        {{ form.naturalidade.errors }}
+      </label>
+
+      <label class="field field--small">
+        <span>{{ form.uf.label }}</span>
+        {{ form.uf }}
+        {{ form.uf.errors }}
+      </label>
+
+      <label class="field">
+        <span>{{ form.nacionalidade.label }}</span>
+        {{ form.nacionalidade }}
+        {{ form.nacionalidade.errors }}
+      </label>
+
+      <label class="field field--wide">
+        <span>{{ form.pai.label }}</span>
+        {{ form.pai }}
+        {{ form.pai.errors }}
+      </label>
+
+      <label class="field field--wide">
+        <span>{{ form.mae.label }}</span>
+        {{ form.mae }}
+        {{ form.mae.errors }}
+      </label>
+
+      <label class="field">
+        <span>{{ form.data_conclusao.label }}</span>
+        {{ form.data_conclusao }}
+        {{ form.data_conclusao.errors }}
+      </label>
+
+      <label class="field">
+        <span>{{ form.serie_conclusao.label }}</span>
+        {{ form.serie_conclusao }}
+        {{ form.serie_conclusao.errors }}
+        <small class="field-help">Opcional. Pode ser preenchida mesmo sem ano/série ativa no histórico.</small>
+      </label>
+
+      <label class="field">
+        <span>{{ form.data_expedicao.label }}</span>
+        {{ form.data_expedicao }}
+        {{ form.data_expedicao.errors }}
+      </label>
+
+      <label class="field field--full">
+        <span>{{ form.observacao_historico.label }}</span>
+        {{ form.observacao_historico }}
+        {{ form.observacao_historico.errors }}
+      </label>
+
+      <label class="field checkbox-field">
+        {{ form.ativo }}
+        <span>{{ form.ativo.label }}</span>
+        {{ form.ativo.errors }}
+      </label>
+    </div>
+  </section>
+
+  <section class="editor-card">
+    <div class="section-heading">
+      <div>
+        <span class="section-number">02</span>
+        <div>
+          <h2>Vida escolar e notas</h2>
+          <p>
+            Esta tela edita a relação <strong>ativa</strong> de cada série.
+            Transferências e outras turmas permanecem preservadas no prontuário do aluno,
+            onde você pode ativar ou desativar cada relação sem apagar notas.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="school-years">
+      {% for ano in anos %}
+      <details class="school-year" {% if ano.registro or forloop.first %}open{% endif %}>
+        <summary>
+          <div>
+            <strong>{{ ano.serie }}º ANO</strong>
+            <span>{% if ano.ano %}Ano letivo {{ ano.ano }}{% else %}Sem registro cadastrado{% endif %}</span>
+          </div>
+          <span class="summary-action">Editar</span>
+        </summary>
+
+        <div class="school-year__body">
+          <div class="academic-grid">
+            <label class="field">
+              <span>Ano letivo</span>
+              <input type="text" inputmode="numeric" maxlength="4"
+                     name="serie_{{ ano.serie }}_ano" value="{{ ano.ano }}"
+                     placeholder="Ex.: 2024">
+            </label>
+
+            <label class="field">
+              <span>Turma</span>
+              <input type="text" name="serie_{{ ano.serie }}_turma"
+                     value="{{ ano.turma }}" placeholder="Ex.: 5º ano Azul">
+            </label>
+
+            <label class="field field--wide">
+              <span>Professor(a) responsável</span>
+              <input type="text" name="serie_{{ ano.serie }}_professor_responsavel"
+                     value="{{ ano.professor_responsavel }}"
+                     placeholder="Nome do(a) professor(a) da turma">
+            </label>
+
+            <label class="field">
+              <span>Faltas</span>
+              <input type="text" name="serie_{{ ano.serie }}_faltas"
+                     value="{{ ano.faltas }}">
+            </label>
+
+            <label class="field">
+              <span>Frequência</span>
+              <input type="text" name="serie_{{ ano.serie }}_frequencia"
+                     value="{{ ano.frequencia }}" placeholder="Ex.: 92%">
+            </label>
+
+            <label class="field">
+              <span>Carga horária</span>
+              <input type="text" name="serie_{{ ano.serie }}_carga_horaria"
+                     value="{{ ano.carga_horaria }}" placeholder="Ex.: 800">
+            </label>
+
+            <label class="field">
+              <span>Resultado / Situação</span>
+              <select name="serie_{{ ano.serie }}_resultado">
+                {% for valor, rotulo in ano.resultado_opcoes %}
+                  <option value="{{ valor }}"{% if valor == ano.resultado %} selected{% endif %}>{{ rotulo }}</option>
+                {% endfor %}
+              </select>
+            </label>
+
+            <label class="field field--wide">
+              <span>Estabelecimento</span>
+              <input type="text" name="serie_{{ ano.serie }}_escola"
+                     value="{{ ano.escola }}">
+            </label>
+
+            <label class="field">
+              <span>Município</span>
+              <input type="text" name="serie_{{ ano.serie }}_municipio"
+                     value="{{ ano.municipio }}">
+            </label>
+
+            <label class="field field--small">
+              <span>UF</span>
+              <select name="serie_{{ ano.serie }}_uf">
+                {% for valor, rotulo in ano.uf_opcoes %}
+                  <option value="{{ valor }}"{% if valor == ano.uf %} selected{% endif %}>{{ rotulo }}</option>
+                {% endfor %}
+              </select>
+            </label>
+          </div>
+
+          <div class="grades-panel">
+            <div class="grades-panel__heading">
+              <h3>Notas / Aproveitamento</h3>
+              <span>Também aceita registros históricos como N1, N2, N3, N4 e N5.</span>
+            </div>
+
+            <div class="grades-grid">
+              {% for nota in ano.notas %}
+              <label class="grade-field">
+                <span>{{ nota.rotulo }}</span>
+                <input type="text"
+                       name="serie_{{ ano.serie }}_nota_{{ nota.codigo }}"
+                       value="{{ nota.valor }}">
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <label class="field field--full">
+            <span>Observação deste ano</span>
+            <textarea name="serie_{{ ano.serie }}_observacao" rows="2">{{ ano.observacao }}</textarea>
+          </label>
+        </div>
+      </details>
+      {% endfor %}
+    </div>
+  </section>
+
+  <div class="form-actions">
+    {% if aluno %}
+      <a class="btn" href="{% url 'historico:aluno' aluno.codigo %}">Cancelar</a>
+    {% else %}
+      <a class="btn" href="{% url 'historico:inicio' %}">Cancelar</a>
+    {% endif %}
+    <button type="submit" class="btn primary">
+      {% if aluno %}Salvar alterações{% else %}Cadastrar aluno e notas{% endif %}
+    </button>
+  </div>
+</form>
+{% endblock %}
