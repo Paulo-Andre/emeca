@@ -1,0 +1,151 @@
+{% extends 'historico/base.html' %}
+{% load static %}
+
+{% block title %}Dados extras por ano{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'historico/css/dados-extras.css' %}?v=20261010-01">
+{% endblock %}
+
+{% block content %}
+<section class="extras-heading">
+  <div>
+    <span class="eyebrow">CONFIGURAÇÃO ACADÊMICA</span>
+    <h1>Dados extras por ano letivo</h1>
+    <p>
+      Defina os parâmetros usados automaticamente no histórico escolar de cada ano:
+      mínimo para aprovação, carga horária, dias letivos, data de conclusão e dados da escola.
+    </p>
+  </div>
+  <a class="btn" href="{% url 'historico:inicio' %}">Voltar</a>
+</section>
+
+{% if salvo %}
+<div class="extras-notice extras-notice--success">
+  Configurações anuais salvas com sucesso.
+</div>
+{% endif %}
+
+{% if formset.non_form_errors %}
+<div class="extras-notice extras-notice--error">
+  {{ formset.non_form_errors }}
+</div>
+{% endif %}
+
+<form method="post" class="extras-form">
+  {% csrf_token %}
+  {{ formset.management_form }}
+
+  <div class="extras-help">
+    <strong>Como funciona:</strong>
+    os valores cadastrados aqui servem como padrão para todos os alunos daquele ano.
+    Quando um registro do aluno possuir um valor específico, o valor do próprio aluno continua tendo prioridade.
+  </div>
+
+  <div class="year-configs">
+    {% for form in formset %}
+    <article class="year-config-card{% if not form.instance.pk %} year-config-card--new{% endif %}">
+      {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+
+      <header class="year-config-card__header">
+        <div>
+          <span class="year-badge">{% if form.instance.pk %}{{ form.instance.ano }}{% else %}+{% endif %}</span>
+          <div>
+            <h2>{% if form.instance.pk %}Ano letivo {{ form.instance.ano }}{% else %}Adicionar novo ano{% endif %}</h2>
+            <p>
+              {% if form.instance.pk %}
+                Edite os parâmetros oficiais usados nos históricos deste ano.
+              {% else %}
+                Preencha esta linha para criar uma nova configuração anual.
+              {% endif %}
+            </p>
+          </div>
+        </div>
+      </header>
+
+      {% if form.non_field_errors %}
+      <div class="form-errors">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <div class="extras-grid">
+        <label class="field field--year">
+          <span>{{ form.ano.label }}</span>
+          {{ form.ano }}
+          {{ form.ano.errors }}
+        </label>
+
+        <label class="field">
+          <span>{{ form.media_minima.label }}</span>
+          {{ form.media_minima }}
+          <small>Ex.: 60 ou 0,60</small>
+          {{ form.media_minima.errors }}
+        </label>
+
+        <label class="field">
+          <span>{{ form.ch_anual.label }}</span>
+          {{ form.ch_anual }}
+          <small>Ex.: 800 ou 833:20</small>
+          {{ form.ch_anual.errors }}
+        </label>
+
+        <label class="field">
+          <span>{{ form.dias_letivos.label }}</span>
+          {{ form.dias_letivos }}
+          <small>Ex.: 200</small>
+          {{ form.dias_letivos.errors }}
+        </label>
+
+        <label class="field">
+          <span>{{ form.data_conclusao.label }}</span>
+          {{ form.data_conclusao }}
+          <small>Data padrão de conclusão daquele ano.</small>
+          {{ form.data_conclusao.errors }}
+        </label>
+
+        <label class="field field--wide">
+          <span>{{ form.matriz_curricular.label }}</span>
+          {{ form.matriz_curricular }}
+          <small>Vincule a versão da grade para preservar o currículo histórico.</small>
+          {{ form.matriz_curricular.errors }}
+        </label>
+
+        <label class="field">
+          <span>{{ form.ch_ingles.label }}</span>
+          {{ form.ch_ingles }}
+          {{ form.ch_ingles.errors }}
+        </label>
+
+        <label class="field">
+          <span>{{ form.ch_sem_ingles.label }}</span>
+          {{ form.ch_sem_ingles }}
+          {{ form.ch_sem_ingles.errors }}
+        </label>
+
+        <label class="field field--wide">
+          <span>{{ form.escola.label }}</span>
+          {{ form.escola }}
+          {{ form.escola.errors }}
+        </label>
+
+        <label class="field">
+          <span>{{ form.municipio.label }}</span>
+          {{ form.municipio }}
+          {{ form.municipio.errors }}
+        </label>
+
+        <label class="field field--uf">
+          <span>{{ form.uf.label }}</span>
+          {{ form.uf }}
+          {{ form.uf.errors }}
+        </label>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+
+  <div class="extras-actions">
+    <a class="btn" href="{% url 'historico:inicio' %}">Cancelar</a>
+    <button type="submit" class="btn primary">Salvar dados anuais</button>
+  </div>
+</form>
+{% endblock %}
