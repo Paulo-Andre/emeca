@@ -11,6 +11,13 @@ if not SECRET_KEY:
     else:
         raise RuntimeError("Defina DJANGO_SECRET_KEY antes de iniciar o sistema.")
 
+DOCUMENT_SIGNING_KEY = os.getenv("DOCUMENT_SIGNING_KEY", "").strip()
+if not DOCUMENT_SIGNING_KEY:
+    if DEBUG:
+        DOCUMENT_SIGNING_KEY = "dev-only-document-signing-key"
+    else:
+        raise RuntimeError("Defina DOCUMENT_SIGNING_KEY antes de iniciar o sistema.")
+
 ALLOWED_HOSTS = [x.strip() for x in os.getenv(
     "DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost"
 ).split(",") if x.strip()]
