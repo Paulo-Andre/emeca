@@ -1,7 +1,9 @@
 import json
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse, HttpResponseNotFound
 from django.views.decorators.csrf import csrf_exempt
 from .models import matricula  
+from django.conf import settings
+from pathlib import Path
 
 
 @csrf_exempt
@@ -137,3 +139,14 @@ def cadastrar(request):
 
     return JsonResponse({"status": "erro"}, status=405)
 
+
+
+def matricula_publica(request):
+    """Entrega o frontend público de matrícula incorporado ao mesmo site."""
+    index_path = Path(settings.BASE_DIR) / "frontend_publico" / "dist" / "index.html"
+    if not index_path.exists():
+        return HttpResponseNotFound(
+            "Frontend público ainda não foi compilado. Execute: "
+            "cd frontend_publico && npm ci && npm run build"
+        )
+    return FileResponse(index_path.open("rb"), content_type="text/html; charset=utf-8")
