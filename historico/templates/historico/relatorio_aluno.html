@@ -1,0 +1,263 @@
+{% extends 'historico/base.html' %}
+{% load static %}
+
+{% block title %}Relatório · {{ aluno.nome }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'historico/css/relatorio-aluno.css' %}?v=20261010-01">
+{% endblock %}
+
+{% block content %}
+<div class="report-toolbar no-print">
+  <div>
+    <span class="eyebrow">RELATÓRIO ACADÊMICO</span>
+    <h1>{{ aluno.nome }}</h1>
+  </div>
+  <div class="toolbar-actions">
+    <a class="btn" href="{% url 'historico:aluno' aluno.codigo %}">Voltar ao prontuário</a>
+    <a class="btn" href="{% url 'historico:aluno_editar' aluno.codigo %}">Editar dados</a>
+    <a class="btn" href="{% url 'historico:historico' aluno.codigo %}">Histórico oficial</a>
+    <button type="button" class="btn primary" onclick="window.print()">Imprimir / Salvar PDF</button>
+  </div>
+</div>
+
+<article class="student-report-sheet">
+  <header class="student-report-header">
+    <div class="report-brand-mark">HE</div>
+    <div>
+      <span>SECRETARIA ACADÊMICA</span>
+      <h1>Relatório Completo do Aluno</h1>
+      <p>Cadastro, vida escolar, relações de turma e aproveitamento acadêmico</p>
+    </div>
+  </header>
+
+  <section class="report-section">
+    <div class="report-section-heading">
+      <span>01</span>
+      <div>
+        <h2>Identificação do aluno</h2>
+        <p>Dados cadastrais atualmente registrados no sistema.</p>
+      </div>
+    </div>
+
+    <dl class="identity-grid">
+      <div class="identity-item identity-item--wide">
+        <dt>Nome completo</dt>
+        <dd>{{ aluno.nome }}</dd>
+      </div>
+      <div>
+        <dt>Código</dt>
+        <dd>{{ aluno.codigo }}</dd>
+      </div>
+      <div>
+        <dt>Matrícula</dt>
+        <dd>{{ aluno.matricula|default:"—" }}</dd>
+      </div>
+      <div>
+        <dt>CPF</dt>
+        <dd>{{ aluno.cpf|default:"—" }}</dd>
+      </div>
+      <div>
+        <dt>Identidade</dt>
+        <dd>{{ aluno.identidade|default:"—" }}</dd>
+      </div>
+      <div>
+        <dt>Órgão expedidor</dt>
+        <dd>{{ aluno.orgao_expedidor|default:"—" }}</dd>
+      </div>
+      <div>
+        <dt>Curso</dt>
+        <dd>{{ aluno.curso|default:"—" }}</dd>
+      </div>
+      <div>
+        <dt>Nascimento</dt>
+        <dd>{{ aluno.nascimento|default:"—" }}</dd>
+      </div>
+      <div>
+        <dt>Sexo</dt>
+        <dd>{{ aluno.sexo|default:"—" }}</dd>
+      </div>
+      <div>
+        <dt>Naturalidade / UF</dt>
+        <dd>
+          {{ aluno.naturalidade|default:"—" }}
+          {% if aluno.uf %} / {{ aluno.uf }}{% endif %}
+        </dd>
+      </div>
+      <div>
+        <dt>Nacionalidade</dt>
+        <dd>{{ aluno.nacionalidade|default:"—" }}</dd>
+      </div>
+      <div class="identity-item--wide">
+        <dt>Pai</dt>
+        <dd>{{ aluno.pai|default:"—" }}</dd>
+      </div>
+      <div class="identity-item--wide">
+        <dt>Mãe</dt>
+        <dd>{{ aluno.mae|default:"—" }}</dd>
+      </div>
+      <div>
+        <dt>Situação cadastral</dt>
+        <dd>{% if aluno.ativo %}Ativo{% else %}Inativo{% endif %}</dd>
+      </div>
+      <div>
+        <dt>Data de expedição cadastrada</dt>
+        <dd>{{ aluno.data_expedicao|default:"—" }}</dd>
+      </div>
+    </dl>
+
+    {% if aluno.observacao_historico %}
+    <div class="report-observation">
+      <strong>Observações gerais</strong>
+      <p>{{ aluno.observacao_historico|linebreaksbr }}</p>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="report-summary">
+    <div>
+      <span>Relações acadêmicas</span>
+      <strong>{{ relatorio.total_relacoes }}</strong>
+    </div>
+    <div>
+      <span>Ativas no histórico</span>
+      <strong>{{ relatorio.relacoes_ativas }}</strong>
+    </div>
+    <div>
+      <span>Inativas preservadas</span>
+      <strong>{{ relatorio.relacoes_inativas }}</strong>
+    </div>
+    <div>
+      <span>Notas preenchidas</span>
+      <strong>{{ relatorio.total_notas_preenchidas }}</strong>
+    </div>
+  </section>
+
+  <section class="report-section report-section--school-life">
+    <div class="report-section-heading">
+      <span>02</span>
+      <div>
+        <h2>Vida escolar completa</h2>
+        <p>Todas as relações são exibidas, inclusive transferências e registros inativos.</p>
+      </div>
+    </div>
+
+    {% if relatorio.relacoes %}
+      {% for item in relatorio.relacoes %}
+      <section class="academic-relation {% if not item.registro.ativo_no_historico %}academic-relation--inactive{% endif %}">
+        <div class="academic-relation-head">
+          <div>
+            <div class="relation-title-line">
+              <h3>
+                {{ item.registro.ano }}
+                {% if item.registro.serie %} · {{ item.registro.serie }}º ano{% endif %}
+                {% if item.registro.turma %} · {{ item.registro.turma }}{% endif %}
+              </h3>
+              {% if item.registro.ativo_no_historico %}
+                <span class="report-status report-status--active">Ativa no histórico</span>
+              {% else %}
+                <span class="report-status report-status--inactive">Inativa / preservada</span>
+              {% endif %}
+            </div>
+            {% if item.registro.professor_responsavel %}
+              <p class="teacher-line"><strong>Professor(a):</strong> {{ item.registro.professor_responsavel }}</p>
+            {% else %}
+              <p class="teacher-line teacher-line--empty"><strong>Professor(a):</strong> não informado</p>
+            {% endif %}
+          </div>
+          <div class="relation-average">
+            <span>Média calculada</span>
+            <strong>{{ item.media|default:"—" }}</strong>
+          </div>
+        </div>
+
+        <dl class="school-data-grid">
+          <div>
+            <dt>Escola</dt>
+            <dd>{{ item.escola|default:"—" }}</dd>
+          </div>
+          <div>
+            <dt>Município / UF</dt>
+            <dd>
+              {{ item.municipio|default:"—" }}
+              {% if item.uf %} / {{ item.uf }}{% endif %}
+            </dd>
+          </div>
+          <div>
+            <dt>Carga horária</dt>
+            <dd>{{ item.carga_horaria|default:"—" }}</dd>
+          </div>
+          <div>
+            <dt>Dias letivos</dt>
+            <dd>{{ item.dias_letivos|default:"—" }}</dd>
+          </div>
+          <div>
+            <dt>Mínimo para aprovação</dt>
+            <dd>{{ item.media_minima|default:"—" }}</dd>
+          </div>
+          <div>
+            <dt>Faltas</dt>
+            <dd>{{ item.registro.faltas|default:"—" }}</dd>
+          </div>
+          <div>
+            <dt>Frequência</dt>
+            <dd>{{ item.registro.frequencia|default:"—" }}</dd>
+          </div>
+          <div>
+            <dt>Resultado</dt>
+            <dd>{{ item.registro.resultado|default:"—" }}</dd>
+          </div>
+          <div>
+            <dt>Matriz curricular</dt>
+            <dd>
+              {% if item.registro.matriz_curricular %}
+                {{ item.registro.matriz_curricular.codigo }} · {{ item.registro.matriz_curricular.nome }}
+              {% else %}
+                —
+              {% endif %}
+            </dd>
+          </div>
+        </dl>
+
+        <div class="grades-report-wrap">
+          <table class="grades-report-table">
+            <thead>
+              <tr>
+                <th>Componente curricular</th>
+                <th>Nota / aproveitamento</th>
+                <th>Carga horária do componente</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% for nota in item.notas %}
+              <tr>
+                <td>{{ nota.rotulo }}</td>
+                <td>{{ nota.valor|default:"—" }}</td>
+                <td>{{ nota.carga_horaria|default:"—" }}</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if item.registro.observacao %}
+        <div class="relation-observation">
+          <strong>Observação da relação</strong>
+          <p>{{ item.registro.observacao|linebreaksbr }}</p>
+        </div>
+        {% endif %}
+      </section>
+      {% endfor %}
+    {% else %}
+      <div class="report-empty">
+        Este aluno ainda não possui relações acadêmicas cadastradas.
+      </div>
+    {% endif %}
+  </section>
+
+  <footer class="student-report-footer">
+    <span>Relatório gerado pelo sistema Histórico Escolar</span>
+    <span>Gerado em {% now "d/m/Y H:i" %}</span>
+  </footer>
+</article>
+{% endblock %}
