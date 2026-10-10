@@ -1,0 +1,880 @@
+:root {
+  --doc-black: #111;
+  --doc-paper: #fff;
+  --edit-bg: #f8fafc;
+  --edit-line: #94a3b8;
+  --alert-bg: #fee2e2;
+  --alert-text: #991b1b;
+  --alert-line: #ef4444;
+}
+
+.editor-toolbar {
+  width: min(210mm, 100%);
+  margin: 0 auto 14px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid #d7dee7;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px -14px rgba(15, 23, 42, .4);
+  font-family: "Inter", Arial, sans-serif;
+}
+
+.editor-toolbar__status {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.editor-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.editor-toolbar button,
+.editor-toolbar a {
+  padding: 8px 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #0f172a;
+  text-decoration: none;
+  font: 600 12px/1 "Inter", Arial, sans-serif;
+  cursor: pointer;
+}
+
+.editor-toolbar button.primary {
+  color: #fff;
+  background: #14532d;
+  border-color: #14532d;
+}
+
+.save-status {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.save-status.is-saving { color: #92400e; }
+.save-status.is-saved { color: #166534; }
+.save-status.is-error { color: #991b1b; }
+
+.document-shell {
+  width: 100%;
+  overflow-x: auto;
+  padding: 1px 0 56px;
+}
+
+.document-sheet {
+  position: relative;
+  width: 210mm;
+  height: 297mm;
+  padding: 3.99mm 4.97mm 0 3.99mm;
+  margin: 2rem auto;
+  overflow: visible;
+  background: var(--doc-paper);
+  color: var(--doc-black);
+  border-radius: 2px;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, .08);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 5.2pt;
+  line-height: 1.1;
+}
+
+.official-page-border {
+  width: 100%;
+  height: 289.17mm;
+  overflow: hidden;
+  display: block;
+  border: .65pt solid var(--doc-black);
+  background: #fff;
+}
+
+.official-letterhead {
+  height: 17.80mm;
+  padding: 2.8mm 1.5mm .25mm;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.official-letterhead img {
+  display: block;
+  width: 100%;
+  height: 14mm;
+  object-fit: fill;
+}
+
+.certificate-section {
+  width: calc(100% - 1.8mm);
+  height: 27.34mm;
+  margin-left: .9mm;
+  overflow: hidden;
+  border: .55pt solid var(--doc-black);
+}
+
+.certificate-section h1 {
+  height: 5.65mm;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: .45pt solid var(--doc-black);
+  font: 700 10.55pt/1 Arial, Helvetica, sans-serif;
+  letter-spacing: .01em;
+}
+
+.certificate-table {
+  width: 100%;
+  height: 21.69mm;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 6.95pt;
+  line-height: 1;
+}
+
+
+.certificate-table .cert-d { width: 3.207%; }
+.certificate-table .cert-e { width: 3.998%; }
+.certificate-table .cert-f { width: 4.389%; }
+.certificate-table .cert-g { width: 4.389%; }
+.certificate-table .cert-h { width: 4.389%; }
+.certificate-table .cert-i { width: 4.700%; }
+.certificate-table .cert-j { width: 3.658%; }
+.certificate-table .cert-k { width: 4.389%; }
+.certificate-table .cert-l { width: 4.389%; }
+.certificate-table .cert-m { width: 5.000%; }
+.certificate-table .cert-n { width: 4.329%; }
+.certificate-table .cert-o { width: 4.499%; }
+.certificate-table .cert-p { width: 4.389%; }
+.certificate-table .cert-q { width: 4.389%; }
+.certificate-table .cert-r { width: 4.389%; }
+.certificate-table .cert-s { width: 2.736%; }
+.certificate-table .cert-t { width: 6.003%; }
+.certificate-table .cert-u { width: 3.988%; }
+.certificate-table .cert-v { width: 3.798%; }
+.certificate-table .cert-w { width: 3.728%; }
+.certificate-table .cert-x { width: 3.357%; }
+.certificate-table .cert-y { width: 8.257%; }
+.certificate-table .cert-z { width: 1.323%; }
+.certificate-table .cert-aa { width: 1.854%; }
+.certificate-table .cert-ab { width: .451%; }
+
+.certificate-table th,
+.certificate-table td {
+  height: 4.34mm;
+  padding: .18mm .18mm;
+  border: 0;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.certificate-table th {
+  width: auto;
+  font-weight: 400;
+  text-align: left;
+}
+
+.certificate-label {
+  padding-left: .28mm !important;
+  padding-right: .18mm !important;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.certificate-label--identity {
+  font-size: 6.15pt;
+  letter-spacing: -.02em;
+}
+
+.certificate-label--conclusion {
+  text-align: right !important;
+  padding-right: .5mm !important;
+}
+
+.center-label {
+  text-align: center !important;
+}
+
+.certificate-table .value {
+  position: relative;
+  padding-left: .35mm !important;
+  padding-right: .35mm !important;
+  border-bottom: .55pt solid var(--doc-black);
+  font-size: 8pt;
+  font-weight: 700;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.certificate-table .sex-value {
+  padding-left: .55mm !important;
+  padding-right: .25mm !important;
+  text-align: left;
+  font-size: 8pt;
+}
+
+.certificate-table .strong { font-weight: 700; }
+.certificate-table .center { text-align: center; }
+.certificate-table .plain-cell {
+  padding-left: .35mm;
+  font-size: 6.95pt;
+  white-space: nowrap;
+}
+
+.editable-certificate-field[contenteditable="true"] {
+  cursor: text;
+  min-width: 7mm;
+}
+
+.editable-certificate-field[contenteditable="true"]:hover,
+.editable-certificate-field[contenteditable="true"]:focus {
+  background: #f6fbf7;
+  outline: 1px solid rgba(20, 83, 45, .22);
+  outline-offset: -1px;
+}
+
+.editable-certificate-field[contenteditable="true"]:empty::before {
+  content: attr(data-placeholder);
+  color: #9aa6a0;
+  font-size: 6pt;
+  font-weight: 400;
+  opacity: .85;
+}
+
+.uppercase { text-transform: uppercase; }
+
+.history-title {
+  width: calc(100% - 1.8mm);
+  height: 9mm;
+  margin: 3.53mm 0 2.82mm .9mm;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-bottom: .65pt solid var(--doc-black);
+  font-size: 9.95pt;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.history-title strong {
+  font-size: 9.95pt;
+}
+
+.history-frame {
+  width: calc(100% - 1.8mm);
+  height: 183.62mm;
+  margin-left: .9mm;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 67.0787% 32.9213%;
+  border: .65pt solid var(--doc-black);
+}
+
+.history-left {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  border-right: .65pt solid var(--doc-black);
+}
+
+.official-history-table {
+  width: 100%;
+  height: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 6pt;
+  line-height: 1.02;
+  font-variant-numeric: tabular-nums;
+}
+
+.official-history-table .c-etapa { width: 4.8576%; }
+.official-history-table .c-ano { width: 6.0302%; }
+.official-history-table .c-rotulo { width: 19.5980%; }
+.official-history-table .c-portugues { width: 6.8677%; }
+.official-history-table .c-arte { width: 5.5276%; }
+.official-history-table .c-edfisica { width: 6.5327%; }
+.official-history-table .c-ingles { width: 6.5327%; }
+.official-history-table .c-matematica { width: 7.2027%; }
+.official-history-table .c-ciencias { width: 6.3652%; }
+.official-history-table .c-geografia { width: 6.5327%; }
+.official-history-table .c-historia { width: 6.5327%; }
+.official-history-table .c-religioso { width: 6.5327%; }
+.official-history-table .c-total { width: 6.5327%; }
+.official-history-table .c-status { width: 4.3551%; }
+
+.official-history-table th,
+.official-history-table td {
+  box-sizing: border-box;
+  padding: .25mm .35mm;
+  border: .42pt solid var(--doc-black);
+  background: #fff;
+  color: var(--doc-black);
+  text-align: center;
+  vertical-align: middle;
+  overflow: hidden;
+  overflow-wrap: normal;
+}
+
+.official-history-table thead .knowledge-row {
+  height: 17.64mm;
+}
+
+.official-history-table thead .subjects-row {
+  height: 20.46mm;
+}
+
+.official-history-table thead th {
+  font-weight: 500;
+}
+
+.official-history-table thead .knowledge-row > th:first-child,
+.official-history-table thead .subjects-row > th:first-child {
+  font-size: 6.95pt;
+  font-weight: 500;
+}
+
+.vertical-category,
+.vertical-subject {
+  position: relative;
+  padding: 0 !important;
+  overflow: hidden;
+  writing-mode: horizontal-tb;
+  transform: none;
+}
+
+.rotated-label {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: block;
+  transform: translate(-50%, -50%) rotate(-90deg);
+  transform-origin: center;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: normal;
+}
+
+.category-label {
+  width: 15.5mm;
+  font-size: 6pt;
+  font-weight: 400;
+  line-height: 1.05;
+}
+
+.subject-label {
+  width: 18.8mm;
+  font-size: 5.7pt;
+  font-weight: 500;
+  line-height: 1.03;
+}
+
+.subject-label--tall {
+  width: 34mm;
+}
+
+.stage-cell,
+.year-cell,
+.status-cell {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  white-space: nowrap;
+}
+
+.official-history-table tbody tr {
+  height: 5.82mm;
+}
+
+.official-history-table tbody tr.year-group-start:not(:first-child) > * {
+  border-top: .55pt solid var(--doc-black);
+}
+
+
+.missing-year-diagonal {
+  position: absolute;
+  z-index: 6;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.missing-year-diagonal line {
+  stroke: var(--doc-black);
+  stroke-width: .7;
+  vector-effect: non-scaling-stroke;
+  shape-rendering: geometricPrecision;
+}
+
+.stage-cell {
+  padding: .4mm .15mm !important;
+  font-size: 8pt;
+  font-weight: 500;
+  letter-spacing: .02em;
+}
+
+.year-cell {
+  padding: .4mm .12mm !important;
+  font-size: 8pt;
+  font-weight: 500;
+}
+
+.row-label {
+  padding: .15mm .35mm .15mm .55mm !important;
+  font-size: 5.8pt;
+  font-weight: 500;
+  letter-spacing: -.015em;
+  text-align: left !important;
+  white-space: nowrap;
+}
+
+.grade-cell {
+  font-size: 6.45pt;
+  font-weight: 500;
+}
+
+.merged-value,
+.school-cell,
+.meta-value {
+  font-size: 6pt;
+}
+
+.merged-value {
+  text-align: center !important;
+}
+
+.school-cell {
+  padding-left: .25mm !important;
+  padding-right: .25mm !important;
+  white-space: nowrap;
+  text-align: center !important;
+}
+
+.municipality-combined {
+  padding: .1mm .25mm !important;
+  font-size: 5pt;
+  font-weight: 500;
+  letter-spacing: -.02em;
+  white-space: nowrap;
+  text-align: center !important;
+}
+
+.municipality-label {
+  margin-right: .45mm;
+  font-weight: 500;
+}
+
+.annual-label {
+  padding: .1mm .18mm !important;
+  font-size: 5.45pt;
+  font-weight: 500;
+  letter-spacing: -.025em;
+  white-space: nowrap;
+  text-align: center !important;
+}
+
+.annual-label--left {
+  text-align: left !important;
+  padding-left: .35mm !important;
+}
+
+.meta-value {
+  font-weight: 500;
+  text-align: center !important;
+}
+
+.total-spacer,
+.total-cell,
+.status-cell {
+  padding: .15mm .08mm !important;
+  font-size: 6pt;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.status-cell {
+  font-size: 5.8pt;
+}
+
+.legal-column {
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  padding: 1.15mm 1mm .8mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: .75mm;
+  font-size: 6.8pt;
+  line-height: 1.12;
+  text-align: center;
+}
+
+.legal-column h3 {
+  margin: 0 0 .3mm;
+  font-size: 7.15pt;
+  font-weight: 700;
+  text-align: center;
+}
+
+.legal-column p {
+  margin: 0;
+  flex: 0 0 auto;
+  text-align: center;
+}
+
+.legal-center {
+  margin-bottom: 0 !important;
+}
+
+.legal-divider {
+  margin: .1mm 0;
+  flex: 0 0 auto;
+  font-size: 6.1pt;
+  letter-spacing: -.02em;
+}
+
+/* Quando existe passagem por 2020 há um bloco legal adicional.
+   A fonte continua ampliada, com espaçamento mais compacto para caber no A4. */
+.legal-column--2020 {
+  gap: .42mm;
+  font-size: 6.35pt;
+  line-height: 1.08;
+}
+
+.legal-column--2020 h3 {
+  font-size: 6.75pt;
+}
+
+.bottom-observation {
+  width: calc(100% - 1.8mm);
+  height: 16.93mm;
+  margin: 1.41mm 0 0 .9mm;
+  display: grid;
+  grid-template-columns: 23mm 1fr;
+  border-bottom: .55pt solid var(--doc-black);
+  font-size: 6.95pt;
+}
+
+.bottom-observation__label {
+  padding: 1.5mm 1.8mm;
+  font-weight: 700;
+}
+
+.bottom-observation__text {
+  padding: 1.4mm 1mm;
+  overflow: hidden;
+  font-size: 6.95pt;
+  font-weight: 700;
+  line-height: 1.22;
+  white-space: pre-wrap;
+  text-transform: uppercase;
+}
+
+.official-footer {
+  position: relative;
+  width: 100%;
+  height: 26.72mm;
+  min-height: 26.72mm;
+  padding: 0;
+  font-size: 6pt;
+}
+
+.signature {
+  position: absolute;
+  bottom: 9.1mm;
+  width: 70mm;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.signature-left { left: 7mm; }
+.signature-right { right: 7mm; }
+
+.signature-line {
+  display: block;
+  width: 100%;
+  margin-bottom: 1.1mm;
+  border-top: .55pt solid var(--doc-black);
+}
+
+.issue-date {
+  position: absolute;
+  left: 50%;
+  bottom: 1.3mm;
+  transform: translateX(-50%);
+  min-width: 82mm;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.issue-date strong {
+  display: block;
+  padding-top: .55mm;
+  border-top: .55pt solid var(--doc-black);
+  font-size: 8pt;
+  line-height: 1.15;
+}
+
+.issue-date strong > span {
+  display: inline;
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.issue-date__caption {
+  display: block;
+  margin-top: .35mm;
+  font-size: 6pt;
+  font-weight: 600;
+}
+
+[contenteditable="true"] {
+  cursor: text;
+}
+
+[contenteditable="true"]:hover,
+[contenteditable="true"]:focus {
+  outline: 1px dashed var(--edit-line);
+  outline-offset: -1px;
+  background: var(--edit-bg) !important;
+}
+
+.alerta-reprovado {
+  background-color: var(--alert-bg) !important;
+  color: var(--alert-text) !important;
+  font-weight: 700 !important;
+  box-shadow: inset 2px 0 0 var(--alert-line);
+}
+
+.registro-com-alerta .year-cell {
+  color: var(--alert-text);
+  font-weight: 700;
+}
+
+.operator-summary {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  color: #64748b;
+  font: 500 11px/1.3 "Inter", Arial, sans-serif;
+}
+
+.operator-summary strong {
+  color: #0f172a;
+}
+
+.screen-only {
+  display: flex;
+}
+
+@media (max-width: 900px) {
+  .editor-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .document-shell {
+    padding-bottom: 48px;
+  }
+}
+
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+@media print {
+  .editable-certificate-field[contenteditable="true"]:empty::before {
+    content: "" !important;
+  }
+
+  html,
+  body {
+    width: 210mm !important;
+    height: 297mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  .app-header,
+  .editor-toolbar,
+  .screen-only {
+    display: none !important;
+  }
+
+  .app-main {
+    width: 210mm !important;
+    max-width: 210mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .document-shell {
+    width: 210mm !important;
+    height: 297mm !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .document-sheet {
+    width: 210mm !important;
+    height: 297mm !important;
+    min-height: 297mm !important;
+    margin: 0 !important;
+    padding: 3.99mm 4.97mm 0 3.99mm !important;
+    overflow: hidden !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  [contenteditable="true"],
+  [contenteditable="true"]:hover,
+  [contenteditable="true"]:focus {
+    outline: none !important;
+    background: transparent !important;
+  }
+
+  .alerta-reprovado,
+  .alerta-reprovado td,
+  [data-status="reprovado"] {
+    background: transparent !important;
+    background-color: transparent !important;
+    color: var(--doc-black) !important;
+    border-left: none !important;
+    box-shadow: none !important;
+  }
+
+  .registro-com-alerta .year-cell {
+    color: var(--doc-black) !important;
+    font-weight: 500 !important;
+  }
+
+  .legal-column {
+    font-size: 6.8pt !important;
+    line-height: 1.12 !important;
+  }
+
+  .legal-column h3 {
+    font-size: 7.15pt !important;
+  }
+
+  .legal-column--2020 {
+    font-size: 6.35pt !important;
+    line-height: 1.08 !important;
+  }
+
+  .legal-column--2020 h3 {
+    font-size: 6.75pt !important;
+  }
+
+  /* Bordas reforçadas em unidade física.
+     Evita que linhas finas desapareçam na rasterização do navegador/PDF. */
+  .certificate-section {
+    border: .25mm solid #000 !important;
+  }
+
+  .certificate-section h1 {
+    border-bottom: .22mm solid #000 !important;
+  }
+
+  .certificate-table .value {
+    border-bottom: .22mm solid #000 !important;
+  }
+
+  .history-frame {
+    border: .25mm solid #000 !important;
+  }
+
+  .history-left {
+    border-right: .25mm solid #000 !important;
+  }
+
+  .official-history-table {
+    border-collapse: collapse !important;
+    border: .25mm solid #000 !important;
+  }
+
+  .official-history-table th,
+  .official-history-table td {
+    border: .25mm solid #000 !important;
+  }
+
+  .official-history-table tbody tr.year-group-start:not(:first-child) > * {
+    border-top: .25mm solid #000 !important;
+  }
+
+  .bottom-observation {
+    border-top: .25mm solid #000 !important;
+    border-bottom: .25mm solid #000 !important;
+  }
+
+  .signature-line,
+  .issue-date strong {
+    border-top: .25mm solid #000 !important;
+  }
+
+  .official-page-border,
+  .certificate-section,
+  .certificate-table,
+  .history-frame,
+  .official-history-table,
+  .official-history-table th,
+  .official-history-table td,
+  .bottom-observation,
+  .signature-line,
+  .issue-date strong {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+
+.editor-toolbar__actions .emit-form {
+  margin: 0;
+  display: inline-flex;
+}
+
+.official-footer--authenticated .signature-right {
+  right: 15mm;
+  width: 60mm;
+}
+
+.authenticity-badge {
+  position: absolute;
+  right: 1.2mm;
+  bottom: .8mm;
+  width: 12.5mm;
+  display: grid;
+  justify-items: center;
+  gap: .2mm;
+  color: #000;
+  font-size: 3.4pt;
+  line-height: 1;
+  text-align: center;
+}
+
+.authenticity-badge img {
+  display: block;
+  width: 11.2mm;
+  height: 11.2mm;
+}
+
+.authenticity-badge span {
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+
+.authenticity-badge code {
+  font: 3pt/1 Arial, Helvetica, sans-serif;
+}

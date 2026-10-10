@@ -1,0 +1,237 @@
+.extras-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 18px;
+}
+
+.extras-heading h1 {
+  margin: 4px 0 6px;
+  font-family: var(--font-academic);
+  font-size: clamp(28px, 4vw, 38px);
+}
+
+.extras-heading p {
+  max-width: 850px;
+  margin: 0;
+  color: var(--muted);
+}
+
+.eyebrow {
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .09em;
+}
+
+.extras-form {
+  display: grid;
+  gap: 18px;
+}
+
+.extras-help,
+.extras-notice {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.extras-help strong {
+  color: var(--ink);
+}
+
+.extras-notice--success {
+  margin-bottom: 16px;
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.extras-notice--error,
+.form-errors {
+  margin-bottom: 14px;
+  border-color: #fecaca;
+  background: #fff7f7;
+  color: #991b1b;
+}
+
+.year-configs {
+  display: grid;
+  gap: 14px;
+}
+
+.year-config-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 5px 20px -16px rgba(15, 23, 42, .35);
+}
+
+.year-config-card--new {
+  border-style: dashed;
+  border-color: #86b896;
+  background: #fbfffc;
+}
+
+.year-config-card__header {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+  background: #f8fafc;
+}
+
+.year-config-card--new .year-config-card__header {
+  background: #f0fdf4;
+}
+
+.year-config-card__header > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.year-badge {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.year-config-card--new .year-badge {
+  background: #166534;
+  font-size: 20px;
+}
+
+.year-config-card h2 {
+  margin: 0;
+  font-family: var(--font-academic);
+  font-size: 18px;
+  color: var(--ink);
+}
+
+.year-config-card__header p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.extras-grid {
+  padding: 18px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.field {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field > span:first-child {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .035em;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--ink);
+  font: 500 14px/1.25 var(--font-ui);
+  outline: none;
+}
+
+.field input:focus,
+.field select:focus {
+  border-color: #65a30d;
+  box-shadow: 0 0 0 3px rgba(101, 163, 13, .11);
+}
+
+.field small {
+  min-height: 14px;
+  color: #64748b;
+  font-size: 10px;
+}
+
+.field--year {
+  grid-column: span 1;
+}
+
+.field--wide {
+  grid-column: span 2;
+}
+
+.field--uf {
+  max-width: 150px;
+}
+
+.errorlist {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: #b91c1c;
+  font-size: 11px;
+}
+
+.extras-actions {
+  position: sticky;
+  bottom: 12px;
+  z-index: 10;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255,255,255,.95);
+  box-shadow: 0 10px 28px -18px rgba(15,23,42,.45);
+  backdrop-filter: blur(8px);
+}
+
+@media (max-width: 1100px) {
+  .extras-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .extras-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .extras-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .field--wide,
+  .field--year,
+  .field--uf {
+    grid-column: 1;
+    max-width: none;
+  }
+
+  .extras-actions {
+    bottom: 6px;
+  }
+}
