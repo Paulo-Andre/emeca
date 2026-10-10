@@ -2,7 +2,7 @@ from django.shortcuts import redirect
 from django.urls import reverse
 
 class LoginRequiredMiddleware:
-    PUBLIC_PREFIXES = ("/static/", "/historico/validar/")
+    PUBLIC_PREFIXES = ("/static/", "/historico/validar/", "/matricula-online/")
 
     def __init__(self, get_response):
         self.get_response = get_response
