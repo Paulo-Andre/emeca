@@ -1,0 +1,44 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<div id="content-main">
+  <div class="module aligned">
+    <h2>Limpar todas as notas</h2>
+    <p>
+      Esta operação removerá <strong>{{ total_notas }}</strong> nota(s) do banco.
+    </p>
+    <p>
+      <strong>Alunos e registros acadêmicos não serão apagados.</strong>
+      Somente os registros da tabela de notas serão removidos.
+    </p>
+
+    <form method="post">
+      {% csrf_token %}
+      <fieldset class="module aligned">
+        <div class="form-row">
+          <div>
+            <label for="id_confirmacao">
+              Para confirmar, digite exatamente:
+              <strong>APAGAR TODAS AS NOTAS</strong>
+            </label>
+            <input
+              type="text"
+              name="confirmacao"
+              id="id_confirmacao"
+              value="{{ confirmacao }}"
+              autocomplete="off"
+              style="width: 360px; max-width: 100%;"
+            >
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="submit-row">
+        <a href="{{ changelist_url }}" class="button cancel-link">Cancelar</a>
+        <input type="submit" value="Apagar todas as notas" class="deletelink">
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
