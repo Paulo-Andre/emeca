@@ -3,6 +3,7 @@ name: Integração EMECA
 on:
   push:
     branches:
+      - main
       - integracao-sistema-unificado
   pull_request:
     branches:
