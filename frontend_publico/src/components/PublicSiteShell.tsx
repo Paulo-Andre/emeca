@@ -42,12 +42,12 @@ export default function PublicSiteShell({ children }: { children: ReactNode }) {
             className={`school-public-nav ${menuOpen ? "is-open" : ""}`}
             aria-label="Menu principal"
           >
-            <a href="/" onClick={closeMenu}>Início</a>
-            <a href="/a-escola/" onClick={closeMenu}>A Escola</a>
-            <a href="/vida-escolar/" onClick={closeMenu}>Vida Escolar</a>
-            <a href="/atividades-jogos/" onClick={closeMenu}>Atividades e Jogos</a>
-            <a href="/projetos/" onClick={closeMenu}>Projetos</a>
-            <a href="/noticias/" onClick={closeMenu}>Notícias</a>
+            <a className="shell-nav-color shell-nav-color--green" href="/" onClick={closeMenu}>Início</a>
+            <a className="shell-nav-color shell-nav-color--gold" href="/a-escola/" onClick={closeMenu}>A Escola</a>
+            <a className="shell-nav-color shell-nav-color--green-soft" href="/vida-escolar/" onClick={closeMenu}>Vida Escolar</a>
+            <a className="shell-nav-color shell-nav-color--gold" href="/atividades-jogos/" onClick={closeMenu}>Atividades e Jogos</a>
+            <a className="shell-nav-color shell-nav-color--green" href="/projetos/" onClick={closeMenu}>Projetos</a>
+            <a className="shell-nav-color shell-nav-color--red" href="/noticias/" onClick={closeMenu}>Notícias</a>
 
             <details className="school-public-more">
               <summary>
