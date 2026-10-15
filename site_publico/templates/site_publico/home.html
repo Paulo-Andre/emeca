@@ -164,6 +164,49 @@
   </div>
 </section>
 
+<section class="section school-model">
+  <div class="school-model__intro">
+    <div>
+      <span class="section-kicker">Nossa escola</span>
+      <h2>Um espaço para aprender, conviver e crescer</h2>
+      {% if config_site.apresentacao %}
+        <p>{{ config_site.apresentacao }}</p>
+      {% else %}
+        <p>A escola é um espaço de aprendizagem, convivência e desenvolvimento. Nosso objetivo é aproximar estudantes, famílias e comunidade em torno de uma educação pública acolhedora, responsável e participativa.</p>
+      {% endif %}
+      <a class="button button--soft" href="{% url 'site_publico:escola' %}">
+        Conheça mais sobre a escola
+        <i data-lucide="arrow-right"></i>
+      </a>
+    </div>
+
+    <div class="school-model__mark" aria-hidden="true">
+      <i data-lucide="school"></i>
+      <span>Educação pública com participação e cuidado</span>
+    </div>
+  </div>
+
+  <div class="school-pillars">
+    <article class="school-pillar school-pillar--green">
+      <span><i data-lucide="book-open-check"></i></span>
+      <h3>Aprendizagem</h3>
+      <p>Experiências que incentivam leitura, raciocínio, criatividade, autonomia e participação ativa dos estudantes.</p>
+    </article>
+
+    <article class="school-pillar school-pillar--red">
+      <span><i data-lucide="heart-handshake"></i></span>
+      <h3>Convivência</h3>
+      <p>Respeito, cooperação e diálogo fazem parte da construção de um ambiente escolar acolhedor e responsável.</p>
+    </article>
+
+    <article class="school-pillar school-pillar--gold">
+      <span><i data-lucide="users-round"></i></span>
+      <h3>Família e comunidade</h3>
+      <p>A participação das famílias fortalece o acompanhamento escolar e aproxima a escola da comunidade.</p>
+    </article>
+  </div>
+</section>
+
 {% if noticias %}
 <section class="section section--tinted">
   <div class="section-heading section-heading--row">
