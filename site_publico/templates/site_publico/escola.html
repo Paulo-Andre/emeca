@@ -1,0 +1,48 @@
+{% extends 'site_publico/base.html' %}
+{% block title %}A Escola · E. M. Egídio Cordeiro Aquino{% endblock %}
+{% block content %}
+<section class="page-hero">
+  <div class="page-heading">
+    <span class="section-kicker">Nossa história</span>
+    <h1>A Escola</h1>
+    <p>Conheça a identidade, os valores e o trabalho da Escola Municipal Egídio Cordeiro Aquino.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="two-column">
+    <article class="prose-card">
+      <h2>Quem somos</h2>
+      {% if config_site.apresentacao %}
+        {{ config_site.apresentacao|linebreaks }}
+      {% else %}
+        <p>Somos uma escola pública comprometida com uma educação acolhedora, responsável e conectada à comunidade.</p>
+        <p>Este espaço pode ser atualizado pela equipe da escola no painel administrativo, sem necessidade de alterar o código do site.</p>
+      {% endif %}
+    </article>
+
+    <article class="prose-card">
+      <h2>Nossa história</h2>
+      {% if config_site.historia %}
+        {{ config_site.historia|linebreaks }}
+      {% else %}
+        <p>A história da escola poderá ser publicada aqui com marcos importantes, transformações ao longo dos anos e sua relação com a comunidade.</p>
+      {% endif %}
+    </article>
+  </div>
+</section>
+
+<section class="section section--soft">
+  <div class="section-heading">
+    <span class="section-kicker">O que nos orienta</span>
+    <h2>Missão e valores</h2>
+  </div>
+  <article class="prose-card">
+    {% if config_site.missao_valores %}
+      {{ config_site.missao_valores|linebreaks }}
+    {% else %}
+      <p>Valorizar cada estudante, promover aprendizagem com significado, fortalecer a convivência respeitosa e construir uma escola próxima das famílias e da comunidade.</p>
+    {% endif %}
+  </article>
+</section>
+{% endblock %}
