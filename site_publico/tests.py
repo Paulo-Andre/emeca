@@ -125,6 +125,20 @@ class SitePublicoTests(TestCase):
         self.assertNotContains(home, 'href="/noticias/"')
         self.assertEqual(pagina_response.status_code, 404)
 
+    def test_matricula_desativada_bloqueia_landing_e_formulario(self):
+        pagina = PaginaPublica.objects.get(chave="matricula")
+        pagina.ativa = False
+        pagina.save(update_fields=["ativa", "atualizado_em"])
+
+        home = self.client.get(reverse("site_publico:home"))
+        landing = self.client.get(reverse("site_publico:matricula_landing"))
+        formulario = self.client.get(reverse("matricula_publica"))
+
+        self.assertNotContains(home, 'href="/matricula-escolar/"')
+        self.assertEqual(landing.status_code, 404)
+        self.assertEqual(formulario.status_code, 404)
+
+
     def test_configuracao_publica_reflete_pagina_desativada(self):
         pagina = PaginaPublica.objects.get(chave="boletim")
         pagina.ativa = False
