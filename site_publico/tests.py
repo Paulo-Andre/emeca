@@ -1,10 +1,12 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from .forms import PaginaPublicaForm
 from .models import Aviso, Noticia, PaginaPublica, SecaoPagina
 
 
@@ -181,3 +183,58 @@ class SitePublicoTests(TestCase):
         pagina = self.client.get(reverse("site_publico:boletim"))
         self.assertContains(pagina, "Resultados e acompanhamento")
         self.assertContains(pagina, "Texto atualizado pela equipe autenticada.")
+
+
+    def test_formulario_de_pagina_aceita_pdf_como_capa(self):
+        pagina = PaginaPublica.objects.get(chave="documentos")
+        pdf = SimpleUploadedFile(
+            "orientacoes.pdf",
+            b"%PDF-1.4\n% teste\n",
+            content_type="application/pdf",
+        )
+        form = PaginaPublicaForm(
+            data={
+                "ativa": "on",
+                "rotulo": pagina.rotulo,
+                "titulo": pagina.titulo,
+                "subtitulo": pagina.subtitulo,
+                "texto_principal": pagina.texto_principal,
+            },
+            files={"imagem_capa": pdf},
+            instance=pagina,
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_desmarcar_ativa_desativa_contato_mesmo_com_arquivo_invalido(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="gestor_visibilidade",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+        pagina = PaginaPublica.objects.get(chave="contato")
+        arquivo_invalido = SimpleUploadedFile(
+            "planilha.xls",
+            b"arquivo-invalido",
+            content_type="application/vnd.ms-excel",
+        )
+
+        response = self.client.post(
+            reverse("site_publico:gestao_pagina_editar", args=[pagina.chave]),
+            {
+                "rotulo": pagina.rotulo,
+                "titulo": pagina.titulo,
+                "subtitulo": pagina.subtitulo,
+                "texto_principal": pagina.texto_principal,
+                "imagem_capa": arquivo_invalido,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        pagina.refresh_from_db()
+        self.assertFalse(pagina.ativa)
+        self.assertEqual(self.client.get(reverse("site_publico:contato")).status_code, 404)
+
+        home = self.client.get(reverse("site_publico:home"))
+        self.assertNotContains(home, 'href="/contato/"')
