@@ -1,0 +1,25 @@
+{% extends 'site_publico/base.html' %}
+{% block title %}Perguntas Frequentes · E. M. Egídio Cordeiro Aquino{% endblock %}
+{% block content %}
+<section class="page-hero">
+  <div class="page-heading">
+    <span class="section-kicker">Dúvidas comuns</span>
+    <h1>Perguntas Frequentes</h1>
+    <p>Respostas rápidas para as dúvidas mais comuns de estudantes e famílias.</p>
+  </div>
+</section>
+<section class="section">
+  {% if itens %}
+    <div class="faq-list">
+      {% for item in itens %}
+        <details>
+          <summary>{{ item.pergunta }}</summary>
+          <p>{{ item.resposta|linebreaksbr }}</p>
+        </details>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-public"><i data-lucide="circle-help"></i><strong>Perguntas em preparação</strong><span>A escola poderá cadastrar as dúvidas mais frequentes pelo painel administrativo.</span></div>
+  {% endif %}
+</section>
+{% endblock %}
