@@ -604,3 +604,369 @@
   border-color: #d4aa00;
 }
 
+
+/* Reference header for enrollment flow */
+.school-public-header {
+  padding: 14px 18px 0;
+  background: #fbfaf6;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.school-public-frame {
+  width: min(1560px, 100%);
+  margin: 0 auto;
+  overflow: visible;
+  border: 1px solid #edf0e9;
+  border-radius: 22px 22px 18px 18px;
+  background: #fff;
+  box-shadow: 0 14px 34px rgba(42,67,29,.10);
+}
+
+.school-public-header__top {
+  min-height: 118px;
+  padding: 18px 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+}
+
+.school-public-header__top .school-public-brand {
+  min-width: 0;
+  flex: 1 1 auto;
+  gap: 17px;
+}
+
+.school-public-header__top .school-public-brand img {
+  width: 76px;
+  height: 76px;
+  padding: 3px;
+  border: 0;
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+.school-public-header__top .school-public-brand strong {
+  max-width: none;
+  color: #0f5528;
+  font: 900 clamp(20px, 2vw, 30px)/1.08 Nunito, Inter, sans-serif;
+  letter-spacing: -.025em;
+}
+
+.school-public-header__top .school-public-brand small {
+  margin-top: 2px;
+  color: #6d6d6d;
+  font-size: clamp(11px, 1vw, 15px);
+  font-weight: 700;
+}
+
+.school-public-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 22px;
+  flex: 0 0 auto;
+}
+
+.school-public-actions .shell-enrollment,
+.school-public-actions .shell-internal-access {
+  min-height: 58px;
+  padding: 0 24px !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  border-radius: 13px !important;
+  font-size: 15px !important;
+  font-weight: 850 !important;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.school-public-actions .shell-enrollment {
+  margin: 0;
+  border: 1px solid #a80e17;
+  background: linear-gradient(180deg, #bd111b, #a80e17);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(168,14,23,.18);
+}
+
+.school-public-actions .shell-enrollment:hover {
+  background: linear-gradient(180deg, #aa0e17, #8e0912);
+}
+
+.school-public-actions .shell-internal-access {
+  border: 2px solid #145a2c;
+  background: #fff;
+  color: #145a2c !important;
+}
+
+.school-public-actions .shell-internal-access:hover {
+  background: #eef6ea !important;
+}
+
+.shell-action-divider {
+  width: 1px;
+  height: 48px;
+  background: #dadeda;
+}
+
+.school-public-nav-band {
+  position: relative;
+  overflow: visible;
+  border-radius: 0 0 17px 17px;
+  background: #104920;
+}
+
+.school-public-nav-band .school-public-nav {
+  width: 100%;
+  min-height: 76px;
+  margin: 0;
+  padding: 0 22px;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  gap: 0;
+}
+
+.school-public-nav-band .shell-nav-main,
+.school-public-nav-band .school-public-more {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.school-public-nav-band .shell-nav-main,
+.school-public-nav-band .school-public-more > summary {
+  min-height: 76px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  font-size: 14px;
+  font-weight: 850;
+  text-decoration: none;
+  white-space: nowrap;
+  list-style: none;
+}
+
+.school-public-nav-band .shell-nav-main + .shell-nav-main::before,
+.school-public-nav-band .school-public-more::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 19px;
+  bottom: 19px;
+  width: 1px;
+  background: rgba(255,255,255,.22);
+}
+
+.school-public-nav-band .shell-nav-main svg,
+.school-public-nav-band .school-public-more > summary svg:first-child {
+  width: 27px;
+  height: 27px;
+  flex: 0 0 27px;
+  stroke-width: 2;
+}
+
+.school-public-nav-band .school-public-more > summary svg:last-child {
+  width: 18px;
+  height: 18px;
+}
+
+.school-public-nav-band .shell-nav-main:hover,
+.school-public-nav-band .school-public-more > summary:hover,
+.school-public-nav-band .school-public-more[open] > summary {
+  background: rgba(255,255,255,.08) !important;
+  color: #fff !important;
+}
+
+.school-public-nav-band .school-public-more__panel {
+  top: calc(100% + 10px);
+  right: 8px;
+  z-index: 120;
+  width: 260px;
+  padding: 10px;
+}
+
+.school-public-nav-accent {
+  height: 7px;
+  display: grid;
+  grid-template-columns: 88fr 12fr;
+  overflow: hidden;
+  border-radius: 0 0 17px 17px;
+}
+
+.school-public-nav-accent span:first-child { background: #f9c232; }
+.school-public-nav-accent span:last-child { background: #a80e17; }
+
+.school-public-header .shell-menu-button {
+  display: none;
+}
+
+@media (max-width: 1240px) {
+  .school-public-header__top {
+    min-height: 102px;
+    padding: 14px 22px;
+  }
+
+  .school-public-header__top .school-public-brand img {
+    width: 64px;
+    height: 64px;
+  }
+
+  .school-public-actions .shell-enrollment,
+  .school-public-actions .shell-internal-access {
+    min-height: 52px;
+    padding: 0 18px !important;
+    font-size: 13px !important;
+  }
+
+  .school-public-nav-band .shell-nav-main,
+  .school-public-nav-band .school-public-more > summary {
+    padding: 0 12px;
+    gap: 8px;
+    font-size: 12.5px;
+  }
+}
+
+@media (max-width: 1020px) {
+  .school-public-header {
+    padding: 8px 8px 0;
+  }
+
+  .school-public-frame {
+    border-radius: 17px;
+  }
+
+  .school-public-header__top {
+    min-height: 82px;
+    padding: 10px 14px;
+  }
+
+  .school-public-header__top .school-public-brand {
+    gap: 10px;
+  }
+
+  .school-public-header__top .school-public-brand img {
+    width: 52px;
+    height: 52px;
+  }
+
+  .school-public-header__top .school-public-brand strong {
+    font-size: 15px;
+  }
+
+  .school-public-header__top .school-public-brand small {
+    font-size: 10px;
+  }
+
+  .school-public-actions {
+    gap: 8px;
+  }
+
+  .shell-action-divider {
+    display: none;
+  }
+
+  .school-public-actions .shell-enrollment,
+  .school-public-actions .shell-internal-access {
+    min-height: 43px;
+    padding: 0 12px !important;
+    border-radius: 10px !important;
+    font-size: 11px !important;
+  }
+
+  .school-public-header .shell-menu-button {
+    min-height: 43px;
+    margin: 0;
+    padding: 0 12px;
+    display: inline-flex;
+  }
+
+  .school-public-nav-band .school-public-nav {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    z-index: 150;
+    width: auto;
+    min-height: 0;
+    max-height: calc(100vh - 120px);
+    margin: 0;
+    padding: 10px;
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    overflow-y: auto;
+    border: 1px solid #2c6339;
+    border-radius: 14px;
+    background: #104920;
+    box-shadow: 0 18px 42px rgba(16,73,32,.28);
+  }
+
+  .school-public-nav-band .school-public-nav.is-open {
+    display: flex;
+  }
+
+  .school-public-nav-band .shell-nav-main,
+  .school-public-nav-band .school-public-more {
+    flex: none;
+    width: 100%;
+  }
+
+  .school-public-nav-band .shell-nav-main,
+  .school-public-nav-band .school-public-more > summary {
+    min-height: 48px;
+    margin: 2px 0;
+    padding: 0 14px;
+    justify-content: flex-start;
+    border-radius: 10px !important;
+  }
+
+  .school-public-nav-band .shell-nav-main::before,
+  .school-public-nav-band .school-public-more::before {
+    display: none !important;
+  }
+
+  .school-public-nav-band .school-public-more__panel {
+    position: static;
+    width: 100%;
+    margin: 4px 0;
+    border: 0;
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 650px) {
+  .school-public-header__top .school-public-brand small {
+    display: none;
+  }
+
+  .school-public-header__top .school-public-brand strong {
+    max-width: 180px;
+    font-size: 13px;
+  }
+
+  .school-public-actions .shell-enrollment span,
+  .school-public-actions .shell-internal-access span,
+  .school-public-header .shell-menu-button span {
+    display: none;
+  }
+
+  .school-public-actions .shell-enrollment,
+  .school-public-actions .shell-internal-access,
+  .school-public-header .shell-menu-button {
+    width: 42px;
+    min-width: 42px;
+    padding: 0 !important;
+  }
+}
