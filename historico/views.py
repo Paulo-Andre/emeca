@@ -84,21 +84,19 @@ RESULTADO_CHOICES = [
 
 
 def _timbragem_data_uri():
-    """Timbragem embutida para a impressão não depender de requisição estática."""
+    """Embute exatamente a timbragem oficial usada no restante do EMECA."""
     caminho = (
         Path(settings.BASE_DIR)
-        / "historico"
+        / "App"
         / "static"
-        / "historico"
-        / "img"
-        / "timbragem_historico_egidio.b64"
+        / "imagens"
+        / "timbragem.jpeg"
     )
     try:
-        payload = "".join(caminho.read_text(encoding="ascii").split())
+        payload = base64.b64encode(caminho.read_bytes()).decode("ascii")
     except OSError:
         return ""
-    return f"data:image/jpeg;base64,{payload}" if payload else ""
-
+    return f"data:image/jpeg;base64,{payload}"
 
 
 def _opcoes_com_valor_atual(opcoes, atual):
