@@ -14,6 +14,7 @@ urlpatterns = [
     path("gestao-site/conteudo/<str:tipo>/<int:pk>/editar/", management_views.gestao_conteudo_editar, name="gestao_conteudo_editar"),
     path("gestao-site/conteudo/<str:tipo>/<int:pk>/excluir/", management_views.gestao_conteudo_excluir, name="gestao_conteudo_excluir"),
     path("", views.home, name="home"),
+    path("configuracao-site-publica/", views.configuracao_publica, name="configuracao_publica"),
     path("a-escola/", views.escola, name="escola"),
     path("vida-escolar/", views.vida_escolar, name="vida_escolar"),
     path("atividades-jogos/", views.atividades, name="atividades"),
