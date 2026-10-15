@@ -45,7 +45,9 @@
     </form>
 
     <aside class="contact-info">
-      <h2>Informações da escola</h2>
+      <h2>{{ secoes_site.contato_informacoes.titulo|default:"Informações da escola" }}</h2>
+      {% if secoes_site.contato_informacoes.texto %}<p>{{ secoes_site.contato_informacoes.texto|linebreaksbr }}</p>{% endif %}
+      {% if secoes_site.contato_informacoes.imagem %}<img class="editable-public-image" src="{{ secoes_site.contato_informacoes.imagem.url }}" alt="">{% endif %}
       {% if config_site.endereco or config_site.cidade %}
         <div class="contact-info__item"><i data-lucide="map-pin"></i><div><span>Endereço</span><strong>{{ config_site.endereco }}{% if config_site.endereco and config_site.cidade %}<br>{% endif %}{{ config_site.cidade }}</strong></div></div>
       {% endif %}
