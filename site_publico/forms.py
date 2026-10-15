@@ -55,8 +55,14 @@ class PaginaPublicaForm(StyledModelForm):
     class Meta:
         model = PaginaPublica
         fields = ["ativa", "rotulo", "titulo", "subtitulo", "texto_principal", "imagem_capa"]
-        labels = {"rotulo": "Texto de destaque"}
-        help_texts = {"rotulo": "Texto pequeno exibido acima do título da página."}
+        labels = {
+            "rotulo": "Texto de destaque",
+            "imagem_capa": "Imagem ou PDF da página",
+        }
+        help_texts = {
+            "rotulo": "Texto pequeno exibido acima do título da página.",
+            "imagem_capa": "Formatos permitidos: JPG, JPEG, PNG, WEBP ou PDF.",
+        }
 
 
 class SecaoPaginaForm(StyledModelForm):
