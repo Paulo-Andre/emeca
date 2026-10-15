@@ -1,0 +1,638 @@
+/* Histórico Escolar integrado à identidade da Secretaria */
+
+body.historico-unificado {
+  display: flex;
+  min-height: 100vh;
+  background: var(--school-bg);
+  color: var(--school-text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+}
+
+.historico-main {
+  flex: 1;
+  min-width: 0;
+  padding: 38px clamp(22px, 4vw, 56px) 56px;
+}
+
+.historico-main > * {
+  max-width: 1180px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.historico-unificado .sidebar .historico-subitem {
+  min-height: 38px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 18px;
+  color: #aac7d1;
+  font-size: 12.5px;
+}
+
+.historico-unificado .sidebar .historico-subitem svg {
+  width: 17px;
+  height: 17px;
+}
+
+.historico-unificado .sidebar .historico-subitem-active {
+  background: rgba(255,255,255,.08);
+  color: #fff;
+}
+
+/* Cabeçalho simples */
+.historico-page-header {
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.historico-page-header__icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--school-primary), #167995);
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(15,95,120,.18);
+}
+
+.historico-page-header__icon svg {
+  width: 23px;
+  height: 23px;
+}
+
+.historico-page-header__copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.historico-page-header h1,
+.historico-unificado .toolbar h1,
+.historico-unificado .page-heading h1,
+.historico-unificado .card h1,
+.historico-unificado .card h2 {
+  margin: 0;
+  color: var(--school-text);
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -.025em;
+}
+
+.historico-page-header h1 {
+  font-size: clamp(1.55rem, 2.3vw, 2rem);
+}
+
+.historico-page-header p,
+.historico-unificado .page-heading p,
+.historico-unificado .toolbar p,
+.historico-unificado .muted-copy {
+  margin: 4px 0 0;
+  color: var(--school-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.historico-page-header__actions {
+  margin-left: auto;
+}
+
+/* Botões */
+.historico-btn,
+.historico-unificado .btn {
+  min-height: 42px;
+  padding: 0 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--school-border);
+  border-radius: 10px;
+  background: #fff;
+  color: #405b66;
+  font: 700 13px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.historico-btn svg {
+  width: 17px;
+  height: 17px;
+}
+
+.historico-btn--primary,
+.historico-unificado .btn.primary,
+.historico-unificado button.primary {
+  border-color: var(--school-primary);
+  background: var(--school-primary);
+  color: #fff;
+  box-shadow: 0 7px 18px rgba(15,95,120,.14);
+}
+
+.historico-btn--primary:hover,
+.historico-unificado .btn.primary:hover,
+.historico-unificado button.primary:hover {
+  background: var(--school-primary-hover);
+}
+
+.historico-btn--secondary:hover,
+.historico-unificado .btn:not(.primary):hover {
+  border-color: #bfd2da;
+  background: #f2f7f9;
+  color: var(--school-primary);
+}
+
+.historico-btn--small,
+.historico-unificado .btn-small {
+  min-height: 34px;
+  padding: 0 11px;
+  font-size: 11px;
+}
+
+/* Busca principal */
+.historico-search-card {
+  padding: 24px;
+  border: 1px solid var(--school-border);
+  border-radius: var(--school-radius-lg);
+  background: #fff;
+  box-shadow: var(--school-shadow-soft);
+}
+
+.historico-search-card__heading {
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.historico-search-card h2 {
+  margin: 0;
+  color: var(--school-text);
+  font-size: 15px;
+  letter-spacing: -.01em;
+}
+
+.historico-search-card p {
+  margin: 4px 0 0;
+  color: var(--school-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.historico-search-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.historico-search-input-wrap {
+  position: relative;
+}
+
+.historico-search-input-wrap > svg {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  transform: translateY(-50%);
+  color: #79909a;
+  pointer-events: none;
+}
+
+.historico-search-form input {
+  width: 100%;
+  min-height: 46px;
+  margin: 0;
+  padding: 11px 14px 11px 42px;
+  border: 1px solid var(--school-border);
+  border-radius: 11px;
+  background: #fbfcfd;
+  color: var(--school-text);
+  font: inherit;
+  outline: none;
+}
+
+.historico-search-form input:focus {
+  border-color: var(--school-primary);
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(15,95,120,.1);
+}
+
+/* Resumo discreto: sem quatro cartões grandes */
+.historico-summary {
+  margin-top: 14px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  border: 1px solid var(--school-border);
+  border-radius: 14px;
+  background: rgba(255,255,255,.78);
+}
+
+.historico-summary__item {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.historico-summary__item span {
+  color: var(--school-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.historico-summary__item strong {
+  color: var(--school-primary-strong);
+  font-size: 17px;
+}
+
+.historico-summary__divider {
+  width: 1px;
+  height: 24px;
+  background: var(--school-border);
+}
+
+.historico-summary__link {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--school-primary);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.historico-summary__link svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Um único aviso de qualidade */
+.historico-attention {
+  margin-top: 12px;
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 11px;
+  border: 1px solid #efd8ad;
+  border-radius: 12px;
+  background: #fffaf0;
+}
+
+.historico-attention__icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: #fff2d8;
+  color: var(--school-warning);
+}
+
+.historico-attention__icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.historico-attention__copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.historico-attention__copy strong {
+  color: #67440d;
+  font-size: 12px;
+}
+
+.historico-attention__copy span {
+  color: #8a6a37;
+  font-size: 11px;
+}
+
+.historico-attention > a {
+  color: #7c5412;
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+/* Resultado */
+.historico-results {
+  margin-top: 18px;
+  overflow: hidden;
+  border: 1px solid var(--school-border);
+  border-radius: var(--school-radius-lg);
+  background: #fff;
+  box-shadow: var(--school-shadow-soft);
+}
+
+.historico-results__heading {
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--school-border);
+}
+
+.historico-results__heading h2 {
+  margin: 0;
+  color: var(--school-text);
+  font-size: 15px;
+}
+
+.historico-results__heading p {
+  margin: 3px 0 0;
+  color: var(--school-muted);
+  font-size: 11px;
+}
+
+.historico-table-wrap {
+  overflow-x: auto;
+}
+
+.historico-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.historico-table th {
+  padding: 12px 18px;
+  background: #f6f9fa;
+  color: #627781;
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .035em;
+}
+
+.historico-table td {
+  padding: 13px 18px;
+  border-bottom: 1px solid #e8eff2;
+  color: var(--school-text);
+  font-size: 12.5px;
+}
+
+.historico-table tbody tr:hover {
+  background: #fafcfd;
+}
+
+.historico-table__actions {
+  text-align: right;
+}
+
+.historico-row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+/* Estado vazio */
+.historico-empty {
+  padding: 42px 20px;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  color: var(--school-muted);
+  text-align: center;
+}
+
+.historico-empty > svg {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 4px;
+  color: #8ba2ac;
+}
+
+.historico-empty strong {
+  color: #405b66;
+  font-size: 13px;
+}
+
+.historico-empty span {
+  font-size: 11.5px;
+}
+
+.historico-empty--initial {
+  margin-top: 18px;
+  padding: 38px 20px;
+  border: 1px dashed #cbd9df;
+  border-radius: 14px;
+  background: rgba(255,255,255,.46);
+}
+
+/* Outras páginas do módulo: neutraliza o visual antigo */
+.historico-unificado .toolbar,
+.historico-unificado .page-heading {
+  max-width: 1180px;
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.historico-unificado .toolbar h1,
+.historico-unificado .page-heading h1 {
+  font-size: clamp(1.5rem, 2.2vw, 1.9rem);
+}
+
+.historico-unificado .eyebrow {
+  margin-bottom: 5px;
+  display: block;
+  color: var(--school-primary);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.historico-unificado .card,
+.historico-unificado .relation-card,
+.historico-unificado .report-filter-card {
+  margin-top: 16px;
+  padding: 22px;
+  border: 1px solid var(--school-border);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: var(--school-shadow-soft);
+}
+
+.historico-unificado .student-insights,
+.historico-unificado .dashboard-metrics {
+  gap: 10px;
+}
+
+.historico-unificado .student-insight,
+.historico-unificado .metric-card {
+  padding: 14px;
+  border-color: var(--school-border);
+  border-radius: 11px;
+  background: #fff;
+}
+
+.historico-unificado .student-insight span,
+.historico-unificado .metric-card span {
+  color: var(--school-muted);
+}
+
+.historico-unificado .student-insight strong,
+.historico-unificado .metric-card strong {
+  color: var(--school-primary-strong);
+}
+
+.historico-unificado input,
+.historico-unificado select,
+.historico-unificado textarea {
+  border-color: var(--school-border);
+  border-radius: 9px;
+  font-family: inherit;
+}
+
+.historico-unificado table th {
+  background: #f5f9fa;
+  color: #607680;
+}
+
+.historico-unificado table td {
+  border-bottom-color: #e8eff2;
+}
+
+/* Validação pública continua limpa e independente */
+body.historico-publico {
+  min-height: 100vh;
+  padding: 24px;
+  display: grid;
+  place-items: start center;
+  background:
+    radial-gradient(circle at 10% 8%, rgba(15,95,120,.08), transparent 28%),
+    var(--school-bg);
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.historico-publico__main {
+  width: min(880px, 100%);
+}
+
+.historico-publico .validation-shell {
+  margin: 30px auto;
+}
+
+.historico-publico .validation-card {
+  border-color: var(--school-border);
+  border-radius: 18px;
+  box-shadow: var(--school-shadow);
+}
+
+/* Responsivo */
+@media (max-width: 1100px) {
+  body.historico-unificado {
+    display: block;
+  }
+
+  .historico-main {
+    padding: 26px 18px 44px;
+  }
+
+  .historico-unificado .sidebar .historico-subitem {
+    padding-left: 10px;
+  }
+
+  .historico-page-header {
+    max-width: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .historico-main {
+    padding: 20px 12px 36px;
+  }
+
+  .historico-page-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .historico-page-header__actions {
+    width: 100%;
+    margin-left: 62px;
+  }
+
+  .historico-search-card {
+    padding: 18px;
+    border-radius: 17px;
+  }
+
+  .historico-search-form {
+    grid-template-columns: 1fr;
+  }
+
+  .historico-search-form .historico-btn {
+    width: 100%;
+  }
+
+  .historico-summary {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .historico-summary__item {
+    justify-content: space-between;
+  }
+
+  .historico-summary__divider {
+    width: 100%;
+    height: 1px;
+  }
+
+  .historico-summary__link {
+    margin-left: 0;
+    justify-content: space-between;
+  }
+
+  .historico-attention {
+    grid-template-columns: auto 1fr;
+  }
+
+  .historico-attention > a {
+    grid-column: 2;
+  }
+
+  .historico-unificado .toolbar,
+  .historico-unificado .page-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .historico-row-actions {
+    justify-content: flex-start;
+  }
+
+  .historico-table {
+    min-width: 650px;
+  }
+}
+
+@media (max-width: 480px) {
+  .historico-page-header__actions {
+    margin-left: 0;
+  }
+
+  .historico-page-header__actions .historico-btn {
+    width: 100%;
+  }
+
+  body.historico-publico {
+    padding: 12px;
+  }
+}
