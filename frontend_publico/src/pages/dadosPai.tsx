@@ -300,19 +300,21 @@ export default function DadosPai({ dado, setDados }: Props) {
               <div className="field">
                 <label>CPF</label>
                 <input
-                  name="cpfPai"
-                  value={cpf}
-                  onChange={handleCPF}
-  style={{
-      border: cpfErro ? "2px solid red" : "1px solid #ccc",
-    }}
-  />
+                    name="cpfPai"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    value={cpf}
+                    onChange={handleCPF}
+                    className={cpfErro ? "field-invalid" : ""}
+                    aria-invalid={cpfErro}
+                    aria-describedby={cpfErro ? "cpf-pai-erro" : undefined}
+                  />
 
-  {cpfErro && (
-    <small style={{ color: "red" }}>
-      CPF inválido
-    </small>
-  )}
+                  {cpfErro && (
+                    <small id="cpf-pai-erro" className="field-error">
+                      Confira o CPF informado.
+                    </small>
+                  )}
 </div>
 
               <div className="field">
