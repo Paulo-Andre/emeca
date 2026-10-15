@@ -26,7 +26,7 @@
 
   <div class="manager-form-grid">
     {% for field in form %}
-      <div class="manager-field{% if field.field.widget.input_type == 'checkbox' %} manager-field--check{% endif %}{% if field.name == 'texto_principal' or field.name == 'conteudo' or field.name == 'descricao' or field.name == 'apresentacao' or field.name == 'historia' or field.name == 'missao_valores' or field.name == 'vida_escolar' or field.name == 'resposta' %} manager-field--full{% endif %}">
+      <div class="manager-field{% if field.field.widget.input_type == 'checkbox' %} manager-field--check{% endif %}{% if field.name == 'texto_principal' or field.name == 'texto' or field.name == 'conteudo' or field.name == 'descricao' or field.name == 'apresentacao' or field.name == 'historia' or field.name == 'missao_valores' or field.name == 'vida_escolar' or field.name == 'home_texto' or field.name == 'home_pilar1_texto' or field.name == 'home_pilar2_texto' or field.name == 'home_pilar3_texto' or field.name == 'resposta' %} manager-field--full{% endif %}">
         {% if field.field.widget.input_type == 'checkbox' %}
           <label class="manager-check-label">{{ field }} <span>{{ field.label }}</span></label>
         {% else %}
