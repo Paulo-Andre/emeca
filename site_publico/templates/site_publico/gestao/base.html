@@ -1,0 +1,76 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}Gestão do Site{% endblock %} · Secretaria Digital</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261015-icons-01">
+  <link rel="stylesheet" href="{% static 'site_publico/gestao.css' %}?v=20261016-01">
+</head>
+<body class="secretaria-dashboard site-manager-page">
+  <aside class="sidebar" aria-label="Navegação da secretaria">
+    <div class="logo">
+      <img class="logo__mark" src="{% static 'imagens/logo.svg' %}" alt="">
+      <span class="logo__copy">
+        <strong>E. M. Egídio Cordeiro Aquino</strong>
+        <span>Secretaria Digital</span>
+      </span>
+    </div>
+
+    <div class="nav-section-label">Atendimento</div>
+    <a class="nav-item" href="{% url 'dashboard' %}">
+      <i data-lucide="users-round"></i><span>Matrículas</span>
+    </a>
+    <a class="nav-item" href="{% url 'telaDeclaracao' %}">
+      <i data-lucide="file-text"></i><span>Declarações</span>
+    </a>
+    <a class="nav-item" href="{% url 'historico:inicio' %}">
+      <i data-lucide="graduation-cap"></i><span>Histórico Escolar</span>
+    </a>
+
+    <div class="nav-section-label">Site público</div>
+    <a class="nav-item active" href="{% url 'site_publico:gestao_site' %}">
+      <i data-lucide="panel-top"></i><span>Gestão do Site</span>
+    </a>
+    <a class="nav-item" href="{% url 'site_publico:home' %}" target="_blank" rel="noopener">
+      <i data-lucide="external-link"></i><span>Ver site público</span>
+    </a>
+
+    {% if request.user.is_superuser or perms.auth.add_user %}
+      <div class="nav-section-label">Administração</div>
+      <a class="nav-item" href="{% url 'cadastro' %}">
+        <i data-lucide="user-plus"></i><span>Cadastrar usuário</span>
+      </a>
+    {% endif %}
+
+    <a class="nav-item nav-logout" href="{% url 'sair' %}">
+      <i data-lucide="log-out"></i><span>Sair</span>
+    </a>
+  </aside>
+
+  <main class="site-manager-main">
+    <header class="site-manager-header">
+      <div class="site-manager-header__icon"><i data-lucide="{% block header_icon %}panel-top{% endblock %}"></i></div>
+      <div>
+        <h1>{% block header_title %}Gestão do Site{% endblock %}</h1>
+        <p>{% block header_subtitle %}Edite conteúdos e controle as páginas públicas da escola.{% endblock %}</p>
+      </div>
+    </header>
+
+    {% if messages %}
+      <div class="site-manager-messages" aria-live="polite">
+        {% for message in messages %}<div class="site-manager-message">{{ message }}</div>{% endfor %}
+      </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <script>lucide.createIcons();</script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>
