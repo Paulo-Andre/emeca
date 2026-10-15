@@ -7,7 +7,7 @@
   <div>
     <span class="eyebrow">DOCUMENTOS ACADÊMICOS</span>
     <h1>Relatórios de alunos</h1>
-    <p>Localize o aluno e emita um relatório completo com cadastro, relações de turma, professor(a), notas e vida escolar.</p>
+    <p>Localize o aluno. O Histórico oficial usa o modelo escolar padronizado; o relatório interno serve apenas para consulta detalhada.</p>
   </div>
   <a class="btn" href="{% url 'historico:inicio' %}">Voltar ao dashboard</a>
 </section>
@@ -97,7 +97,8 @@
             <td>
               <div class="table-actions">
                 <a class="btn btn-small" href="{% url 'historico:aluno' aluno.codigo %}">Prontuário</a>
-                <a class="btn primary btn-small" href="{% url 'historico:relatorio_aluno' aluno.codigo %}">Emitir relatório</a>
+                <a class="btn primary btn-small" href="{% url 'historico:historico' aluno.codigo %}">Histórico oficial</a>
+                <a class="btn btn-small" href="{% url 'historico:relatorio_aluno' aluno.codigo %}">Relatório interno</a>
               </div>
             </td>
           </tr>
