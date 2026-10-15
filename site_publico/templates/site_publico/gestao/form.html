@@ -19,8 +19,15 @@
 
   {% if imagem_atual %}
     <div class="manager-current-image">
-      <span>Imagem atual</span>
-      <img src="{{ imagem_atual.url }}" alt="">
+      <span>{% if imagem_atual_e_pdf %}PDF atual{% else %}Imagem atual{% endif %}</span>
+      {% if imagem_atual_e_pdf %}
+        <a class="manager-current-file" href="{{ imagem_atual.url }}" target="_blank" rel="noopener">
+          <i data-lucide="file-text"></i>
+          <span>Abrir PDF atual</span>
+        </a>
+      {% else %}
+        <img src="{{ imagem_atual.url }}" alt="">
+      {% endif %}
     </div>
   {% endif %}
 

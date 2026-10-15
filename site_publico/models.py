@@ -5,6 +5,7 @@ from django.utils.text import slugify
 
 
 IMAGEM_VALIDATOR = FileExtensionValidator(["jpg", "jpeg", "png", "webp"])
+PAGINA_ARQUIVO_VALIDATOR = FileExtensionValidator(["jpg", "jpeg", "png", "webp", "pdf"])
 DOCUMENTO_VALIDATOR = FileExtensionValidator(["pdf", "doc", "docx", "xls", "xlsx", "odt"])
 
 
@@ -83,11 +84,15 @@ class PaginaPublica(models.Model):
     texto_principal = models.TextField(blank=True)
     imagem_capa = models.FileField(
         upload_to="site_publico/paginas/",
-        validators=[IMAGEM_VALIDATOR],
+        validators=[PAGINA_ARQUIVO_VALIDATOR],
         blank=True,
     )
     ordem = models.PositiveSmallIntegerField(default=0)
     atualizado_em = models.DateTimeField(auto_now=True)
+
+    @property
+    def capa_e_pdf(self):
+        return bool(self.imagem_capa and self.imagem_capa.name.lower().endswith(".pdf"))
 
     class Meta:
         ordering = ["ordem", "nome"]

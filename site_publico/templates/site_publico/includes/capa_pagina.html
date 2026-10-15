@@ -1,0 +1,14 @@
+{% if pagina.imagem_capa %}
+  {% if pagina.capa_e_pdf %}
+    <a class="page-hero__document" href="{{ pagina.imagem_capa.url }}" target="_blank" rel="noopener">
+      <span class="page-hero__document-icon"><i data-lucide="file-text"></i></span>
+      <span>
+        <strong>PDF da página</strong>
+        <small>Abrir documento em uma nova aba</small>
+      </span>
+      <i data-lucide="external-link"></i>
+    </a>
+  {% else %}
+    <img class="page-hero__image" src="{{ pagina.imagem_capa.url }}" alt="">
+  {% endif %}
+{% endif %}
