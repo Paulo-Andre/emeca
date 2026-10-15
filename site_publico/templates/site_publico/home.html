@@ -3,9 +3,9 @@
 
 {% block content %}
 <section class="home-stage">
-  {% if slides_home %}
-    <div class="hero-carousel" data-carousel>
-      <div class="hero-carousel__viewport">
+  <div class="hero-carousel" data-carousel>
+    <div class="hero-carousel__viewport">
+      {% if slides_home %}
         {% for item in slides_home %}
           <article class="hero-slide{% if forloop.first %} is-active{% endif %}" data-slide>
             {% if item.imagem %}
@@ -25,45 +25,53 @@
             </div>
           </article>
         {% endfor %}
-      </div>
+      {% else %}
+        <article class="hero-slide hero-slide--institutional is-active" data-slide>
+          <div class="hero-slide__veil"></div>
+          <div class="hero-slide__content">
+            <span class="hero-badge">Bem-vindos</span>
+            <h1>{{ config_site.nome_escola|default:"E. M. Egídio Cordeiro Aquino" }}</h1>
+            <p>{{ config_site.subtitulo|default:"Educação, acolhimento e aprendizagem construídos juntos." }}</p>
+            <a class="button button--light" href="{% url 'site_publico:escola' %}">
+              Conheça a escola
+              <i data-lucide="arrow-right"></i>
+            </a>
+          </div>
+        </article>
 
-      {% if slides_home|length > 1 %}
-        <button class="carousel-arrow carousel-arrow--prev" type="button" data-carousel-prev aria-label="Destaque anterior">
-          <i data-lucide="chevron-left"></i>
-        </button>
-        <button class="carousel-arrow carousel-arrow--next" type="button" data-carousel-next aria-label="Próximo destaque">
-          <i data-lucide="chevron-right"></i>
-        </button>
-        <div class="carousel-dots" aria-label="Escolher destaque">
-          {% for item in slides_home %}
-            <button type="button" data-carousel-dot="{{ forloop.counter0 }}" {% if forloop.first %}class="active"{% endif %} aria-label="Destaque {{ forloop.counter }}"></button>
-          {% endfor %}
-        </div>
+        <article class="hero-slide hero-slide--learning" data-slide>
+          <div class="hero-slide__veil"></div>
+          <div class="hero-slide__content">
+            <span class="hero-badge">Aprender e participar</span>
+            <h1>Atividades, projetos e notícias da escola</h1>
+            <p>Quando fotos e notícias forem publicadas, elas passam a ocupar este carrossel automaticamente.</p>
+            <a class="button button--light" href="{% url 'site_publico:noticias' %}">
+              Ver notícias
+              <i data-lucide="arrow-right"></i>
+            </a>
+          </div>
+        </article>
       {% endif %}
     </div>
-  {% else %}
-    <div class="hero-welcome">
-      <div class="hero-welcome__copy">
-        <span class="hero-badge">Bem-vindos</span>
-        <h1>{{ config_site.nome_escola|default:"E. M. Egídio Cordeiro Aquino" }}</h1>
-        <p>{{ config_site.subtitulo|default:"Educação, acolhimento e aprendizagem construídos juntos." }}</p>
-        <div class="hero-welcome__actions">
-          <a class="button button--primary" href="{% url 'site_publico:matricula_landing' %}">
-            Matrícula Online
-            <i data-lucide="arrow-right"></i>
-          </a>
-          <a class="button button--outline-light" href="{% url 'site_publico:atividades' %}">
-            Atividades e Jogos
-          </a>
-        </div>
-      </div>
-      <div class="hero-welcome__crest" aria-hidden="true">
-        <span class="hero-welcome__sun"></span>
-        <i data-lucide="school"></i>
-        <strong>Aprender · Conviver · Crescer</strong>
-      </div>
+
+    <button class="carousel-arrow carousel-arrow--prev" type="button" data-carousel-prev aria-label="Destaque anterior">
+      <i data-lucide="chevron-left"></i>
+    </button>
+    <button class="carousel-arrow carousel-arrow--next" type="button" data-carousel-next aria-label="Próximo destaque">
+      <i data-lucide="chevron-right"></i>
+    </button>
+
+    <div class="carousel-dots" aria-label="Escolher destaque">
+      {% if slides_home %}
+        {% for item in slides_home %}
+          <button type="button" data-carousel-dot="{{ forloop.counter0 }}" {% if forloop.first %}class="active"{% endif %} aria-label="Destaque {{ forloop.counter }}"></button>
+        {% endfor %}
+      {% else %}
+        <button type="button" data-carousel-dot="0" class="active" aria-label="Destaque 1"></button>
+        <button type="button" data-carousel-dot="1" aria-label="Destaque 2"></button>
+      {% endif %}
     </div>
-  {% endif %}
+  </div>
 </section>
 
 {% if avisos %}
