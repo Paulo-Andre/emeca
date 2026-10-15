@@ -1,0 +1,46 @@
+{% extends 'site_publico/gestao/base.html' %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block header_icon %}pencil-line{% endblock %}
+{% block header_title %}{{ titulo }}{% endblock %}
+{% block header_subtitle %}{{ descricao }}{% endblock %}
+
+{% block content %}
+<div class="manager-toolbar">
+  {% if voltar_tipo %}
+    <a class="manager-back" href="{% url voltar_url voltar_tipo %}"><i data-lucide="arrow-left"></i> Voltar</a>
+  {% else %}
+    <a class="manager-back" href="{% url voltar %}"><i data-lucide="arrow-left"></i> Voltar</a>
+  {% endif %}
+</div>
+
+<form class="manager-form-card" method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="manager-form-error">{{ form.non_field_errors }}</div>{% endif %}
+
+  {% if imagem_atual %}
+    <div class="manager-current-image">
+      <span>Imagem atual</span>
+      <img src="{{ imagem_atual.url }}" alt="">
+    </div>
+  {% endif %}
+
+  <div class="manager-form-grid">
+    {% for field in form %}
+      <div class="manager-field{% if field.field.widget.input_type == 'checkbox' %} manager-field--check{% endif %}{% if field.name == 'texto_principal' or field.name == 'conteudo' or field.name == 'descricao' or field.name == 'apresentacao' or field.name == 'historia' or field.name == 'missao_valores' or field.name == 'vida_escolar' or field.name == 'resposta' %} manager-field--full{% endif %}">
+        {% if field.field.widget.input_type == 'checkbox' %}
+          <label class="manager-check-label">{{ field }} <span>{{ field.label }}</span></label>
+        {% else %}
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+        {% endif %}
+        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+        {% for error in field.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="manager-form-actions">
+    <button class="manager-btn manager-btn--primary" type="submit"><i data-lucide="save"></i> Salvar alterações</button>
+  </div>
+</form>
+{% endblock %}
