@@ -5,25 +5,39 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="{% block meta_description %}Site oficial da Escola Municipal Egídio Cordeiro Aquino.{% endblock %}">
+  <meta name="theme-color" content="#800000">
   <title>{% block title %}E. M. Egídio Cordeiro Aquino{% endblock %}</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
-  <link rel="stylesheet" href="{% static 'site_publico/site.css' %}?v=20261015-01">
+  <link rel="stylesheet" href="{% static 'site_publico/site.css' %}?v=20261015-logo-02">
   {% block extra_head %}{% endblock %}
 </head>
 <body class="public-site">
   <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
 
   <header class="site-header">
-    <div class="site-header__accent"></div>
+    <div class="site-utility">
+      <div class="site-utility__inner">
+        <span>Escola Municipal · Montes Claros/MG</span>
+        <nav aria-label="Acessos complementares">
+          <a href="{% url 'site_publico:documentos' %}">Documentos</a>
+          <a href="{% url 'site_publico:faq' %}">Perguntas frequentes</a>
+          <a class="utility-login" href="{% url 'login' %}">
+            <i data-lucide="lock-keyhole"></i>
+            Área Interna
+          </a>
+        </nav>
+      </div>
+    </div>
+
     <div class="site-header__inner">
-      <a class="site-brand" href="{% url 'site_publico:home' %}">
+      <a class="site-brand" href="{% url 'site_publico:home' %}" aria-label="Página inicial da escola">
         <img src="{% static 'imagens/logo.svg' %}" alt="">
         <span>
           <strong>{{ config_site.nome_escola|default:"E. M. Egídio Cordeiro Aquino" }}</strong>
-          <small>Escola Municipal · Montes Claros/MG</small>
+          <small>Educação pública, acolhimento e aprendizagem</small>
         </span>
       </a>
 
@@ -39,12 +53,23 @@
         <a href="{% url 'site_publico:atividades' %}" {% if request.resolver_match.url_name == 'atividades' or request.resolver_match.url_name == 'atividade' %}class="active"{% endif %}>Atividades e Jogos</a>
         <a href="{% url 'site_publico:projetos' %}" {% if request.resolver_match.url_name == 'projetos' or request.resolver_match.url_name == 'projeto' %}class="active"{% endif %}>Projetos</a>
         <a href="{% url 'site_publico:noticias' %}" {% if request.resolver_match.url_name == 'noticias' or request.resolver_match.url_name == 'noticia' %}class="active"{% endif %}>Notícias</a>
-        <a href="{% url 'site_publico:galeria' %}" {% if request.resolver_match.url_name == 'galeria' or request.resolver_match.url_name == 'album' %}class="active"{% endif %}>Galeria</a>
-        <a href="{% url 'site_publico:matricula_landing' %}" {% if request.resolver_match.url_name == 'matricula_landing' %}class="active"{% endif %}>Matrícula</a>
-        <a href="{% url 'site_publico:contato' %}" {% if request.resolver_match.url_name == 'contato' %}class="active"{% endif %}>Contato</a>
-        <a class="internal-access" href="{% url 'login' %}">
-          <i data-lucide="lock-keyhole"></i>
-          Área Interna
+
+        <details class="site-nav-more{% if request.resolver_match.url_name == 'galeria' or request.resolver_match.url_name == 'album' or request.resolver_match.url_name == 'documentos' or request.resolver_match.url_name == 'faq' or request.resolver_match.url_name == 'contato' %} active{% endif %}">
+          <summary>
+            Mais
+            <i data-lucide="chevron-down"></i>
+          </summary>
+          <div class="site-nav-more__panel">
+            <a href="{% url 'site_publico:galeria' %}"><i data-lucide="images"></i><span><strong>Galeria</strong><small>Fotos e momentos da escola</small></span></a>
+            <a href="{% url 'site_publico:documentos' %}"><i data-lucide="folder-down"></i><span><strong>Documentos</strong><small>Arquivos e orientações</small></span></a>
+            <a href="{% url 'site_publico:faq' %}"><i data-lucide="circle-help"></i><span><strong>Perguntas frequentes</strong><small>Dúvidas de famílias e alunos</small></span></a>
+            <a href="{% url 'site_publico:contato' %}"><i data-lucide="messages-square"></i><span><strong>Contato</strong><small>Fale com a escola</small></span></a>
+          </div>
+        </details>
+
+        <a class="enrollment-access {% if request.resolver_match.url_name == 'matricula_landing' %}active{% endif %}" href="{% url 'site_publico:matricula_landing' %}">
+          <i data-lucide="clipboard-pen-line"></i>
+          Matrícula
         </a>
       </nav>
     </div>
@@ -73,11 +98,19 @@
       </div>
 
       <div>
-        <h3>Links úteis</h3>
-        <a href="{% url 'site_publico:documentos' %}">Documentos e downloads</a>
+        <h3>Escola</h3>
+        <a href="{% url 'site_publico:escola' %}">A Escola</a>
+        <a href="{% url 'site_publico:vida_escolar' %}">Vida Escolar</a>
+        <a href="{% url 'site_publico:projetos' %}">Projetos</a>
+        <a href="{% url 'site_publico:noticias' %}">Notícias</a>
+      </div>
+
+      <div>
+        <h3>Serviços</h3>
+        <a href="{% url 'site_publico:matricula_landing' %}">Matrícula Online</a>
+        <a href="{% url 'site_publico:atividades' %}">Atividades e Jogos</a>
+        <a href="{% url 'site_publico:documentos' %}">Documentos</a>
         <a href="{% url 'site_publico:faq' %}">Perguntas frequentes</a>
-        <a href="{% url 'site_publico:matricula_landing' %}">Matrícula online</a>
-        <a href="{% url 'login' %}">Área interna</a>
       </div>
 
       <div>
@@ -87,15 +120,17 @@
         {% if config_site.telefone %}<p>{{ config_site.telefone }}</p>{% endif %}
         {% if config_site.email %}<p>{{ config_site.email }}</p>{% endif %}
         {% if config_site.horario_atendimento %}<p>{{ config_site.horario_atendimento }}</p>{% endif %}
+        <a href="{% url 'site_publico:contato' %}">Enviar mensagem</a>
       </div>
     </div>
+
     <div class="site-footer__bottom">
       <span>© {% now "Y" %} {{ config_site.nome_escola|default:"E. M. Egídio Cordeiro Aquino" }}</span>
-      <span>Secretaria Digital integrada</span>
+      <a href="{% url 'login' %}">Acesso à Secretaria Digital</a>
     </div>
   </footer>
 
-  <script src="{% static 'site_publico/site.js' %}?v=20261015-01" defer></script>
+  <script src="{% static 'site_publico/site.js' %}?v=20261015-logo-02" defer></script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>
