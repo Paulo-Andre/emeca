@@ -125,7 +125,14 @@ def _slides_home(agora, paginas_ativas):
 
 
 def configuracao_publica(request):
-    return JsonResponse({"paginas": paginas_ativas_dict()})
+    config = _config()
+    return JsonResponse({
+        "paginas": paginas_ativas_dict(),
+        "site": {
+            "nome_escola": config.nome_escola if config else "E. M. Egídio Cordeiro Aquino",
+            "subtitulo": config.subtitulo if config else "Educação pública, acolhimento e aprendizagem",
+        },
+    })
 
 
 def home(request):
