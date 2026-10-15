@@ -24,6 +24,7 @@ class SitePublicoTests(TestCase):
             "site_publico:noticias",
             "site_publico:galeria",
             "site_publico:matricula_landing",
+            "site_publico:boletim",
             "site_publico:documentos",
             "site_publico:faq",
             "site_publico:contato",
