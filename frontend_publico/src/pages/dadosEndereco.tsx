@@ -68,7 +68,7 @@ export default function DadosEndereco({ dado, setDados }: Props) {
         
          <header className="formulario-header">
                                   <div className="header-brand">
-                                    <img src="logo_escola.svg" alt="Logo" className="header-logo" />
+                                    <img src={`${import.meta.env.BASE_URL}logo_escola.svg`} alt="Logo" className="header-logo" />
                                     <div className="header-text">
                                       <h1>Ficha de Matrícula</h1>
               <p>Endereço</p>
