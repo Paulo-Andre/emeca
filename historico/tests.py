@@ -1395,7 +1395,8 @@ class DocumentoAutenticadoTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "CERTIFICADO DE CONCLUSÃO")
         self.assertContains(response, "historico/css/document.css")
-        self.assertContains(response, "timbragem_historico_egidio.jpeg")
+        self.assertContains(response, "data:image/jpeg;base64,/9j/")
+        self.assertContains(response, "historico/css/print-fidelity.css")
         self.assertNotContains(response, "school-ui.css")
         self.assertNotContains(response, 'class="sidebar"')
 
