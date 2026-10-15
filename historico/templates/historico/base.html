@@ -6,100 +6,87 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{% block title %}Histórico Escolar{% endblock %}</title>
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+
   <link rel="stylesheet" href="{% static 'historico/css/app.css' %}?v=20261010-06">
   <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261015-04">
+  <link rel="stylesheet" href="{% static 'historico/css/unificado.css' %}?v=20261015-01">
   {% block extra_head %}{% endblock %}
 </head>
-<body>
-<header class="app-header">
-  <div class="school-strip">
-    <div class="school-strip__inner">
-      <span class="school-strip__name">E. M. Egídio Cordeiro Aquino</span>
-      <span class="school-strip__right">Secretaria Acadêmica · Histórico Escolar</span>
-    </div>
-  </div>
 
-  <div class="app-header__inner">
-    <a class="brand" href="{% url 'historico:inicio' %}" aria-label="Ir para o início do Histórico Escolar">
-      <span class="brand-mark brand-mark--school" aria-hidden="true">
-        <svg viewBox="0 0 32 32" role="img" focusable="false">
-          <circle cx="16" cy="16" r="14"></circle>
-          <path d="M8.2 10.2c3.1-1 5.6-.6 7.8 1.2v11.1c-2.2-1.7-4.7-2.1-7.8-1.2V10.2Z"></path>
-          <path d="M23.8 10.2c-3.1-1-5.6-.6-7.8 1.2v11.1c2.2-1.7 4.7-2.1 7.8-1.2V10.2Z"></path>
-          <path d="M16 11.4v11.1"></path>
-        </svg>
+{% if request.user.is_authenticated %}
+<body class="secretaria-dashboard historico-unificado">
+  <aside class="sidebar" aria-label="Navegação da secretaria">
+    <div class="logo">
+      <img class="logo__mark" src="{% static 'imagens/logo.svg' %}" alt="">
+      <span class="logo__copy">
+        <strong>E. M. Egídio Cordeiro Aquino</strong>
+        <span>Secretaria Digital</span>
       </span>
-      <span class="brand-copy">
-        <small>Secretaria escolar</small>
-        <strong>Histórico Escolar</strong>
-      </span>
+    </div>
+
+    <div class="nav-section-label">Atendimento</div>
+    <a class="nav-item" href="{% url 'dashboard' %}">
+      <i data-lucide="users-round"></i><span>Matrículas</span>
+    </a>
+    <a class="nav-item" href="{% url 'telaDeclaracao' %}">
+      <i data-lucide="file-text"></i><span>Declarações</span>
+    </a>
+    <a class="nav-item active" href="{% url 'historico:inicio' %}">
+      <i data-lucide="graduation-cap"></i><span>Histórico Escolar</span>
     </a>
 
-    <nav class="main-nav" aria-label="Menu principal">
-      <a class="nav-link {% if request.resolver_match.url_name == 'inicio' %}is-active{% endif %}"
-         href="{% url 'historico:inicio' %}">
-        <span>Início</span>
+    <div class="nav-section-label">Histórico</div>
+    <a class="nav-item historico-subitem {% if request.resolver_match.url_name == 'inicio' %}historico-subitem-active{% endif %}"
+       href="{% url 'historico:inicio' %}">
+      <i data-lucide="layout-dashboard"></i><span>Painel</span>
+    </a>
+    <a class="nav-item historico-subitem {% if request.resolver_match.url_name == 'aluno_novo' %}historico-subitem-active{% endif %}"
+       href="{% url 'historico:aluno_novo' %}">
+      <i data-lucide="user-plus"></i><span>Novo aluno</span>
+    </a>
+    <a class="nav-item historico-subitem {% if request.resolver_match.url_name == 'relatorios' or request.resolver_match.url_name == 'relatorio_aluno' %}historico-subitem-active{% endif %}"
+       href="{% url 'historico:relatorios' %}">
+      <i data-lucide="files"></i><span>Relatórios</span>
+    </a>
+    <a class="nav-item historico-subitem {% if request.resolver_match.url_name == 'integridade_dados' %}historico-subitem-active{% endif %}"
+       href="{% url 'historico:integridade_dados' %}">
+      <i data-lucide="shield-check"></i><span>Conferir dados</span>
+    </a>
+
+    {% if request.user.is_superuser or perms.auth.add_user %}
+      <div class="nav-section-label">Administração</div>
+      <a class="nav-item" href="{% url 'historico:importar_lista_alunos' %}">
+        <i data-lucide="users-round"></i><span>Atualizar lista</span>
       </a>
-
-      <details class="nav-dropdown {% if request.resolver_match.url_name == 'aluno_novo' or request.resolver_match.url_name == 'aluno_editar' or request.resolver_match.url_name == 'aluno' or request.resolver_match.url_name == 'importar_lista_alunos' or request.resolver_match.url_name == 'importar_notas_pdf' %}is-active{% endif %}">
-        <summary>Alunos</summary>
-        <div class="nav-dropdown__panel">
-          <a href="{% url 'historico:aluno_novo' %}">
-            <strong>Novo aluno</strong>
-            <small>Cadastrar aluno e vida escolar</small>
-          </a>
-          <a href="{% url 'historico:importar_lista_alunos' %}">
-            <strong>Atualizar lista</strong>
-            <small>Importar ou atualizar cadastros</small>
-          </a>
-          <a href="{% url 'historico:importar_notas_pdf' %}">
-            <strong>Importar notas</strong>
-            <small>Processar ATA/PDF</small>
-          </a>
-        </div>
-      </details>
-
-      <a class="nav-link {% if request.resolver_match.url_name == 'relatorios' or request.resolver_match.url_name == 'relatorio_aluno' %}is-active{% endif %}"
-         href="{% url 'historico:relatorios' %}">
-        <span>Relatórios</span>
+      <a class="nav-item" href="{% url 'historico:importar_notas_pdf' %}">
+        <i data-lucide="file-up"></i><span>Importar notas</span>
       </a>
-
-      <details class="nav-dropdown {% if request.resolver_match.url_name == 'dados_extras_anuais' or request.resolver_match.url_name == 'integridade_dados' %}is-active{% endif %}">
-        <summary>Acadêmico</summary>
-        <div class="nav-dropdown__panel">
-          <a href="{% url 'historico:dados_extras_anuais' %}">
-            <strong>Dados por ano</strong>
-            <small>Carga horária e regras anuais</small>
-          </a>
-          <a href="{% url 'historico:integridade_dados' %}">
-            <strong>Integridade</strong>
-            <small>Conferir dados e pendências</small>
-          </a>
-        </div>
-      </details>
-
-      <a class="nav-link nav-home" href="{% url 'dashboard' %}">
-        <span>Secretaria</span>
+      <a class="nav-item" href="{% url 'historico:dados_extras_anuais' %}">
+        <i data-lucide="calendar-range"></i><span>Dados por ano</span>
       </a>
+    {% endif %}
 
-      {% if request.user.is_superuser %}
-        <a class="nav-link" href="/admin/">
-          <span>Administração</span>
-        </a>
-      {% endif %}
+    <a class="nav-item nav-logout" href="{% url 'sair' %}">
+      <i data-lucide="log-out"></i><span>Sair</span>
+    </a>
+  </aside>
 
-      {% if request.user.is_authenticated %}
-        <span class="nav-user">{{ request.user.username }}</span>
-        <a class="nav-link nav-logout-inline" href="{% url 'sair' %}">Sair</a>
-      {% endif %}
-    </nav>
-  </div>
-</header>
+  <main class="historico-main">
+    {% block content %}{% endblock %}
+  </main>
 
-<main class="app-main">
-  {% block content %}{% endblock %}
-</main>
-
-{% block extra_js %}{% endblock %}
+  <script>lucide.createIcons();</script>
+  {% block extra_js %}{% endblock %}
 </body>
+{% else %}
+<body class="historico-publico">
+  <main class="historico-publico__main">
+    {% block content_public %}{% block content %}{% endblock %}{% endblock %}
+  </main>
+  {% block extra_js_public %}{% block extra_js %}{% endblock %}{% endblock %}
+</body>
+{% endif %}
 </html>
