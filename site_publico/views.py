@@ -76,17 +76,21 @@ def _slides_home(agora):
     albuns = (
         AlbumGaleria.objects
         .filter(ativo=True)
-        .exclude(capa="")
+        .prefetch_related("fotos")
         .order_by("-data_evento", "-id")
     )
-    for item in albuns[:3]:
+    for item in albuns[:5]:
         if len(slides) >= 8:
             break
+        fotos = list(item.fotos.all())
+        imagem = item.capa.url if item.capa else (fotos[0].imagem.url if fotos else "")
+        if not imagem:
+            continue
         slides.append({
             "rotulo": "Fotos",
             "titulo": item.titulo,
             "descricao": item.descricao,
-            "imagem": item.capa.url,
+            "imagem": imagem,
             "link": item.get_absolute_url(),
             "texto_botao": "Ver fotos",
         })
