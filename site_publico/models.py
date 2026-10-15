@@ -1,0 +1,333 @@
+from django.core.validators import FileExtensionValidator
+from django.db import models
+from django.urls import reverse
+from django.utils.text import slugify
+
+
+IMAGEM_VALIDATOR = FileExtensionValidator(["jpg", "jpeg", "png", "webp"])
+DOCUMENTO_VALIDATOR = FileExtensionValidator(["pdf", "doc", "docx", "xls", "xlsx", "odt"])
+
+
+def _slug_unico(instance, valor):
+    base = slugify(valor)[:170] or "item"
+    candidato = base
+    indice = 2
+    queryset = instance.__class__.objects.all()
+    if instance.pk:
+        queryset = queryset.exclude(pk=instance.pk)
+    while queryset.filter(slug=candidato).exists():
+        sufixo = f"-{indice}"
+        candidato = f"{base[:180-len(sufixo)]}{sufixo}"
+        indice += 1
+    return candidato
+
+
+class ConfiguracaoSite(models.Model):
+    nome_escola = models.CharField(max_length=180, default="E. M. Egídio Cordeiro Aquino")
+    subtitulo = models.CharField(max_length=220, default="Educação, acolhimento e aprendizagem construídos juntos.")
+    apresentacao = models.TextField(blank=True)
+    historia = models.TextField(blank=True)
+    missao_valores = models.TextField(blank=True)
+    vida_escolar = models.TextField(blank=True)
+    endereco = models.CharField(max_length=255, blank=True)
+    cidade = models.CharField(max_length=120, default="Montes Claros/MG", blank=True)
+    telefone = models.CharField(max_length=60, blank=True)
+    whatsapp = models.CharField(max_length=60, blank=True)
+    email = models.EmailField(blank=True)
+    horario_atendimento = models.CharField(max_length=180, blank=True)
+    mapa_url = models.URLField(blank=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Configuração do site"
+        verbose_name_plural = "Configurações do site"
+
+    def __str__(self):
+        return self.nome_escola
+
+
+class DestaqueHome(models.Model):
+    CATEGORIAS = [
+        ("NOTICIA", "Notícia"),
+        ("EVENTO", "Evento"),
+        ("PROJETO", "Projeto"),
+        ("COMUNICADO", "Comunicado"),
+    ]
+    titulo = models.CharField(max_length=180)
+    descricao = models.CharField(max_length=320, blank=True)
+    categoria = models.CharField(max_length=20, choices=CATEGORIAS, default="NOTICIA")
+    imagem = models.FileField(
+        upload_to="site_publico/destaques/",
+        validators=[IMAGEM_VALIDATOR],
+        blank=True,
+    )
+    texto_botao = models.CharField(max_length=60, blank=True, default="Saiba mais")
+    link = models.CharField(max_length=500, blank=True)
+    ativo = models.BooleanField(default=True)
+    ordem = models.PositiveSmallIntegerField(default=0)
+    inicio = models.DateTimeField(blank=True, null=True)
+    fim = models.DateTimeField(blank=True, null=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["ordem", "-criado_em"]
+        verbose_name = "Destaque do carrossel"
+        verbose_name_plural = "Destaques do carrossel"
+
+    def __str__(self):
+        return self.titulo
+
+
+class Aviso(models.Model):
+    TIPOS = [
+        ("INFO", "Informativo"),
+        ("IMPORTANTE", "Importante"),
+        ("URGENTE", "Urgente"),
+    ]
+    titulo = models.CharField(max_length=160)
+    texto = models.TextField()
+    tipo = models.CharField(max_length=20, choices=TIPOS, default="INFO")
+    link = models.CharField(max_length=500, blank=True)
+    texto_link = models.CharField(max_length=60, blank=True, default="Saiba mais")
+    ativo = models.BooleanField(default=True)
+    inicio = models.DateTimeField(blank=True, null=True)
+    fim = models.DateTimeField(blank=True, null=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+
+    def __str__(self):
+        return self.titulo
+
+
+class Noticia(models.Model):
+    titulo = models.CharField(max_length=180)
+    slug = models.SlugField(max_length=180, unique=True, blank=True)
+    resumo = models.CharField(max_length=360, blank=True)
+    conteudo = models.TextField()
+    imagem = models.FileField(
+        upload_to="site_publico/noticias/",
+        validators=[IMAGEM_VALIDATOR],
+        blank=True,
+    )
+    publicado_em = models.DateTimeField()
+    ativo = models.BooleanField(default=True)
+    destaque = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["-publicado_em"]
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = _slug_unico(self, self.titulo)
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return reverse("site_publico:noticia", args=[self.slug])
+
+    def __str__(self):
+        return self.titulo
+
+
+class Projeto(models.Model):
+    titulo = models.CharField(max_length=180)
+    slug = models.SlugField(max_length=180, unique=True, blank=True)
+    resumo = models.CharField(max_length=360, blank=True)
+    conteudo = models.TextField()
+    imagem = models.FileField(
+        upload_to="site_publico/projetos/",
+        validators=[IMAGEM_VALIDATOR],
+        blank=True,
+    )
+    ativo = models.BooleanField(default=True)
+    destaque = models.BooleanField(default=False)
+    ordem = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["ordem", "titulo"]
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = _slug_unico(self, self.titulo)
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return reverse("site_publico:projeto", args=[self.slug])
+
+    def __str__(self):
+        return self.titulo
+
+
+class AtividadeJogo(models.Model):
+    TIPOS = [
+        ("JOGO", "Jogo"),
+        ("QUIZ", "Quiz"),
+        ("ATIVIDADE", "Atividade"),
+        ("DESAFIO", "Desafio"),
+        ("VIDEO", "Vídeo educativo"),
+        ("MATERIAL", "Material"),
+    ]
+    DIFICULDADES = [
+        ("FACIL", "Fácil"),
+        ("MEDIO", "Médio"),
+        ("DESAFIO", "Desafio"),
+    ]
+    titulo = models.CharField(max_length=180)
+    slug = models.SlugField(max_length=180, unique=True, blank=True)
+    descricao = models.TextField()
+    tipo = models.CharField(max_length=20, choices=TIPOS, default="ATIVIDADE")
+    ano_escolar = models.CharField(max_length=80, blank=True)
+    disciplina = models.CharField(max_length=100, blank=True)
+    dificuldade = models.CharField(max_length=20, choices=DIFICULDADES, default="FACIL")
+    imagem = models.FileField(
+        upload_to="site_publico/atividades/",
+        validators=[IMAGEM_VALIDATOR],
+        blank=True,
+    )
+    link = models.URLField(blank=True)
+    arquivo = models.FileField(
+        upload_to="site_publico/atividades/arquivos/",
+        validators=[DOCUMENTO_VALIDATOR],
+        blank=True,
+    )
+    ativo = models.BooleanField(default=True)
+    destaque = models.BooleanField(default=False)
+    ordem = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["ordem", "titulo"]
+        verbose_name = "Atividade ou jogo"
+        verbose_name_plural = "Atividades e jogos"
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = _slug_unico(self, self.titulo)
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return reverse("site_publico:atividade", args=[self.slug])
+
+    def __str__(self):
+        return self.titulo
+
+
+class Evento(models.Model):
+    titulo = models.CharField(max_length=180)
+    descricao = models.CharField(max_length=320, blank=True)
+    inicio = models.DateTimeField()
+    fim = models.DateTimeField(blank=True, null=True)
+    local = models.CharField(max_length=180, blank=True)
+    ativo = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["inicio"]
+
+    def __str__(self):
+        return self.titulo
+
+
+class AlbumGaleria(models.Model):
+    titulo = models.CharField(max_length=180)
+    slug = models.SlugField(max_length=180, unique=True, blank=True)
+    descricao = models.CharField(max_length=360, blank=True)
+    capa = models.FileField(
+        upload_to="site_publico/galeria/capas/",
+        validators=[IMAGEM_VALIDATOR],
+        blank=True,
+    )
+    data_evento = models.DateField(blank=True, null=True)
+    ativo = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["-data_evento", "-id"]
+        verbose_name = "Álbum da galeria"
+        verbose_name_plural = "Álbuns da galeria"
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = _slug_unico(self, self.titulo)
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return reverse("site_publico:album", args=[self.slug])
+
+    def __str__(self):
+        return self.titulo
+
+
+class FotoGaleria(models.Model):
+    album = models.ForeignKey(AlbumGaleria, on_delete=models.CASCADE, related_name="fotos")
+    imagem = models.FileField(
+        upload_to="site_publico/galeria/fotos/",
+        validators=[IMAGEM_VALIDATOR],
+    )
+    legenda = models.CharField(max_length=220, blank=True)
+    ordem = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["ordem", "id"]
+        verbose_name = "Foto da galeria"
+        verbose_name_plural = "Fotos da galeria"
+
+    def __str__(self):
+        return self.legenda or f"Foto de {self.album}"
+
+
+class DocumentoPublico(models.Model):
+    CATEGORIAS = [
+        ("FORMULARIO", "Formulário"),
+        ("ORIENTACAO", "Orientação"),
+        ("LISTA", "Lista"),
+        ("OUTRO", "Outro"),
+    ]
+    titulo = models.CharField(max_length=180)
+    descricao = models.CharField(max_length=360, blank=True)
+    categoria = models.CharField(max_length=20, choices=CATEGORIAS, default="OUTRO")
+    arquivo = models.FileField(
+        upload_to="site_publico/documentos/",
+        validators=[DOCUMENTO_VALIDATOR],
+    )
+    ativo = models.BooleanField(default=True)
+    ordem = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["ordem", "titulo"]
+        verbose_name = "Documento público"
+        verbose_name_plural = "Documentos públicos"
+
+    def __str__(self):
+        return self.titulo
+
+
+class PerguntaFrequente(models.Model):
+    pergunta = models.CharField(max_length=220)
+    resposta = models.TextField()
+    ativo = models.BooleanField(default=True)
+    ordem = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["ordem", "id"]
+        verbose_name = "Pergunta frequente"
+        verbose_name_plural = "Perguntas frequentes"
+
+    def __str__(self):
+        return self.pergunta
+
+
+class MensagemContato(models.Model):
+    nome = models.CharField(max_length=160)
+    email = models.EmailField(blank=True)
+    telefone = models.CharField(max_length=40, blank=True)
+    assunto = models.CharField(max_length=180)
+    mensagem = models.TextField()
+    lida = models.BooleanField(default=False)
+    criada_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criada_em"]
+        verbose_name = "Mensagem de contato"
+        verbose_name_plural = "Mensagens de contato"
+
+    def __str__(self):
+        return f"{self.nome} — {self.assunto}"
