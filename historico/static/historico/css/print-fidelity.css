@@ -1,0 +1,73 @@
+@media print {
+  html,
+  body,
+  .document-sheet,
+  .official-page-border {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    forced-color-adjust: none !important;
+  }
+
+  /* Mantém o desenho antigo, mas cria uma linha vetorial interna que
+     o mecanismo de impressão não elimina em células com rowspan/colspan. */
+  .official-history-table th,
+  .official-history-table td {
+    position: relative !important;
+    border-color: #111 !important;
+    outline: .24pt solid #111 !important;
+    outline-offset: -.24pt !important;
+  }
+
+  .official-history-table thead th {
+    outline-width: .28pt !important;
+  }
+
+  .official-history-table tbody tr.year-group-start:not(:first-child) > * {
+    border-top: .65pt solid #111 !important;
+  }
+
+  .certificate-section,
+  .history-frame {
+    border-color: #111 !important;
+  }
+
+  .history-left {
+    border-right: .65pt solid #111 !important;
+  }
+
+  .history-title {
+    border-bottom: .65pt solid #111 !important;
+  }
+
+  .certificate-section h1,
+  .certificate-table .value,
+  .bottom-observation,
+  .signature-line,
+  .issue-date strong {
+    border-color: #111 !important;
+  }
+
+  .signature-line,
+  .issue-date strong {
+    border-top-width: .65pt !important;
+  }
+
+  .missing-year-diagonal line {
+    stroke: #111 !important;
+    stroke-width: .9 !important;
+    shape-rendering: crispEdges !important;
+  }
+
+  .official-letterhead img {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 100% !important;
+    height: 14mm !important;
+    object-fit: fill !important;
+  }
+
+  .legal-column {
+    overflow: hidden !important;
+  }
+}
