@@ -14,25 +14,40 @@
 <section class="section">
   {% if config_site.vida_escolar %}
     <article class="prose-card">{{ config_site.vida_escolar|linebreaks }}</article>
-  {% else %}
-    <div class="two-column">
-      <article class="info-card">
-        <h2>Rotina escolar</h2>
-        <p>Informações sobre horários, entrada e saída, organização do dia e orientações gerais poderão ser publicadas pela escola.</p>
-      </article>
-      <article class="info-card">
-        <h2>Acompanhamento da aprendizagem</h2>
-        <p>Espaço para orientações sobre avaliações, recuperação, frequência, reuniões e acompanhamento das famílias.</p>
-      </article>
-      <article class="info-card">
-        <h2>Reuniões e comunicados</h2>
-        <p>Os principais avisos aparecem automaticamente na página inicial enquanto estiverem ativos.</p>
-      </article>
-      <article class="info-card">
-        <h2>Documentos</h2>
-        <p>Formulários, orientações e arquivos públicos podem ser encontrados na área de Documentos e Downloads.</p>
-      </article>
-    </div>
   {% endif %}
+
+  <div class="two-column{% if config_site.vida_escolar %} section-spaced{% endif %}">
+    {% if not secoes_site.vida_rotina or secoes_site.vida_rotina.ativa %}
+    <article class="info-card">
+      {% if secoes_site.vida_rotina.imagem %}<img class="editable-public-image" src="{{ secoes_site.vida_rotina.imagem.url }}" alt="">{% endif %}
+      <h2>{{ secoes_site.vida_rotina.titulo|default:"Rotina escolar" }}</h2>
+      <p>{{ secoes_site.vida_rotina.texto|default:"Informações sobre horários, entrada e saída, organização do dia e orientações gerais poderão ser publicadas pela escola." }}</p>
+    </article>
+    {% endif %}
+
+    {% if not secoes_site.vida_aprendizagem or secoes_site.vida_aprendizagem.ativa %}
+    <article class="info-card">
+      {% if secoes_site.vida_aprendizagem.imagem %}<img class="editable-public-image" src="{{ secoes_site.vida_aprendizagem.imagem.url }}" alt="">{% endif %}
+      <h2>{{ secoes_site.vida_aprendizagem.titulo|default:"Acompanhamento da aprendizagem" }}</h2>
+      <p>{{ secoes_site.vida_aprendizagem.texto|default:"Espaço para orientações sobre avaliações, recuperação, frequência, reuniões e acompanhamento das famílias." }}</p>
+    </article>
+    {% endif %}
+
+    {% if not secoes_site.vida_reunioes or secoes_site.vida_reunioes.ativa %}
+    <article class="info-card">
+      {% if secoes_site.vida_reunioes.imagem %}<img class="editable-public-image" src="{{ secoes_site.vida_reunioes.imagem.url }}" alt="">{% endif %}
+      <h2>{{ secoes_site.vida_reunioes.titulo|default:"Reuniões e comunicados" }}</h2>
+      <p>{{ secoes_site.vida_reunioes.texto|default:"Os principais avisos aparecem automaticamente na página inicial enquanto estiverem ativos." }}</p>
+    </article>
+    {% endif %}
+
+    {% if not secoes_site.vida_documentos or secoes_site.vida_documentos.ativa %}
+    <article class="info-card">
+      {% if secoes_site.vida_documentos.imagem %}<img class="editable-public-image" src="{{ secoes_site.vida_documentos.imagem.url }}" alt="">{% endif %}
+      <h2>{{ secoes_site.vida_documentos.titulo|default:"Documentos" }}</h2>
+      <p>{{ secoes_site.vida_documentos.texto|default:"Formulários, orientações e arquivos públicos podem ser encontrados na área de Documentos e Downloads." }}</p>
+    </article>
+    {% endif %}
+  </div>
 </section>
 {% endblock %}
