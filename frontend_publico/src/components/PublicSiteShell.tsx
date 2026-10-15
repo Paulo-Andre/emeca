@@ -11,18 +11,10 @@ export default function PublicSiteShell({ children }: { children: ReactNode }) {
   return (
     <div className="school-public-shell">
       <header className="school-public-header">
-        <div className="school-public-utility">
-          <div className="school-public-utility__inner">
-            <span>Escola Municipal · Montes Claros/MG</span>
-            <nav aria-label="Acessos complementares">
-              <a href="/documentos/">Documentos</a>
-              <a href="/perguntas-frequentes/">Perguntas frequentes</a>
-              <a className="shell-login" href="/login/">
-                <LockKeyhole size={13} />
-                Área Interna
-              </a>
-            </nav>
-          </div>
+        <div className="school-public-colors" aria-hidden="true">
+          <span />
+          <span />
+          <span />
         </div>
 
         <div className="school-public-header__inner">
@@ -73,6 +65,11 @@ export default function PublicSiteShell({ children }: { children: ReactNode }) {
             <a className="shell-enrollment active" href="/matricula-escolar/" onClick={closeMenu}>
               <ClipboardPenLine size={15} />
               Matrícula
+            </a>
+
+            <a className="shell-internal-access" href="/login/" onClick={closeMenu}>
+              <LockKeyhole size={15} />
+              Área Interna
             </a>
           </nav>
         </div>
