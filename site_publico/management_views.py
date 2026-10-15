@@ -84,7 +84,8 @@ def gestao_configuracao(request):
     return render(request, "site_publico/gestao/form.html", {
         "form": form,
         "titulo": "Informações institucionais",
-        "descricao": "Edite os textos e canais gerais exibidos no site.",
+        "descricao": "Edite os textos institucionais, canais de atendimento e a logo exibida no site.",
+        "imagem_atual": config.logo_site,
         "voltar": "site_publico:gestao_site",
     })
 
