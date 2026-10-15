@@ -4,7 +4,7 @@
 {% block content %}
 <section class="page-hero enrollment-page-hero">
   <div class="page-heading">
-    <span class="section-kicker">Para pais e responsáveis</span>
+    <span class="section-kicker">{{ paginas_site.matricula.rotulo|default:"Para pais e responsáveis" }}</span>
     <h1>{{ paginas_site.matricula.titulo|default:"Matrícula Online" }}</h1>
     <p>{{ paginas_site.matricula.subtitulo|default:"Um caminho mais simples para organizar os dados antes do atendimento presencial na escola." }}</p>
     {% if paginas_site.matricula.texto_principal %}<div class="page-heading__intro">{{ paginas_site.matricula.texto_principal|linebreaksbr }}</div>{% endif %}
