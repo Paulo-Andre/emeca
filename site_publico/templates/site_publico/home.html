@@ -2,23 +2,23 @@
 {% block title %}Início · E. M. Egídio Cordeiro Aquino{% endblock %}
 
 {% block content %}
-<section class="home-hero">
-  {% if destaques %}
+<section class="home-stage">
+  {% if slides_home %}
     <div class="hero-carousel" data-carousel>
       <div class="hero-carousel__viewport">
-        {% for item in destaques %}
+        {% for item in slides_home %}
           <article class="hero-slide{% if forloop.first %} is-active{% endif %}" data-slide>
             {% if item.imagem %}
-              <img src="{{ item.imagem.url }}" alt="">
+              <img src="{{ item.imagem }}" alt="">
             {% endif %}
-            <div class="hero-slide__overlay"></div>
+            <div class="hero-slide__veil"></div>
             <div class="hero-slide__content">
-              <span class="eyebrow-pill">{{ item.get_categoria_display }}</span>
+              <span class="hero-badge">{{ item.rotulo }}</span>
               <h1>{{ item.titulo }}</h1>
               {% if item.descricao %}<p>{{ item.descricao }}</p>{% endif %}
               {% if item.link %}
                 <a class="button button--light" href="{{ item.link }}">
-                  {{ item.texto_botao|default:"Saiba mais" }}
+                  {{ item.texto_botao }}
                   <i data-lucide="arrow-right"></i>
                 </a>
               {% endif %}
@@ -27,7 +27,7 @@
         {% endfor %}
       </div>
 
-      {% if destaques|length > 1 %}
+      {% if slides_home|length > 1 %}
         <button class="carousel-arrow carousel-arrow--prev" type="button" data-carousel-prev aria-label="Destaque anterior">
           <i data-lucide="chevron-left"></i>
         </button>
@@ -35,7 +35,7 @@
           <i data-lucide="chevron-right"></i>
         </button>
         <div class="carousel-dots" aria-label="Escolher destaque">
-          {% for item in destaques %}
+          {% for item in slides_home %}
             <button type="button" data-carousel-dot="{{ forloop.counter0 }}" {% if forloop.first %}class="active"{% endif %} aria-label="Destaque {{ forloop.counter }}"></button>
           {% endfor %}
         </div>
@@ -44,30 +44,38 @@
   {% else %}
     <div class="hero-welcome">
       <div class="hero-welcome__copy">
-        <span class="eyebrow-pill">Bem-vindos</span>
+        <span class="hero-badge">Bem-vindos</span>
         <h1>{{ config_site.nome_escola|default:"E. M. Egídio Cordeiro Aquino" }}</h1>
         <p>{{ config_site.subtitulo|default:"Educação, acolhimento e aprendizagem construídos juntos." }}</p>
         <div class="hero-welcome__actions">
-          <a class="button button--primary" href="{% url 'site_publico:matricula_landing' %}">Matrícula Online</a>
-          <a class="button button--ghost" href="{% url 'site_publico:atividades' %}">Atividades e Jogos</a>
+          <a class="button button--primary" href="{% url 'site_publico:matricula_landing' %}">
+            Matrícula Online
+            <i data-lucide="arrow-right"></i>
+          </a>
+          <a class="button button--outline-light" href="{% url 'site_publico:atividades' %}">
+            Atividades e Jogos
+          </a>
         </div>
       </div>
-      <div class="hero-welcome__visual" aria-hidden="true">
+      <div class="hero-welcome__crest" aria-hidden="true">
+        <span class="hero-welcome__sun"></span>
         <i data-lucide="school"></i>
-        <span>Aprender · Conviver · Crescer</span>
+        <strong>Aprender · Conviver · Crescer</strong>
       </div>
     </div>
   {% endif %}
 </section>
 
 {% if avisos %}
-<section class="section section--compact" id="avisos-escola">
+<section class="section section--notices" id="avisos-escola">
   <div class="section-heading section-heading--row">
     <div>
       <span class="section-kicker">Comunicados</span>
-      <h2>Avisos da escola</h2>
+      <h2>Avisos importantes</h2>
     </div>
+    <span class="section-help">Informações ativas da escola</span>
   </div>
+
   <div class="notice-stack">
     {% for aviso in avisos %}
       <article class="notice notice--{{ aviso.tipo|lower }}">
@@ -94,45 +102,57 @@
 {% endif %}
 
 <section class="section">
-  <div class="section-heading">
+  <div class="section-heading section-heading--center">
     <span class="section-kicker">Acesso rápido</span>
-    <h2>O que você procura?</h2>
-    <p>Serviços e informações importantes para estudantes e famílias.</p>
+    <h2>Informações e serviços da escola</h2>
+    <p>Encontre rapidamente os principais caminhos para estudantes e famílias.</p>
   </div>
 
   <div class="quick-grid">
-    <a class="quick-card" href="{% url 'site_publico:matricula_landing' %}">
+    <a class="quick-card quick-card--wine" href="{% url 'site_publico:matricula_landing' %}">
       <span class="quick-card__icon"><i data-lucide="clipboard-pen-line"></i></span>
       <strong>Matrícula Online</strong>
-      <span>Veja as orientações e inicie a matrícula.</span>
+      <span>Orientações e acesso ao formulário.</span>
+      <em>Começar <i data-lucide="arrow-up-right"></i></em>
     </a>
-    <a class="quick-card" href="{% url 'site_publico:atividades' %}">
-      <span class="quick-card__icon quick-card__icon--play"><i data-lucide="gamepad-2"></i></span>
+
+    <a class="quick-card quick-card--blue" href="{% url 'site_publico:atividades' %}">
+      <span class="quick-card__icon"><i data-lucide="gamepad-2"></i></span>
       <strong>Atividades e Jogos</strong>
-      <span>Aprender de forma divertida e interativa.</span>
+      <span>Jogos, quizzes e desafios educativos.</span>
+      <em>Explorar <i data-lucide="arrow-up-right"></i></em>
     </a>
-    <a class="quick-card" href="{% url 'site_publico:documentos' %}">
+
+    <a class="quick-card quick-card--green" href="{% url 'site_publico:documentos' %}">
       <span class="quick-card__icon"><i data-lucide="folder-down"></i></span>
       <strong>Documentos</strong>
-      <span>Formulários, orientações e arquivos.</span>
+      <span>Arquivos, formulários e orientações.</span>
+      <em>Acessar <i data-lucide="arrow-up-right"></i></em>
     </a>
-    <a class="quick-card" href="{% url 'site_publico:contato' %}">
+
+    <a class="quick-card quick-card--gold" href="{% url 'site_publico:contato' %}">
       <span class="quick-card__icon"><i data-lucide="messages-square"></i></span>
       <strong>Fale com a escola</strong>
       <span>Envie uma mensagem para nossa equipe.</span>
+      <em>Contato <i data-lucide="arrow-up-right"></i></em>
     </a>
   </div>
 </section>
 
 {% if noticias %}
-<section class="section section--soft">
+<section class="section section--tinted">
   <div class="section-heading section-heading--row">
     <div>
       <span class="section-kicker">Acontece na escola</span>
       <h2>Últimas notícias</h2>
+      <p>Projetos, eventos, atividades e acontecimentos da comunidade escolar.</p>
     </div>
-    <a class="text-link" href="{% url 'site_publico:noticias' %}">Ver todas <i data-lucide="arrow-right"></i></a>
+    <a class="button button--soft" href="{% url 'site_publico:noticias' %}">
+      Ver todas
+      <i data-lucide="arrow-right"></i>
+    </a>
   </div>
+
   <div class="cards-grid cards-grid--3">
     {% for item in noticias %}
       <article class="content-card">
@@ -142,9 +162,10 @@
           {% else %}
             <span class="media-placeholder"><i data-lucide="newspaper"></i></span>
           {% endif %}
+          <span class="content-card__date">{{ item.publicado_em|date:"d M" }}</span>
         </a>
         <div class="content-card__body">
-          <span class="content-card__meta">{{ item.publicado_em|date:"d/m/Y" }}</span>
+          <span class="content-card__meta">Notícia</span>
           <h3><a href="{{ item.get_absolute_url }}">{{ item.titulo }}</a></h3>
           {% if item.resumo %}<p>{{ item.resumo }}</p>{% endif %}
           <a class="text-link" href="{{ item.get_absolute_url }}">Leia mais <i data-lucide="arrow-right"></i></a>
@@ -161,9 +182,14 @@
     <div>
       <span class="section-kicker">Aprender brincando</span>
       <h2>Atividades e jogos em destaque</h2>
+      <p>Conteúdos para aprender, revisar e se divertir.</p>
     </div>
-    <a class="text-link" href="{% url 'site_publico:atividades' %}">Explorar tudo <i data-lucide="arrow-right"></i></a>
+    <a class="button button--soft" href="{% url 'site_publico:atividades' %}">
+      Explorar tudo
+      <i data-lucide="arrow-right"></i>
+    </a>
   </div>
+
   <div class="learning-grid">
     {% for item in atividades %}
       <a class="learning-card" href="{{ item.get_absolute_url }}">
@@ -171,11 +197,13 @@
           {% if item.tipo == 'JOGO' %}<i data-lucide="gamepad-2"></i>
           {% elif item.tipo == 'QUIZ' %}<i data-lucide="circle-help"></i>
           {% elif item.tipo == 'VIDEO' %}<i data-lucide="play-circle"></i>
+          {% elif item.tipo == 'DESAFIO' %}<i data-lucide="trophy"></i>
           {% else %}<i data-lucide="pencil-ruler"></i>{% endif %}
         </span>
         <span class="learning-card__type">{{ item.get_tipo_display }}</span>
         <strong>{{ item.titulo }}</strong>
         <span>{{ item.disciplina }}{% if item.ano_escolar %} · {{ item.ano_escolar }}{% endif %}</span>
+        <em>Começar <i data-lucide="arrow-up-right"></i></em>
       </a>
     {% endfor %}
   </div>
@@ -183,20 +211,29 @@
 {% endif %}
 
 {% if projetos %}
-<section class="section section--soft">
+<section class="section section--tinted">
   <div class="section-heading section-heading--row">
     <div>
       <span class="section-kicker">Nossa escola em movimento</span>
       <h2>Projetos em destaque</h2>
+      <p>Iniciativas que fortalecem aprendizagem, participação e convivência.</p>
     </div>
-    <a class="text-link" href="{% url 'site_publico:projetos' %}">Ver projetos <i data-lucide="arrow-right"></i></a>
+    <a class="button button--soft" href="{% url 'site_publico:projetos' %}">
+      Ver projetos
+      <i data-lucide="arrow-right"></i>
+    </a>
   </div>
+
   <div class="cards-grid cards-grid--3">
     {% for item in projetos %}
       <article class="content-card content-card--project">
-        {% if item.imagem %}
-          <a class="content-card__media" href="{{ item.get_absolute_url }}"><img src="{{ item.imagem.url }}" alt=""></a>
-        {% endif %}
+        <a class="content-card__media" href="{{ item.get_absolute_url }}">
+          {% if item.imagem %}
+            <img src="{{ item.imagem.url }}" alt="">
+          {% else %}
+            <span class="media-placeholder"><i data-lucide="sparkles"></i></span>
+          {% endif %}
+        </a>
         <div class="content-card__body">
           <span class="content-card__meta">Projeto</span>
           <h3><a href="{{ item.get_absolute_url }}">{{ item.titulo }}</a></h3>
@@ -209,12 +246,47 @@
 </section>
 {% endif %}
 
-{% if eventos %}
+{% if albuns %}
 <section class="section">
+  <div class="section-heading section-heading--row">
+    <div>
+      <span class="section-kicker">Nossa escola em imagens</span>
+      <h2>Galeria de fotos</h2>
+      <p>Momentos que fazem parte da nossa história.</p>
+    </div>
+    <a class="button button--soft" href="{% url 'site_publico:galeria' %}">
+      Ver galeria
+      <i data-lucide="arrow-right"></i>
+    </a>
+  </div>
+
+  <div class="home-gallery">
+    {% for item in albuns %}
+      <a class="home-gallery__item" href="{{ item.get_absolute_url }}">
+        {% if item.capa %}
+          <img src="{{ item.capa.url }}" alt="">
+        {% elif item.fotos.first %}
+          <img src="{{ item.fotos.first.imagem.url }}" alt="">
+        {% else %}
+          <span class="media-placeholder"><i data-lucide="images"></i></span>
+        {% endif %}
+        <span>
+          <strong>{{ item.titulo }}</strong>
+          {% if item.data_evento %}<small>{{ item.data_evento|date:"d/m/Y" }}</small>{% endif %}
+        </span>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if eventos %}
+<section class="section section--events">
   <div class="section-heading">
     <span class="section-kicker">Agenda</span>
     <h2>Próximos acontecimentos</h2>
   </div>
+
   <div class="events-list">
     {% for evento in eventos %}
       <article class="event-row">
@@ -233,12 +305,18 @@
 </section>
 {% endif %}
 
-<section class="section home-contact-band">
-  <div>
-    <span class="section-kicker">Estamos por perto</span>
-    <h2>Precisa falar com a escola?</h2>
-    <p>Use nossos canais de atendimento ou envie uma mensagem pelo site.</p>
+<section class="section">
+  <div class="home-contact-band">
+    <div class="home-contact-band__icon"><i data-lucide="school"></i></div>
+    <div>
+      <span class="section-kicker">Escola e família juntas</span>
+      <h2>Precisa falar com a escola?</h2>
+      <p>Use nossos canais de atendimento ou envie uma mensagem diretamente pelo site.</p>
+    </div>
+    <a class="button button--light" href="{% url 'site_publico:contato' %}">
+      Entrar em contato
+      <i data-lucide="arrow-right"></i>
+    </a>
   </div>
-  <a class="button button--primary" href="{% url 'site_publico:contato' %}">Entrar em contato</a>
 </section>
 {% endblock %}
