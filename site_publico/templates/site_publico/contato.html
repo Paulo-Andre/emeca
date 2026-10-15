@@ -4,8 +4,10 @@
 <section class="page-hero">
   <div class="page-heading">
     <span class="section-kicker">Fale com a escola</span>
-    <h1>Contato</h1>
-    <p>Envie uma mensagem ou consulte nossos canais de atendimento.</p>
+    <h1>{{ paginas_site.contato.titulo|default:"Contato" }}</h1>
+    <p>{{ paginas_site.contato.subtitulo|default:"Envie uma mensagem ou consulte nossos canais de atendimento." }}</p>
+    {% if paginas_site.contato.texto_principal %}<div class="page-heading__intro">{{ paginas_site.contato.texto_principal|linebreaksbr }}</div>{% endif %}
+    {% if paginas_site.contato.imagem_capa %}<img class="page-hero__image" src="{{ paginas_site.contato.imagem_capa.url }}" alt="">{% endif %}
   </div>
 </section>
 
