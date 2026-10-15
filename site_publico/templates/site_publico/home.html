@@ -25,6 +25,20 @@
             </div>
           </article>
         {% endfor %}
+        {% if slides_home|length == 1 %}
+          <article class="hero-slide hero-slide--learning" data-slide>
+            <div class="hero-slide__veil"></div>
+            <div class="hero-slide__content">
+              <span class="hero-badge">Nossa escola</span>
+              <h1>Aprendizagem, projetos e participação</h1>
+              <p>Conheça as atividades, projetos e momentos que fazem parte da vida escolar.</p>
+              <a class="button button--light" href="{% url 'site_publico:projetos' %}">
+                Conhecer projetos
+                <i data-lucide="arrow-right"></i>
+              </a>
+            </div>
+          </article>
+        {% endif %}
       {% else %}
         <article class="hero-slide hero-slide--institutional is-active" data-slide>
           <div class="hero-slide__veil"></div>
@@ -66,6 +80,9 @@
         {% for item in slides_home %}
           <button type="button" data-carousel-dot="{{ forloop.counter0 }}" {% if forloop.first %}class="active"{% endif %} aria-label="Destaque {{ forloop.counter }}"></button>
         {% endfor %}
+        {% if slides_home|length == 1 %}
+          <button type="button" data-carousel-dot="1" aria-label="Destaque 2"></button>
+        {% endif %}
       {% else %}
         <button type="button" data-carousel-dot="0" class="active" aria-label="Destaque 1"></button>
         <button type="button" data-carousel-dot="1" aria-label="Destaque 2"></button>
