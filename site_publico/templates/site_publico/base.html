@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
-  <link rel="stylesheet" href="{% static 'site_publico/site.css' %}?v=20261015-menu-04">
+  <link rel="stylesheet" href="{% static 'site_publico/site.css' %}?v=20261015-colors-05">
   {% block extra_head %}{% endblock %}
 </head>
 <body class="public-site">
@@ -37,12 +37,12 @@
       </button>
 
       <nav class="site-nav" id="menu-principal" aria-label="Menu principal">
-        <a href="{% url 'site_publico:home' %}" {% if request.resolver_match.url_name == 'home' %}class="active"{% endif %}>Início</a>
-        <a href="{% url 'site_publico:escola' %}" {% if request.resolver_match.url_name == 'escola' %}class="active"{% endif %}>A Escola</a>
-        <a href="{% url 'site_publico:vida_escolar' %}" {% if request.resolver_match.url_name == 'vida_escolar' %}class="active"{% endif %}>Vida Escolar</a>
-        <a href="{% url 'site_publico:atividades' %}" {% if request.resolver_match.url_name == 'atividades' or request.resolver_match.url_name == 'atividade' %}class="active"{% endif %}>Atividades e Jogos</a>
-        <a href="{% url 'site_publico:projetos' %}" {% if request.resolver_match.url_name == 'projetos' or request.resolver_match.url_name == 'projeto' %}class="active"{% endif %}>Projetos</a>
-        <a href="{% url 'site_publico:noticias' %}" {% if request.resolver_match.url_name == 'noticias' or request.resolver_match.url_name == 'noticia' %}class="active"{% endif %}>Notícias</a>
+        <a class="nav-color nav-color--green{% if request.resolver_match.url_name == 'home' %} active{% endif %}" href="{% url 'site_publico:home' %}">Início</a>
+        <a class="nav-color nav-color--gold{% if request.resolver_match.url_name == 'escola' %} active{% endif %}" href="{% url 'site_publico:escola' %}">A Escola</a>
+        <a class="nav-color nav-color--green-soft{% if request.resolver_match.url_name == 'vida_escolar' %} active{% endif %}" href="{% url 'site_publico:vida_escolar' %}">Vida Escolar</a>
+        <a class="nav-color nav-color--gold{% if request.resolver_match.url_name == 'atividades' or request.resolver_match.url_name == 'atividade' %} active{% endif %}" href="{% url 'site_publico:atividades' %}">Atividades e Jogos</a>
+        <a class="nav-color nav-color--green{% if request.resolver_match.url_name == 'projetos' or request.resolver_match.url_name == 'projeto' %} active{% endif %}" href="{% url 'site_publico:projetos' %}">Projetos</a>
+        <a class="nav-color nav-color--red{% if request.resolver_match.url_name == 'noticias' or request.resolver_match.url_name == 'noticia' %} active{% endif %}" href="{% url 'site_publico:noticias' %}">Notícias</a>
 
         <details class="site-nav-more{% if request.resolver_match.url_name == 'galeria' or request.resolver_match.url_name == 'album' or request.resolver_match.url_name == 'documentos' or request.resolver_match.url_name == 'faq' or request.resolver_match.url_name == 'contato' %} active{% endif %}">
           <summary>
