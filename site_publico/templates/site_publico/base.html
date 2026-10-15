@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
-  <link rel="stylesheet" href="{% static 'site_publico/site.css' %}?v=20261015-sticky-nav-10">
+  <link rel="stylesheet" href="{% static 'site_publico/site.css' %}?v=20261015-boletim-11">
   {% block extra_head %}{% endblock %}
 </head>
 <body class="public-site">
@@ -29,6 +29,11 @@
         </a>
 
         <div class="site-header__actions">
+          <a class="header-report{% if request.resolver_match.url_name == 'boletim' %} active{% endif %}" href="{% url 'site_publico:boletim' %}">
+            <i data-lucide="file-text"></i>
+            <span>Boletim</span>
+          </a>
+
           <a class="header-enrollment{% if request.resolver_match.url_name == 'matricula_landing' %} active{% endif %}" href="{% url 'site_publico:matricula_landing' %}">
             <i data-lucide="clipboard-pen-line"></i>
             <span>Matrícula</span>
