@@ -1,0 +1,28 @@
+{% extends 'site_publico/base.html' %}
+{% block title %}Matrícula Online · E. M. Egídio Cordeiro Aquino{% endblock %}
+{% block content %}
+<section class="page-hero">
+  <div class="page-heading">
+    <span class="section-kicker">Para pais e responsáveis</span>
+    <h1>Matrícula Online</h1>
+    <p>Preencha os dados com atenção. O formulário público já está integrado ao sistema da escola.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="two-column">
+    <article class="prose-card">
+      <h2>Antes de começar</h2>
+      <p>Tenha em mãos os dados do estudante, responsáveis, endereço, contatos de emergência e informações necessárias para o cadastro escolar.</p>
+      <p>Revise os dados antes de finalizar o envio. A equipe da escola poderá entrar em contato caso seja necessário complementar alguma informação.</p>
+      <a class="button button--primary" href="{% url 'matricula_publica' %}">Iniciar matrícula <i data-lucide="arrow-right"></i></a>
+    </article>
+    <article class="info-card">
+      <h2>Precisa de ajuda?</h2>
+      <p>Se tiver dúvidas durante o preenchimento, consulte as perguntas frequentes ou fale diretamente com a escola.</p>
+      <p><a class="text-link" href="{% url 'site_publico:faq' %}">Perguntas frequentes <i data-lucide="arrow-right"></i></a></p>
+      <p><a class="text-link" href="{% url 'site_publico:contato' %}">Entrar em contato <i data-lucide="arrow-right"></i></a></p>
+    </article>
+  </div>
+</section>
+{% endblock %}
