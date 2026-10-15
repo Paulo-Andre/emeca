@@ -3472,3 +3472,61 @@ textarea {
   position: static !important;
   top: auto !important;
 }
+
+/* Sticky navigation only: white school header scrolls away */
+.site-header {
+  position: static !important;
+  top: auto !important;
+}
+
+.site-nav-band {
+  position: sticky !important;
+  top: 0;
+  z-index: 180;
+  width: min(1560px, calc(100% - 24px));
+  margin: 0 auto;
+  box-shadow: 0 8px 22px rgba(16,73,32,.16);
+}
+
+.site-nav-band .mobile-menu-button {
+  display: none;
+}
+
+@media (max-width: 1020px) {
+  .site-nav-band {
+    width: calc(100% - 16px);
+    min-height: 54px;
+    padding-top: 5px;
+  }
+
+  .site-nav-band .mobile-menu-button {
+    min-height: 42px;
+    margin: 0 10px 5px;
+    padding: 0 15px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border: 0;
+    border-radius: 11px;
+    background: linear-gradient(180deg, #ffd65a, #f9c232);
+    color: #104920;
+    font-weight: 850;
+    box-shadow: 0 4px 12px rgba(0,0,0,.10);
+  }
+
+  .site-nav-band .site-nav {
+    top: 54px;
+  }
+}
+
+@media (max-width: 650px) {
+  .site-nav-band .mobile-menu-button {
+    width: auto;
+    min-width: 42px;
+    padding: 0 12px;
+  }
+
+  .site-nav-band .mobile-menu-button span {
+    display: inline;
+  }
+}
