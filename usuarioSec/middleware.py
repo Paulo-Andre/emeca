@@ -17,6 +17,7 @@ class LoginRequiredMiddleware:
         "/documentos/",
         "/perguntas-frequentes/",
         "/contato/",
+        "/configuracao-site-publica/",
         "/boletim/",
     )
 
