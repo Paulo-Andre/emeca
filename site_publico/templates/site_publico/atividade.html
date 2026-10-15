@@ -1,0 +1,35 @@
+{% extends 'site_publico/base.html' %}
+{% block title %}{{ item.titulo }} · Atividades e Jogos{% endblock %}
+{% block content %}
+<section class="page-hero">
+  <div class="page-heading">
+    <span class="section-kicker">{{ item.get_tipo_display }}</span>
+    <h1>{{ item.titulo }}</h1>
+    <p>{{ item.disciplina }}{% if item.disciplina and item.ano_escolar %} · {% endif %}{{ item.ano_escolar }}</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="detail-layout">
+    <article class="detail-main">
+      {% if item.imagem %}<img class="detail-cover" src="{{ item.imagem.url }}" alt="">{% endif %}
+      <div class="prose-card detail-text">{{ item.descricao|linebreaks }}</div>
+    </article>
+    <aside class="detail-aside">
+      <h3>Sobre esta atividade</h3>
+      <div class="meta-list">
+        <div class="meta-row"><span>Tipo</span><strong>{{ item.get_tipo_display }}</strong></div>
+        {% if item.disciplina %}<div class="meta-row"><span>Disciplina</span><strong>{{ item.disciplina }}</strong></div>{% endif %}
+        {% if item.ano_escolar %}<div class="meta-row"><span>Ano escolar</span><strong>{{ item.ano_escolar }}</strong></div>{% endif %}
+        <div class="meta-row"><span>Dificuldade</span><strong>{{ item.get_dificuldade_display }}</strong></div>
+      </div>
+      {% if item.link %}
+        <p><a class="button button--primary" href="{{ item.link }}" target="_blank" rel="noopener noreferrer">Abrir atividade <i data-lucide="external-link"></i></a></p>
+      {% endif %}
+      {% if item.arquivo %}
+        <p><a class="button button--ghost" href="{{ item.arquivo.url }}">Baixar material <i data-lucide="download"></i></a></p>
+      {% endif %}
+    </aside>
+  </div>
+</section>
+{% endblock %}
