@@ -1,28 +1,91 @@
 {% extends 'site_publico/base.html' %}
 {% block title %}Matrícula Online · E. M. Egídio Cordeiro Aquino{% endblock %}
+
 {% block content %}
-<section class="page-hero">
+<section class="page-hero enrollment-page-hero">
   <div class="page-heading">
     <span class="section-kicker">Para pais e responsáveis</span>
     <h1>Matrícula Online</h1>
-    <p>Preencha os dados com atenção. O formulário público já está integrado ao sistema da escola.</p>
+    <p>Um caminho mais simples para organizar os dados antes do atendimento presencial na escola.</p>
   </div>
 </section>
 
 <section class="section">
-  <div class="two-column">
-    <article class="prose-card">
-      <h2>Antes de começar</h2>
-      <p>Tenha em mãos os dados do estudante, responsáveis, endereço, contatos de emergência e informações necessárias para o cadastro escolar.</p>
-      <p>Revise os dados antes de finalizar o envio. A equipe da escola poderá entrar em contato caso seja necessário complementar alguma informação.</p>
-      <a class="button button--primary" href="{% url 'matricula_publica' %}">Iniciar matrícula <i data-lucide="arrow-right"></i></a>
+  <div class="enrollment-intro">
+    <div>
+      <span class="section-kicker">Como funciona</span>
+      <h2>Preencha com calma, etapa por etapa</h2>
+      <p>O formulário foi dividido para facilitar o preenchimento pelo celular. Tenha em mãos os dados do estudante, responsáveis, endereço e contatos de emergência.</p>
+    </div>
+    <a class="button button--primary enrollment-start" href="{% url 'matricula_publica' %}">
+      Iniciar matrícula
+      <i data-lucide="arrow-right"></i>
+    </a>
+  </div>
+
+  <div class="enrollment-steps">
+    <article>
+      <span class="enrollment-steps__number">01</span>
+      <span class="enrollment-steps__icon"><i data-lucide="badge-check"></i></span>
+      <h3>Confirme a orientação</h3>
+      <p>Use o formulário após a orientação da escola ou o encaminhamento do Cadastro Escolar.</p>
     </article>
-    <article class="info-card">
-      <h2>Precisa de ajuda?</h2>
-      <p>Se tiver dúvidas durante o preenchimento, consulte as perguntas frequentes ou fale diretamente com a escola.</p>
-      <p><a class="text-link" href="{% url 'site_publico:faq' %}">Perguntas frequentes <i data-lucide="arrow-right"></i></a></p>
-      <p><a class="text-link" href="{% url 'site_publico:contato' %}">Entrar em contato <i data-lucide="arrow-right"></i></a></p>
+
+    <article>
+      <span class="enrollment-steps__number">02</span>
+      <span class="enrollment-steps__icon enrollment-steps__icon--blue"><i data-lucide="clipboard-pen-line"></i></span>
+      <h3>Preencha os dados</h3>
+      <p>Informe os dados do aluno e responsáveis. Você verá o progresso durante todo o processo.</p>
+    </article>
+
+    <article>
+      <span class="enrollment-steps__number">03</span>
+      <span class="enrollment-steps__icon enrollment-steps__icon--green"><i data-lucide="school"></i></span>
+      <h3>Conclua na escola</h3>
+      <p>A vaga é confirmada somente após a conferência dos documentos e a assinatura presencial.</p>
     </article>
   </div>
+</section>
+
+<section class="section section--tinted">
+  <div class="enrollment-help">
+    <article class="prose-card">
+      <span class="section-kicker">Antes de começar</span>
+      <h2>Tenha as informações em mãos</h2>
+      <p>Separe documentos pessoais, comprovante de residência, contatos de emergência e informações de saúde ou acompanhamento do estudante quando aplicável.</p>
+      <div class="enrollment-callout">
+        <i data-lucide="triangle-alert"></i>
+        <span>O preenchimento online <strong>não garante a vaga automaticamente</strong>. A matrícula precisa ser concluída presencialmente.</span>
+      </div>
+    </article>
+
+    <article class="info-card enrollment-support">
+      <span class="section-kicker">Precisa de ajuda?</span>
+      <h2>Estamos disponíveis</h2>
+      <p>Se tiver dúvidas antes ou durante o preenchimento, consulte as perguntas frequentes ou entre em contato com a escola.</p>
+      <div class="enrollment-support__links">
+        <a class="button button--soft" href="{% url 'site_publico:faq' %}">
+          Perguntas frequentes
+          <i data-lucide="circle-help"></i>
+        </a>
+        <a class="button button--soft" href="{% url 'site_publico:contato' %}">
+          Falar com a escola
+          <i data-lucide="messages-square"></i>
+        </a>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="section enrollment-final-cta">
+  <div>
+    <span class="section-kicker">Pronto para começar?</span>
+    <h2>O formulário salva os dados durante esta sessão</h2>
+    <p>Reserve alguns minutos e revise as informações antes de finalizar.</p>
+  </div>
+  <a class="button button--primary" href="{% url 'matricula_publica' %}">
+    Abrir formulário
+    <i data-lucide="arrow-right"></i>
+  </a>
 </section>
 {% endblock %}
