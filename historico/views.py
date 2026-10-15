@@ -1,3 +1,4 @@
+import base64
 import json
 import time
 import uuid
@@ -80,6 +81,23 @@ RESULTADO_CHOICES = [
     ("EM CONTINUIDADE", "Em continuidade"),
     ("EM CURSO", "Em curso"),
 ]
+
+
+def _timbragem_data_uri():
+    """Timbragem embutida para a impressão não depender de requisição estática."""
+    caminho = (
+        Path(settings.BASE_DIR)
+        / "historico"
+        / "static"
+        / "historico"
+        / "img"
+        / "timbragem_historico_egidio.b64"
+    )
+    try:
+        payload = "".join(caminho.read_text(encoding="ascii").split())
+    except OSError:
+        return ""
+    return f"data:image/jpeg;base64,{payload}" if payload else ""
 
 
 
@@ -760,6 +778,7 @@ def historico_impressao(request, codigo):
                 "documento": documento,
                 "validacao_documento": validar_documento(documento),
                 "qr_code_data_uri": qr_code_data_uri(request, documento),
+                "letterhead_data_uri": _timbragem_data_uri(),
                 "can_edit": False,
             }
         )
@@ -786,6 +805,7 @@ def historico_impressao(request, codigo):
             "documento": None,
             "validacao_documento": None,
             "qr_code_data_uri": "",
+            "letterhead_data_uri": _timbragem_data_uri(),
             "can_edit": True,
         }
 
