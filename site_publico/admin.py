@@ -12,6 +12,7 @@ from .models import (
     Noticia,
     PerguntaFrequente,
     Projeto,
+    PaginaPublica,
 )
 
 
@@ -98,3 +99,10 @@ class MensagemContatoAdmin(admin.ModelAdmin):
     list_filter = ("lida", "criada_em")
     search_fields = ("nome", "email", "telefone", "assunto", "mensagem")
     readonly_fields = ("nome", "email", "telefone", "assunto", "mensagem", "criada_em")
+
+
+@admin.register(PaginaPublica)
+class PaginaPublicaAdmin(admin.ModelAdmin):
+    list_display = ("nome", "chave", "ativa", "ordem", "atualizado_em")
+    list_editable = ("ativa", "ordem")
+    readonly_fields = ("chave", "atualizado_em")
