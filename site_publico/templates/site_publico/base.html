@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
-  <link rel="stylesheet" href="{% static 'site_publico/site.css' %}?v=20261015-scroll-08">
+  <link rel="stylesheet" href="{% static 'site_publico/site.css' %}?v=20261015-sticky-nav-09">
   {% block extra_head %}{% endblock %}
 </head>
 <body class="public-site">
@@ -33,23 +33,18 @@
             <i data-lucide="clipboard-pen-line"></i>
             <span>Matrícula</span>
           </a>
-
-          <span class="header-action-divider" aria-hidden="true"></span>
-
-          <a class="header-internal" href="{% url 'login' %}">
-            <i data-lucide="lock-keyhole"></i>
-            <span>Área Interna</span>
-          </a>
-
-          <button class="mobile-menu-button" type="button" aria-expanded="false" aria-controls="menu-principal">
-            <i data-lucide="menu"></i>
-            <span>Menu</span>
-          </button>
         </div>
       </div>
+    </div>
+  </header>
 
-      <div class="site-nav-band">
-        <nav class="site-nav" id="menu-principal" aria-label="Menu principal">
+  <div class="site-nav-band">
+    <button class="mobile-menu-button" type="button" aria-expanded="false" aria-controls="menu-principal">
+      <i data-lucide="menu"></i>
+      <span>Menu</span>
+    </button>
+
+    <nav class="site-nav" id="menu-principal" aria-label="Menu principal">
           <a class="nav-main{% if request.resolver_match.url_name == 'home' %} active{% endif %}" href="{% url 'site_publico:home' %}">
             <i data-lucide="house"></i><span>Início</span>
           </a>
@@ -85,16 +80,15 @@
               <a href="{% url 'site_publico:documentos' %}"><i data-lucide="folder-down"></i><span><strong>Documentos</strong><small>Arquivos e orientações</small></span></a>
               <a href="{% url 'site_publico:faq' %}"><i data-lucide="circle-help"></i><span><strong>Perguntas frequentes</strong><small>Dúvidas de famílias e alunos</small></span></a>
               <a href="{% url 'site_publico:contato' %}"><i data-lucide="messages-square"></i><span><strong>Contato</strong><small>Fale com a escola</small></span></a>
+              <a href="{% url 'login' %}"><i data-lucide="lock-keyhole"></i><span><strong>Área Interna</strong><small>Acessar a Secretaria Digital</small></span></a>
             </div>
           </details>
-        </nav>
+    </nav>
 
-        <div class="site-nav-accent" aria-hidden="true">
-          <span></span><span></span>
-        </div>
-      </div>
+    <div class="site-nav-accent" aria-hidden="true">
+      <span></span><span></span>
     </div>
-  </header>
+  </div>
 
   {% if messages %}
     <div class="site-messages" aria-live="polite">
@@ -151,7 +145,7 @@
     </div>
   </footer>
 
-  <script src="{% static 'site_publico/site.js' %}?v=20261015-scroll-08" defer></script>
+  <script src="{% static 'site_publico/site.js' %}?v=20261015-sticky-nav-09" defer></script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>
