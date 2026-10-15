@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { ChevronDown, ClipboardPenLine, LockKeyhole, Menu, X } from "lucide-react";
 import "./css/publicSiteShell.css";
 
-export default function PublicSiteShell({ children }: { children: React.ReactNode }) {
+export default function PublicSiteShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const logo = `${import.meta.env.BASE_URL}logo_escola.svg`;
 
