@@ -1,0 +1,15 @@
+{% extends 'site_publico/base.html' %}
+{% block title %}{{ item.titulo }} · Projetos{% endblock %}
+{% block content %}
+<section class="page-hero">
+  <div class="page-heading">
+    <span class="section-kicker">Projeto</span>
+    <h1>{{ item.titulo }}</h1>
+    {% if item.resumo %}<p>{{ item.resumo }}</p>{% endif %}
+  </div>
+</section>
+<section class="section">
+  {% if item.imagem %}<img class="detail-cover" src="{{ item.imagem.url }}" alt="">{% endif %}
+  <article class="prose-card detail-text">{{ item.conteudo|linebreaks }}</article>
+</section>
+{% endblock %}
