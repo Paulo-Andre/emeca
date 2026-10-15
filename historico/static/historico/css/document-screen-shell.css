@@ -106,10 +106,22 @@ body.document-app {
   transition: background .16s ease, color .16s ease;
 }
 
-.document-nav-item svg {
-  width: 19px;
-  height: 19px;
-  flex: 0 0 auto;
+.document-nav-item > svg {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  padding: 7px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 10px;
+  background: rgba(255,255,255,.07);
+  color: #cfe2e8;
+  stroke-width: 2.15;
+  transition:
+    background .16s ease,
+    border-color .16s ease,
+    color .16s ease,
+    transform .16s ease;
 }
 
 .document-nav-item:hover {
@@ -117,10 +129,23 @@ body.document-app {
   color: #fff;
 }
 
+.document-nav-item:hover > svg {
+  background: rgba(255,255,255,.13);
+  border-color: rgba(255,255,255,.18);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
 .document-nav-item.is-active {
   background: #fff;
   color: var(--doc-shell-primary-strong);
   box-shadow: 0 8px 22px rgba(0,0,0,.12);
+}
+
+.document-nav-item.is-active > svg {
+  background: #e8f3f6;
+  border-color: #c8dfe6;
+  color: var(--doc-shell-primary);
 }
 
 .document-nav-item.is-subitem {
@@ -132,13 +157,22 @@ body.document-app {
   font-size: 12.5px;
 }
 
-.document-nav-item.is-subitem svg {
-  width: 17px;
-  height: 17px;
+.document-nav-item.is-subitem > svg {
+  width: 30px;
+  height: 30px;
+  flex-basis: 30px;
+  padding: 6px;
+  border-radius: 9px;
 }
 
 .document-nav-item.is-danger {
   color: #ffd4cf;
+}
+
+.document-nav-item.is-danger > svg {
+  background: rgba(180,35,24,.15);
+  border-color: rgba(255,196,190,.18);
+  color: #ffb8b0;
 }
 
 .document-nav-item.is-danger:hover {
@@ -295,11 +329,20 @@ body.document-app {
   .document-nav-item,
   .document-nav-item.is-subitem {
     width: auto;
-    min-height: 38px;
+    min-height: 40px;
     margin: 0 3px;
-    padding: 8px 10px;
+    padding: 5px 9px;
     flex: 0 0 auto;
     white-space: nowrap;
+  }
+
+  .document-nav-item > svg,
+  .document-nav-item.is-subitem > svg {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+    padding: 6px;
+    border-radius: 9px;
   }
 
   .document-nav-item.is-logout {
