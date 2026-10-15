@@ -12,6 +12,8 @@ class SitePublicoTests(TestCase):
         response = self.client.get(reverse("site_publico:home"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "E. M. Egídio Cordeiro Aquino")
+        self.assertContains(response, 'class="hero-carousel"')
+        self.assertContains(response, 'data-carousel')
 
     def test_paginas_principais_sao_publicas(self):
         nomes = [
