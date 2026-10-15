@@ -6,6 +6,7 @@ SECOES_INICIAIS = [
     ("home", "home_fallback_slide", "Início — carrossel alternativo", "Aprender e participar", "Atividades, projetos e notícias da escola", "Quando fotos e notícias forem publicadas, elas passam a ocupar este carrossel automaticamente.", 10),
     ("home", "home_avisos", "Início — avisos", "Comunicados", "Avisos importantes", "Informações ativas da escola", 20),
     ("home", "home_acesso", "Início — acesso rápido", "Acesso rápido", "Informações e serviços da escola", "Encontre rapidamente os principais caminhos para estudantes e famílias.", 30),
+    ("home", "home_modelo", "Início — apresentação da escola", "Nossa escola", "", "Educação pública com participação e cuidado", 35),
     ("home", "home_noticias", "Início — notícias", "Acontece na escola", "Últimas notícias", "Projetos, eventos, atividades e acontecimentos da comunidade escolar.", 40),
     ("home", "home_atividades", "Início — atividades", "Aprender brincando", "Atividades e jogos em destaque", "Conteúdos para aprender, revisar e se divertir.", 50),
     ("home", "home_projetos", "Início — projetos", "Nossa escola em movimento", "Projetos em destaque", "Iniciativas que fortalecem aprendizagem, participação e convivência.", 60),
