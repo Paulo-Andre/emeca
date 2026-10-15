@@ -47,13 +47,35 @@ def _slides_home(agora, paginas_ativas):
     """Monta o carrossel com destaques, notícias e fotos da galeria."""
     slides = []
 
+    links_paginas = {
+        "/a-escola/": "escola",
+        "/vida-escolar/": "vida_escolar",
+        "/atividades-jogos/": "atividades",
+        "/projetos/": "projetos",
+        "/noticias/": "noticias",
+        "/galeria/": "galeria",
+        "/matricula-escolar/": "matricula",
+        "/boletim/": "boletim",
+        "/documentos/": "documentos",
+        "/perguntas-frequentes/": "faq",
+        "/contato/": "contato",
+    }
+
     for item in _visiveis_no_periodo(DestaqueHome.objects.all())[:5]:
+        link = item.link
+        chave_link = next(
+            (chave for prefixo, chave in links_paginas.items() if link.startswith(prefixo)),
+            None,
+        ) if link else None
+        if chave_link and not paginas_ativas.get(chave_link, True):
+            link = ""
+
         slides.append({
             "rotulo": item.get_categoria_display(),
             "titulo": item.titulo,
             "descricao": item.descricao,
             "imagem": item.imagem.url if item.imagem else "",
-            "link": item.link,
+            "link": link,
             "texto_botao": item.texto_botao or "Saiba mais",
         })
 
