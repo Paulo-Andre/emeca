@@ -87,10 +87,6 @@ const handleCPF = (e: React.ChangeEvent<HTMLInputElement>) => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
-    console.log(dado);
-    console.log("setDados:", setDados);
-console.log("tipo:", typeof setDados);
-
     if (form.checkValidity()) {
       navigate("/DadosPai");
     } else {
@@ -300,16 +296,18 @@ console.log("tipo:", typeof setDados);
     name="cpfDoAluno"
     required
     type="text"
+    inputMode="numeric"
+    autoComplete="off"
     value={cpf}
     onChange={handleCPF}
-  style={{
-      border: cpfErro ? "2px solid red" : "1px solid #ccc",
-    }}
+    className={cpfErro ? "field-invalid" : ""}
+    aria-invalid={cpfErro}
+    aria-describedby={cpfErro ? "cpf-aluno-erro" : undefined}
   />
 
   {cpfErro && (
-    <small style={{ color: "red" }}>
-      CPF inválido
+    <small id="cpf-aluno-erro" className="field-error">
+      Confira o CPF informado.
     </small>
   )}
 </div>         
