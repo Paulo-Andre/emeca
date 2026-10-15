@@ -1,0 +1,196 @@
+# Generated manually for the initial public school website schema.
+from django.core.validators import FileExtensionValidator
+from django.db import migrations, models
+import django.db.models.deletion
+
+
+class Migration(migrations.Migration):
+    initial = True
+
+    dependencies = []
+
+    operations = [
+        migrations.CreateModel(
+            name="ConfiguracaoSite",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("nome_escola", models.CharField(default="E. M. Egídio Cordeiro Aquino", max_length=180)),
+                ("subtitulo", models.CharField(default="Educação, acolhimento e aprendizagem construídos juntos.", max_length=220)),
+                ("apresentacao", models.TextField(blank=True)),
+                ("historia", models.TextField(blank=True)),
+                ("missao_valores", models.TextField(blank=True)),
+                ("vida_escolar", models.TextField(blank=True)),
+                ("endereco", models.CharField(blank=True, max_length=255)),
+                ("cidade", models.CharField(blank=True, default="Montes Claros/MG", max_length=120)),
+                ("telefone", models.CharField(blank=True, max_length=60)),
+                ("whatsapp", models.CharField(blank=True, max_length=60)),
+                ("email", models.EmailField(blank=True, max_length=254)),
+                ("horario_atendimento", models.CharField(blank=True, max_length=180)),
+                ("mapa_url", models.URLField(blank=True)),
+                ("atualizado_em", models.DateTimeField(auto_now=True)),
+            ],
+            options={
+                "verbose_name": "Configuração do site",
+                "verbose_name_plural": "Configurações do site",
+            },
+        ),
+        migrations.CreateModel(
+            name="DestaqueHome",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("titulo", models.CharField(max_length=180)),
+                ("descricao", models.CharField(blank=True, max_length=320)),
+                ("categoria", models.CharField(choices=[("NOTICIA", "Notícia"), ("EVENTO", "Evento"), ("PROJETO", "Projeto"), ("COMUNICADO", "Comunicado")], default="NOTICIA", max_length=20)),
+                ("imagem", models.FileField(blank=True, upload_to="site_publico/destaques/", validators=[FileExtensionValidator(["jpg", "jpeg", "png", "webp"])])),
+                ("texto_botao", models.CharField(blank=True, default="Saiba mais", max_length=60)),
+                ("link", models.CharField(blank=True, max_length=500)),
+                ("ativo", models.BooleanField(default=True)),
+                ("ordem", models.PositiveSmallIntegerField(default=0)),
+                ("inicio", models.DateTimeField(blank=True, null=True)),
+                ("fim", models.DateTimeField(blank=True, null=True)),
+                ("criado_em", models.DateTimeField(auto_now_add=True)),
+            ],
+            options={"verbose_name": "Destaque do carrossel", "verbose_name_plural": "Destaques do carrossel", "ordering": ["ordem", "-criado_em"]},
+        ),
+        migrations.CreateModel(
+            name="Aviso",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("titulo", models.CharField(max_length=160)),
+                ("texto", models.TextField()),
+                ("tipo", models.CharField(choices=[("INFO", "Informativo"), ("IMPORTANTE", "Importante"), ("URGENTE", "Urgente")], default="INFO", max_length=20)),
+                ("link", models.CharField(blank=True, max_length=500)),
+                ("texto_link", models.CharField(blank=True, default="Saiba mais", max_length=60)),
+                ("ativo", models.BooleanField(default=True)),
+                ("inicio", models.DateTimeField(blank=True, null=True)),
+                ("fim", models.DateTimeField(blank=True, null=True)),
+                ("criado_em", models.DateTimeField(auto_now_add=True)),
+            ],
+            options={"ordering": ["-criado_em"]},
+        ),
+        migrations.CreateModel(
+            name="Noticia",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("titulo", models.CharField(max_length=180)),
+                ("slug", models.SlugField(blank=True, max_length=180, unique=True)),
+                ("resumo", models.CharField(blank=True, max_length=360)),
+                ("conteudo", models.TextField()),
+                ("imagem", models.FileField(blank=True, upload_to="site_publico/noticias/", validators=[FileExtensionValidator(["jpg", "jpeg", "png", "webp"])])),
+                ("publicado_em", models.DateTimeField()),
+                ("ativo", models.BooleanField(default=True)),
+                ("destaque", models.BooleanField(default=False)),
+            ],
+            options={"ordering": ["-publicado_em"]},
+        ),
+        migrations.CreateModel(
+            name="Projeto",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("titulo", models.CharField(max_length=180)),
+                ("slug", models.SlugField(blank=True, max_length=180, unique=True)),
+                ("resumo", models.CharField(blank=True, max_length=360)),
+                ("conteudo", models.TextField()),
+                ("imagem", models.FileField(blank=True, upload_to="site_publico/projetos/", validators=[FileExtensionValidator(["jpg", "jpeg", "png", "webp"])])),
+                ("ativo", models.BooleanField(default=True)),
+                ("destaque", models.BooleanField(default=False)),
+                ("ordem", models.PositiveSmallIntegerField(default=0)),
+            ],
+            options={"ordering": ["ordem", "titulo"]},
+        ),
+        migrations.CreateModel(
+            name="AtividadeJogo",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("titulo", models.CharField(max_length=180)),
+                ("slug", models.SlugField(blank=True, max_length=180, unique=True)),
+                ("descricao", models.TextField()),
+                ("tipo", models.CharField(choices=[("JOGO", "Jogo"), ("QUIZ", "Quiz"), ("ATIVIDADE", "Atividade"), ("DESAFIO", "Desafio"), ("VIDEO", "Vídeo educativo"), ("MATERIAL", "Material")], default="ATIVIDADE", max_length=20)),
+                ("ano_escolar", models.CharField(blank=True, max_length=80)),
+                ("disciplina", models.CharField(blank=True, max_length=100)),
+                ("dificuldade", models.CharField(choices=[("FACIL", "Fácil"), ("MEDIO", "Médio"), ("DESAFIO", "Desafio")], default="FACIL", max_length=20)),
+                ("imagem", models.FileField(blank=True, upload_to="site_publico/atividades/", validators=[FileExtensionValidator(["jpg", "jpeg", "png", "webp"])])),
+                ("link", models.URLField(blank=True)),
+                ("arquivo", models.FileField(blank=True, upload_to="site_publico/atividades/arquivos/", validators=[FileExtensionValidator(["pdf", "doc", "docx", "xls", "xlsx", "odt"])])),
+                ("ativo", models.BooleanField(default=True)),
+                ("destaque", models.BooleanField(default=False)),
+                ("ordem", models.PositiveSmallIntegerField(default=0)),
+            ],
+            options={"verbose_name": "Atividade ou jogo", "verbose_name_plural": "Atividades e jogos", "ordering": ["ordem", "titulo"]},
+        ),
+        migrations.CreateModel(
+            name="Evento",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("titulo", models.CharField(max_length=180)),
+                ("descricao", models.CharField(blank=True, max_length=320)),
+                ("inicio", models.DateTimeField()),
+                ("fim", models.DateTimeField(blank=True, null=True)),
+                ("local", models.CharField(blank=True, max_length=180)),
+                ("ativo", models.BooleanField(default=True)),
+            ],
+            options={"ordering": ["inicio"]},
+        ),
+        migrations.CreateModel(
+            name="AlbumGaleria",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("titulo", models.CharField(max_length=180)),
+                ("slug", models.SlugField(blank=True, max_length=180, unique=True)),
+                ("descricao", models.CharField(blank=True, max_length=360)),
+                ("capa", models.FileField(blank=True, upload_to="site_publico/galeria/capas/", validators=[FileExtensionValidator(["jpg", "jpeg", "png", "webp"])])),
+                ("data_evento", models.DateField(blank=True, null=True)),
+                ("ativo", models.BooleanField(default=True)),
+            ],
+            options={"verbose_name": "Álbum da galeria", "verbose_name_plural": "Álbuns da galeria", "ordering": ["-data_evento", "-id"]},
+        ),
+        migrations.CreateModel(
+            name="DocumentoPublico",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("titulo", models.CharField(max_length=180)),
+                ("descricao", models.CharField(blank=True, max_length=360)),
+                ("categoria", models.CharField(choices=[("FORMULARIO", "Formulário"), ("ORIENTACAO", "Orientação"), ("LISTA", "Lista"), ("OUTRO", "Outro")], default="OUTRO", max_length=20)),
+                ("arquivo", models.FileField(upload_to="site_publico/documentos/", validators=[FileExtensionValidator(["pdf", "doc", "docx", "xls", "xlsx", "odt"])])),
+                ("ativo", models.BooleanField(default=True)),
+                ("ordem", models.PositiveSmallIntegerField(default=0)),
+            ],
+            options={"verbose_name": "Documento público", "verbose_name_plural": "Documentos públicos", "ordering": ["ordem", "titulo"]},
+        ),
+        migrations.CreateModel(
+            name="PerguntaFrequente",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("pergunta", models.CharField(max_length=220)),
+                ("resposta", models.TextField()),
+                ("ativo", models.BooleanField(default=True)),
+                ("ordem", models.PositiveSmallIntegerField(default=0)),
+            ],
+            options={"verbose_name": "Pergunta frequente", "verbose_name_plural": "Perguntas frequentes", "ordering": ["ordem", "id"]},
+        ),
+        migrations.CreateModel(
+            name="MensagemContato",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("nome", models.CharField(max_length=160)),
+                ("email", models.EmailField(blank=True, max_length=254)),
+                ("telefone", models.CharField(blank=True, max_length=40)),
+                ("assunto", models.CharField(max_length=180)),
+                ("mensagem", models.TextField()),
+                ("lida", models.BooleanField(default=False)),
+                ("criada_em", models.DateTimeField(auto_now_add=True)),
+            ],
+            options={"verbose_name": "Mensagem de contato", "verbose_name_plural": "Mensagens de contato", "ordering": ["-criada_em"]},
+        ),
+        migrations.CreateModel(
+            name="FotoGaleria",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("imagem", models.FileField(upload_to="site_publico/galeria/fotos/", validators=[FileExtensionValidator(["jpg", "jpeg", "png", "webp"])])),
+                ("legenda", models.CharField(blank=True, max_length=220)),
+                ("ordem", models.PositiveSmallIntegerField(default=0)),
+                ("album", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="fotos", to="site_publico.albumgaleria")),
+            ],
+            options={"verbose_name": "Foto da galeria", "verbose_name_plural": "Fotos da galeria", "ordering": ["ordem", "id"]},
+        ),
+    ]
