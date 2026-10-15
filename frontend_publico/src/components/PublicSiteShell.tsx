@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ChevronDown, ClipboardPenLine, Ellipsis, Gamepad2, GraduationCap, Home, LockKeyhole, Menu, Newspaper, School, UsersRound, X } from "lucide-react";
+import { ChevronDown, ClipboardPenLine, Ellipsis, FileText, Gamepad2, GraduationCap, Home, LockKeyhole, Menu, Newspaper, School, UsersRound, X } from "lucide-react";
 import "./css/publicSiteShell.css";
 
 export default function PublicSiteShell({ children }: { children: ReactNode }) {
@@ -22,6 +22,11 @@ export default function PublicSiteShell({ children }: { children: ReactNode }) {
             </a>
 
             <div className="school-public-actions">
+              <a className="shell-report" href="/boletim/" onClick={closeMenu}>
+                <FileText size={20} />
+                <span>Boletim</span>
+              </a>
+
               <a className="shell-enrollment active" href="/matricula-escolar/" onClick={closeMenu}>
                 <ClipboardPenLine size={20} />
                 <span>Matrícula</span>
