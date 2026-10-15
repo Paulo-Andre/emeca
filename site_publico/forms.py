@@ -60,9 +60,8 @@ class PaginaPublicaForm(StyledModelForm):
 class SecaoPaginaForm(StyledModelForm):
     class Meta:
         model = SecaoPagina
-        fields = ["ativa", "rotulo", "titulo", "texto", "imagem"]
+        fields = ["rotulo", "titulo", "texto", "imagem"]
         labels = {
-            "ativa": "Exibir este bloco",
             "rotulo": "Texto de destaque",
             "titulo": "Título",
             "texto": "Texto",
