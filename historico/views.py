@@ -82,22 +82,6 @@ RESULTADO_CHOICES = [
 ]
 
 
-def _letterhead_data_uri():
-    """Retorna a timbragem embutida para a impressão não depender de asset binário."""
-    arquivo = (
-        Path(settings.BASE_DIR)
-        / "historico"
-        / "static"
-        / "historico"
-        / "img"
-        / "timbragem_historico_egidio.b64"
-    )
-    try:
-        payload = "".join(arquivo.read_text(encoding="ascii").split())
-    except OSError:
-        return ""
-    return f"data:image/jpeg;base64,{payload}" if payload else ""
-
 
 def _opcoes_com_valor_atual(opcoes, atual):
     atuais = {valor for valor, _ in opcoes}
@@ -776,7 +760,6 @@ def historico_impressao(request, codigo):
                 "documento": documento,
                 "validacao_documento": validar_documento(documento),
                 "qr_code_data_uri": qr_code_data_uri(request, documento),
-                "letterhead_data_uri": _letterhead_data_uri(),
                 "can_edit": False,
             }
         )
@@ -803,7 +786,6 @@ def historico_impressao(request, codigo):
             "documento": None,
             "validacao_documento": None,
             "qr_code_data_uri": "",
-            "letterhead_data_uri": _letterhead_data_uri(),
             "can_edit": True,
         }
 
