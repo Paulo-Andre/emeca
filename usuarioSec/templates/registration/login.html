@@ -1,186 +1,82 @@
+{% load static %}
 <!doctype html>
 <html lang="pt-br">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Login</title>
-
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-        font-family: "Segoe UI", sans-serif;
-      }
-
-      body {
-        height: 100vh;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-
-      .container {
-        background: white;
-        padding: 40px;
-        width: 360px;
-        border-radius: 18px;
-        box-shadow: 0 20px 45px rgba(0, 0, 0, 0.2);
-        text-align: center;
-        animation: fadeIn 0.6s ease-in-out;
-      }
-
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(20px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-
-      .container h2 {
-        margin-bottom: 25px;
-        color: #333;
-      }
-
-      .input-group {
-        margin-bottom: 20px;
-        text-align: left;
-        position: relative;
-      }
-
-      .input-group label {
-        font-size: 13px;
-        color: #555;
-        display: block;
-        margin-bottom: 6px;
-      }
-
-      .form-control {
-        width: 100%;
-        padding: 12px 15px;
-        border-radius: 10px;
-        border: 1px solid #ccc;
-        outline: none;
-        transition: 0.3s;
-        font-size: 14px;
-      }
-
-      .form-control:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 10px rgba(102, 126, 234, 0.4);
-      }
-
-      .toggle-password {
-        position: absolute;
-        right: 12px;
-        top: 38px;
-        cursor: pointer;
-        font-size: 12px;
-        color: #667eea;
-        font-weight: 500;
-      }
-
-      button {
-        width: 100%;
-        padding: 12px;
-        border: none;
-        border-radius: 10px;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
-        font-size: 16px;
-        cursor: pointer;
-        transition: 0.3s;
-        margin-top: 10px;
-      }
-
-      button:hover {
-        opacity: 0.9;
-        transform: translateY(-2px);
-      }
-
-      .error {
-        color: red;
-        font-size: 13px;
-        margin-bottom: 10px;
-      }
-
-      .footer-text {
-        margin-top: 18px;
-        font-size: 13px;
-        color: #666;
-      }
-
-      .footer-text a {
-        color: #667eea;
-        text-decoration: none;
-        font-weight: 500;
-      }
-
-      .footer-text a:hover {
-        text-decoration: underline;
-      }
-    </style>
-  </head>
-
-  <body>
-    <div class="container">
-      <h2>Entrar</h2>
-
-      {% if form.errors %}
-      <div class="error">Usuário ou senha inválidos.</div>
-      {% endif %}
-
-      <form method="POST">
-        {% csrf_token %}
-
-        <div class="input-group">
-          <label for="id_username">Usuário</label>
-          <input
-            type="text"
-            name="username"
-            id="id_username"
-            class="form-control"
-            required
-          />
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acesso · Secretaria Escolar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261015-01">
+</head>
+<body>
+  <main class="login-page">
+    <section class="login-shell" aria-label="Acesso ao sistema da secretaria">
+      <div class="login-brand-panel">
+        <div class="login-brand">
+          <img src="{% static 'imagens/logo.svg' %}" alt="Brasão da E. M. Egídio Cordeiro Aquino">
+          <h1>Secretaria Escolar Digital</h1>
+          <p>Um único ambiente para matrículas, declarações e histórico escolar da E. M. Egídio Cordeiro Aquino.</p>
         </div>
+        <div class="login-brand-note">Acesso restrito a usuários autorizados.</div>
+      </div>
 
-        <div class="input-group">
-          <label for="id_password">Senha</label>
-          <input
-            type="password"
-            name="password"
-            id="id_password"
-            class="form-control"
-            required
-          />
-          <span class="toggle-password" onclick="togglePassword()"
-            >Mostrar</span
-          >
-        </div>
+      <div class="login-card">
+        <span class="login-eyebrow">Área interna</span>
+        <h2>Entrar no sistema</h2>
+        <p>Use seu usuário e senha para acessar os serviços da secretaria.</p>
 
-        <button type="submit">Entrar</button>
-      </form>
+        {% if form.errors %}
+          <div class="login-error" role="alert">Usuário ou senha inválidos. Confira os dados e tente novamente.</div>
+        {% endif %}
 
-      
+        <form method="POST" novalidate>
+          {% csrf_token %}
 
-    <script>
-      function togglePassword() {
-        const passwordField = document.getElementById("id_password");
-        const toggleText = document.querySelector(".toggle-password");
+          <div class="input-group">
+            <label for="id_username">Usuário</label>
+            <input
+              type="text"
+              name="username"
+              id="id_username"
+              class="form-control"
+              autocomplete="username"
+              autofocus
+              required
+            >
+          </div>
 
-        if (passwordField.type === "password") {
-          passwordField.type = "text";
-          toggleText.innerText = "Ocultar";
-        } else {
-          passwordField.type = "password";
-          toggleText.innerText = "Mostrar";
-        }
-      }
-    </script>
-  </body>
+          <div class="input-group">
+            <label for="id_password">Senha</label>
+            <input
+              type="password"
+              name="password"
+              id="id_password"
+              class="form-control"
+              autocomplete="current-password"
+              required
+            >
+            <button class="toggle-password" type="button" onclick="togglePassword()" aria-label="Mostrar ou ocultar senha">Mostrar</button>
+          </div>
+
+          {% if next %}
+            <input type="hidden" name="next" value="{{ next }}">
+          {% endif %}
+
+          <button class="login-submit" type="submit">Entrar</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    function togglePassword() {
+      const passwordField = document.getElementById("id_password");
+      const toggleText = document.querySelector(".toggle-password");
+      const mostrando = passwordField.type === "text";
+      passwordField.type = mostrando ? "password" : "text";
+      toggleText.innerText = mostrando ? "Mostrar" : "Ocultar";
+    }
+  </script>
+</body>
 </html>
