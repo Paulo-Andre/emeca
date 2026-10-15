@@ -3362,3 +3362,105 @@ textarea {
     padding: 0;
   }
 }
+
+/* Compact reference header */
+@media (min-width: 1021px) {
+  .site-header {
+    padding: 7px 12px 0;
+  }
+
+  .site-header__frame {
+    border-radius: 18px 18px 15px 15px;
+  }
+
+  .site-header__top {
+    min-height: 82px;
+    padding: 10px 22px;
+    gap: 22px;
+  }
+
+  .site-header__top .site-brand {
+    gap: 12px;
+  }
+
+  .site-header__top .site-brand img {
+    width: 56px;
+    height: 56px;
+    border-radius: 13px;
+  }
+
+  .site-header__top .site-brand strong {
+    font-size: clamp(17px, 1.55vw, 23px);
+    line-height: 1.04;
+  }
+
+  .site-header__top .site-brand small {
+    margin-top: 1px;
+    font-size: clamp(9px, .8vw, 11.5px);
+  }
+
+  .site-header__actions {
+    gap: 15px;
+  }
+
+  .header-enrollment,
+  .header-internal {
+    min-height: 44px;
+    padding: 0 17px;
+    gap: 8px;
+    border-radius: 11px;
+    font-size: 12.5px;
+  }
+
+  .header-enrollment svg,
+  .header-internal svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  .header-action-divider {
+    height: 34px;
+  }
+
+  .site-nav-band .site-nav {
+    min-height: 56px;
+    padding: 0 14px;
+  }
+
+  .site-nav-band .nav-main,
+  .site-nav-band .site-nav-more > summary {
+    min-height: 56px;
+    padding: 0 13px;
+    gap: 8px;
+    font-size: 12px;
+  }
+
+  .site-nav-band .nav-main + .nav-main::before,
+  .site-nav-band .site-nav-more::before {
+    top: 14px;
+    bottom: 14px;
+  }
+
+  .site-nav-band .nav-main svg,
+  .site-nav-band .site-nav-more > summary svg:first-child {
+    width: 21px;
+    height: 21px;
+    flex-basis: 21px;
+  }
+
+  .site-nav-band .site-nav-more > summary svg:last-child {
+    width: 15px;
+    height: 15px;
+  }
+
+  .site-nav-band .nav-main.active {
+    min-height: 44px;
+    margin: 6px 6px;
+    padding: 0 18px;
+    border-radius: 13px !important;
+  }
+
+  .site-nav-accent {
+    height: 5px;
+  }
+}
