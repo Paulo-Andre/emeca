@@ -778,64 +778,99 @@
     font-size: 6.75pt !important;
   }
 
-  /* Bordas reforçadas em unidade física.
-     Evita que linhas finas desapareçam na rasterização do navegador/PDF. */
+  /* Bordas de impressão reforçadas.
+     Microsoft Print to PDF e alguns drivers eliminam traços submilimétricos.
+     Mantemos a geometria original e reforçamos só a renderização das linhas. */
+  html,
+  body,
+  .document-sheet {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    forced-color-adjust: none !important;
+  }
+
+  .official-page-border {
+    border: .34mm solid #000 !important;
+  }
+
   .certificate-section {
-    border: .25mm solid #000 !important;
+    border: .32mm solid #000 !important;
   }
 
   .certificate-section h1 {
-    border-bottom: .22mm solid #000 !important;
+    border-bottom: .30mm solid #000 !important;
+  }
+
+  .certificate-table {
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
   }
 
   .certificate-table .value {
-    border-bottom: .22mm solid #000 !important;
+    border-bottom: .30mm solid #000 !important;
+  }
+
+  .history-title {
+    border-bottom: .32mm solid #000 !important;
   }
 
   .history-frame {
-    border: .25mm solid #000 !important;
+    border: .34mm solid #000 !important;
   }
 
   .history-left {
-    border-right: .25mm solid #000 !important;
+    border-right: .34mm solid #000 !important;
   }
 
   .official-history-table {
     border-collapse: collapse !important;
-    border: .25mm solid #000 !important;
+    border-spacing: 0 !important;
+    border: .34mm solid #000 !important;
   }
 
   .official-history-table th,
   .official-history-table td {
-    border: .25mm solid #000 !important;
+    border: .30mm solid #000 !important;
+    /* reforço interno evita falhas de 1 pixel em drivers do Windows */
+    box-shadow: inset 0 0 0 .035mm #000 !important;
   }
 
   .official-history-table tbody tr.year-group-start:not(:first-child) > * {
-    border-top: .25mm solid #000 !important;
+    border-top: .34mm solid #000 !important;
   }
 
   .bottom-observation {
-    border-top: .25mm solid #000 !important;
-    border-bottom: .25mm solid #000 !important;
+    border-top: .30mm solid #000 !important;
+    border-bottom: .30mm solid #000 !important;
   }
 
   .signature-line,
   .issue-date strong {
-    border-top: .25mm solid #000 !important;
+    border-top: .30mm solid #000 !important;
+  }
+
+  .missing-year-diagonal line {
+    stroke: #000 !important;
+    stroke-width: 1 !important;
+    shape-rendering: crispEdges !important;
   }
 
   .official-page-border,
   .certificate-section,
   .certificate-table,
+  .history-title,
   .history-frame,
+  .history-left,
   .official-history-table,
   .official-history-table th,
   .official-history-table td,
   .bottom-observation,
   .signature-line,
-  .issue-date strong {
+  .issue-date strong,
+  .missing-year-diagonal {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    forced-color-adjust: none !important;
   }
 }
 
