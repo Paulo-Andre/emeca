@@ -1,0 +1,25 @@
+{% extends 'site_publico/base.html' %}
+{% block title %}{{ item.titulo }} · Galeria{% endblock %}
+{% block content %}
+<section class="page-hero">
+  <div class="page-heading">
+    <span class="section-kicker">{% if item.data_evento %}{{ item.data_evento|date:"d/m/Y" }}{% else %}Galeria{% endif %}</span>
+    <h1>{{ item.titulo }}</h1>
+    {% if item.descricao %}<p>{{ item.descricao }}</p>{% endif %}
+  </div>
+</section>
+<section class="section">
+  {% if item.fotos.all %}
+    <div class="photo-grid">
+      {% for foto in item.fotos.all %}
+        <figure>
+          <img src="{{ foto.imagem.url }}" alt="{{ foto.legenda }}">
+          {% if foto.legenda %}<figcaption>{{ foto.legenda }}</figcaption>{% endif %}
+        </figure>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-public"><i data-lucide="image"></i><strong>Álbum sem fotos</strong><span>As fotos aparecerão assim que forem adicionadas.</span></div>
+  {% endif %}
+</section>
+{% endblock %}
