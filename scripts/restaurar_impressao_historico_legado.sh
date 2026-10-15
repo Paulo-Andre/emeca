@@ -80,7 +80,6 @@ echo "4/6 - Limpando arquivos estáticos antigos e reconstruindo sem cache"
 cd "$NEW_DIR"
 docker compose down
 docker image rm emeca-web >/dev/null 2>&1 || true
-docker builder prune -f >/dev/null 2>&1 || true
 docker compose build --no-cache
 
 echo "5/6 - Subindo o EMECA"
