@@ -9,8 +9,8 @@
   </div>
   <div class="toolbar-actions">
     <a class="btn" href="{% url 'historico:aluno_editar' aluno.codigo %}">Editar dados e notas</a>
-    <a class="btn" href="{% url 'historico:historico' aluno.codigo %}">Histórico oficial</a>
-    <a class="btn primary" href="{% url 'historico:relatorio_aluno' aluno.codigo %}">Emitir relatório completo</a>
+    <a class="btn primary" href="{% url 'historico:historico' aluno.codigo %}">Histórico oficial</a>
+    <a class="btn" href="{% url 'historico:relatorio_aluno' aluno.codigo %}">Relatório interno</a>
   </div>
 </div>
 
