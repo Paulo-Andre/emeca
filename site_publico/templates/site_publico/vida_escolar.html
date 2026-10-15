@@ -3,7 +3,7 @@
 {% block content %}
 <section class="page-hero">
   <div class="page-heading">
-    <span class="section-kicker">Informações para famílias e estudantes</span>
+    <span class="section-kicker">{{ paginas_site.vida_escolar.rotulo|default:"Informações para famílias e estudantes" }}</span>
     <h1>{{ paginas_site.vida_escolar.titulo|default:"Vida Escolar" }}</h1>
     <p>{{ paginas_site.vida_escolar.subtitulo|default:"Orientações importantes sobre a rotina, o acompanhamento e os serviços escolares." }}</p>
     {% if paginas_site.vida_escolar.texto_principal %}<div class="page-heading__intro">{{ paginas_site.vida_escolar.texto_principal|linebreaksbr }}</div>{% endif %}
