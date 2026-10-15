@@ -3748,3 +3748,55 @@ textarea {
 .section-spaced {
   margin-top: 24px;
 }
+
+
+/* PDF anexado como conteúdo principal da página */
+.page-hero__document {
+  width: min(560px, 100%);
+  margin-top: 18px;
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(15, 90, 43, .18);
+  border-radius: 14px;
+  background: #f6faf4;
+  color: #123d20;
+  text-decoration: none;
+  box-shadow: 0 7px 20px rgba(29, 67, 37, .06);
+}
+
+.page-hero__document:hover {
+  border-color: rgba(15, 90, 43, .34);
+  background: #eef7eb;
+}
+
+.page-hero__document-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: #e3f0df;
+}
+
+.page-hero__document-icon svg,
+.page-hero__document > svg {
+  width: 20px;
+  height: 20px;
+}
+
+.page-hero__document > span:nth-child(2) {
+  display: grid;
+  gap: 2px;
+}
+
+.page-hero__document strong {
+  font-size: 13px;
+}
+
+.page-hero__document small {
+  color: #657267;
+  font-size: 11px;
+}
