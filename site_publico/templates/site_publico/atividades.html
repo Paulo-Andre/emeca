@@ -1,0 +1,49 @@
+{% extends 'site_publico/base.html' %}
+{% block title %}Atividades e Jogos · E. M. Egídio Cordeiro Aquino{% endblock %}
+{% block content %}
+<section class="page-hero">
+  <div class="page-heading">
+    <span class="section-kicker">Aprender também pode ser divertido</span>
+    <h1>Atividades e Jogos</h1>
+    <p>Jogos, quizzes, desafios e materiais educativos organizados pela escola.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="filter-row" aria-label="Filtrar atividades por tipo">
+    <a href="{% url 'site_publico:atividades' %}" {% if not tipo_atual %}class="active"{% endif %}>Todos</a>
+    {% for valor, rotulo in tipos %}
+      <a href="?tipo={{ valor }}" {% if tipo_atual == valor %}class="active"{% endif %}>{{ rotulo }}</a>
+    {% endfor %}
+  </div>
+
+  {% if itens %}
+    <div class="learning-grid">
+      {% for item in itens %}
+        <a class="learning-card" href="{{ item.get_absolute_url }}">
+          <span class="learning-card__icon">
+            {% if item.tipo == 'JOGO' %}<i data-lucide="gamepad-2"></i>
+            {% elif item.tipo == 'QUIZ' %}<i data-lucide="circle-help"></i>
+            {% elif item.tipo == 'VIDEO' %}<i data-lucide="play-circle"></i>
+            {% elif item.tipo == 'DESAFIO' %}<i data-lucide="trophy"></i>
+            {% else %}<i data-lucide="pencil-ruler"></i>{% endif %}
+          </span>
+          <span class="learning-card__type">{{ item.get_tipo_display }}</span>
+          <strong>{{ item.titulo }}</strong>
+          <span>
+            {% if item.disciplina %}{{ item.disciplina }}{% endif %}
+            {% if item.disciplina and item.ano_escolar %} · {% endif %}
+            {% if item.ano_escolar %}{{ item.ano_escolar }}{% endif %}
+          </span>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-public">
+      <i data-lucide="gamepad-2"></i>
+      <strong>Novas atividades em breve</strong>
+      <span>A escola ainda não publicou conteúdo nesta categoria.</span>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
