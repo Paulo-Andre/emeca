@@ -33,7 +33,7 @@ INSTALLED_APPS = [
     "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes",
     "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
     "rest_framework", "corsheaders", "cadastro", "secretaria", "usuarioSec",
-    "historico",
+    "historico", "site_publico",
 ]
 
 MIDDLEWARE = [
@@ -87,6 +87,10 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "App" / "static", BASE_DIR / "frontend_publico" / "dist"]
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = DATA_DIR / "media"
+MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 STORAGES = {
