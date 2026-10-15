@@ -17,6 +17,7 @@ class LoginRequiredMiddleware:
         "/documentos/",
         "/perguntas-frequentes/",
         "/contato/",
+        "/boletim/",
     )
 
     def __init__(self, get_response):
