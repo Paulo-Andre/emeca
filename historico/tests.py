@@ -1424,6 +1424,8 @@ class DocumentoAutenticadoTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Documento autêntico")
+        self.assertContains(response, 'class="site-header"')
+        self.assertContains(response, 'id="menu-principal"')
         self.assertNotContains(response, "MARIA AUTENTICADA")
         self.assertNotContains(response, "10/05/2015")
 
