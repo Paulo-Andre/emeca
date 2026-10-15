@@ -41,7 +41,11 @@ class ConfiguracaoSiteForm(StyledModelForm):
         model = ConfiguracaoSite
         fields = [
             "nome_escola", "subtitulo", "apresentacao", "historia", "missao_valores",
-            "vida_escolar", "endereco", "cidade", "telefone", "whatsapp", "email",
+            "vida_escolar", "home_titulo", "home_texto",
+            "home_pilar1_titulo", "home_pilar1_texto",
+            "home_pilar2_titulo", "home_pilar2_texto",
+            "home_pilar3_titulo", "home_pilar3_texto",
+            "endereco", "cidade", "telefone", "whatsapp", "email",
             "horario_atendimento", "mapa_url",
         ]
 
