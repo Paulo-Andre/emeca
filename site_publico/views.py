@@ -186,6 +186,10 @@ def matricula_landing(request):
     return render(request, "site_publico/matricula.html", _base_context())
 
 
+def boletim(request):
+    return render(request, "site_publico/boletim.html", _base_context())
+
+
 def documentos(request):
     contexto = _base_context()
     contexto["itens"] = DocumentoPublico.objects.filter(ativo=True)
