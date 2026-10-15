@@ -41,16 +41,70 @@ def _base_context():
     return {"config_site": _config()}
 
 
+def _slides_home(agora):
+    """Monta o carrossel com destaques, notícias e fotos da galeria."""
+    slides = []
+
+    for item in _visiveis_no_periodo(DestaqueHome.objects.all())[:5]:
+        slides.append({
+            "rotulo": item.get_categoria_display(),
+            "titulo": item.titulo,
+            "descricao": item.descricao,
+            "imagem": item.imagem.url if item.imagem else "",
+            "link": item.link,
+            "texto_botao": item.texto_botao or "Saiba mais",
+        })
+
+    noticias = (
+        Noticia.objects
+        .filter(ativo=True, publicado_em__lte=agora)
+        .exclude(imagem="")
+        .order_by("-destaque", "-publicado_em")
+    )
+    for item in noticias[:4]:
+        if len(slides) >= 7:
+            break
+        slides.append({
+            "rotulo": "Notícia",
+            "titulo": item.titulo,
+            "descricao": item.resumo,
+            "imagem": item.imagem.url,
+            "link": item.get_absolute_url(),
+            "texto_botao": "Ler notícia",
+        })
+
+    albuns = (
+        AlbumGaleria.objects
+        .filter(ativo=True)
+        .exclude(capa="")
+        .order_by("-data_evento", "-id")
+    )
+    for item in albuns[:3]:
+        if len(slides) >= 8:
+            break
+        slides.append({
+            "rotulo": "Fotos",
+            "titulo": item.titulo,
+            "descricao": item.descricao,
+            "imagem": item.capa.url,
+            "link": item.get_absolute_url(),
+            "texto_botao": "Ver fotos",
+        })
+
+    return slides
+
+
 def home(request):
     agora = timezone.now()
     contexto = _base_context()
     contexto.update({
-        "destaques": _visiveis_no_periodo(DestaqueHome.objects.all())[:6],
+        "slides_home": _slides_home(agora),
         "avisos": _visiveis_no_periodo(Aviso.objects.all())[:4],
         "noticias": Noticia.objects.filter(ativo=True, publicado_em__lte=agora)[:3],
         "atividades": AtividadeJogo.objects.filter(ativo=True, destaque=True)[:4],
         "projetos": Projeto.objects.filter(ativo=True, destaque=True)[:3],
         "eventos": Evento.objects.filter(ativo=True, inicio__gte=agora)[:4],
+        "albuns": AlbumGaleria.objects.filter(ativo=True).prefetch_related("fotos")[:4],
     })
     return render(request, "site_publico/home.html", contexto)
 
