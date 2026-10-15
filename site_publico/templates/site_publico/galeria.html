@@ -1,0 +1,25 @@
+{% extends 'site_publico/base.html' %}
+{% block title %}Galeria · E. M. Egídio Cordeiro Aquino{% endblock %}
+{% block content %}
+<section class="page-hero">
+  <div class="page-heading">
+    <span class="section-kicker">Memórias da escola</span>
+    <h1>Galeria</h1>
+    <p>Fotos de projetos, atividades, eventos e momentos da nossa comunidade escolar.</p>
+  </div>
+</section>
+<section class="section">
+  {% if itens %}
+    <div class="gallery-grid">
+      {% for item in itens %}
+        <a class="gallery-card" href="{{ item.get_absolute_url }}">
+          {% if item.capa %}<img src="{{ item.capa.url }}" alt="">{% elif item.fotos.first %}<img src="{{ item.fotos.first.imagem.url }}" alt="">{% endif %}
+          <span class="gallery-card__overlay"><span><strong>{{ item.titulo }}</strong>{% if item.data_evento %}<span>{{ item.data_evento|date:"d/m/Y" }}</span>{% endif %}</span></span>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-public"><i data-lucide="images"></i><strong>Galeria em preparação</strong><span>Os álbuns publicados pela escola aparecerão aqui.</span></div>
+  {% endif %}
+</section>
+{% endblock %}
