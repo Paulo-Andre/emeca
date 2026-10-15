@@ -3734,3 +3734,17 @@ textarea {
   object-fit: cover;
   box-shadow: 0 10px 26px rgba(42,67,29,.09);
 }
+
+
+/* Imagens adicionadas pelo editor de conteúdo */
+.editable-public-image {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  object-fit: cover;
+  border-radius: 16px;
+  margin: 14px 0 18px;
+}
+.section-spaced {
+  margin-top: 24px;
+}
