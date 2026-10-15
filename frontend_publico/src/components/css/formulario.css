@@ -196,9 +196,6 @@ textarea {
   box-shadow: var(--form-shadow);
 }
 
-.form-card form {
-  counter-reset: form-section;
-}
 
 .section-title {
   margin: 32px 0 17px;
@@ -217,23 +214,27 @@ textarea {
 }
 
 .section-title::before {
-  counter-increment: form-section;
-  content: counter(form-section);
-  width: 27px;
-  height: 27px;
-  display: grid;
-  place-items: center;
-  flex: 0 0 27px;
-  border-radius: 9px;
-  background: var(--form-wine);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 900;
-  box-shadow: inset 0 -2px 0 rgba(0,0,0,.10);
+  content: "";
+  width: 5px;
+  height: 28px;
+  flex: 0 0 5px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--form-gold-bright), var(--form-gold));
 }
 
 form > .section-title:first-child {
   margin-top: 0;
+}
+
+.section-note {
+  margin: -7px 2px 16px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--form-blue);
+  border-radius: 0 9px 9px 0;
+  background: var(--form-blue-soft);
+  color: #526c7f;
+  font-size: 10.5px;
+  line-height: 1.5;
 }
 
 .form-grid {
