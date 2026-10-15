@@ -1,188 +1,208 @@
+{% load static %}
 <!doctype html>
 <html lang="pt-br">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cadastro</title>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secretaria · Cadastrar usuário</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261015-02">
+  <style>
+    .account-page {
+      min-height: 100vh;
+      padding: 28px;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at 10% 10%, rgba(15,95,120,.08), transparent 30%),
+        var(--school-bg);
+    }
+    .account-card {
+      width: min(470px, 100%);
+      padding: 34px;
+      border: 1px solid var(--school-border);
+      border-radius: 24px;
+      background: #fff;
+      box-shadow: var(--school-shadow);
+    }
+    .account-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 26px;
+    }
+    .account-brand img {
+      width: 52px;
+      height: 52px;
+      padding: 5px;
+      object-fit: contain;
+      border-radius: 14px;
+      background: #f0f7f9;
+    }
+    .account-brand strong {
+      display: block;
+      color: var(--school-primary-strong);
+      font-size: 14px;
+    }
+    .account-brand span {
+      color: var(--school-muted);
+      font-size: 11px;
+    }
+    .account-card h1 {
+      margin: 0 0 7px;
+      color: var(--school-text);
+      font-size: 27px;
+      letter-spacing: -.03em;
+    }
+    .account-card > p {
+      margin: 0 0 24px;
+      color: var(--school-muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .account-field {
+      margin-bottom: 16px;
+    }
+    .account-field label {
+      display: block;
+      margin-bottom: 7px;
+      color: #405b66;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .account-field input {
+      width: 100%;
+      min-height: 46px;
+      padding: 11px 13px;
+      border: 1px solid var(--school-border);
+      border-radius: 10px;
+      background: #fbfcfd;
+      color: var(--school-text);
+      font: inherit;
+      outline: none;
+    }
+    .account-field input:focus {
+      border-color: var(--school-primary);
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(15,95,120,.1);
+    }
+    .account-password {
+      position: relative;
+    }
+    .account-password input {
+      padding-right: 74px;
+    }
+    .account-toggle {
+      position: absolute;
+      right: 11px;
+      bottom: 14px;
+      border: 0;
+      background: transparent;
+      color: var(--school-primary);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .account-error {
+      margin-bottom: 18px;
+      padding: 12px 14px;
+      border: 1px solid #f0c8c4;
+      border-radius: 10px;
+      background: var(--school-danger-soft);
+      color: var(--school-danger);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .account-submit {
+      width: 100%;
+      min-height: 46px;
+      margin-top: 4px;
+      border: 0;
+      border-radius: 10px;
+      background: var(--school-primary);
+      color: #fff;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .account-submit:hover {
+      background: var(--school-primary-hover);
+    }
+    .account-back {
+      margin-top: 18px;
+      text-align: center;
+      font-size: 12px;
+    }
+    .account-back a {
+      color: var(--school-primary);
+      font-weight: 700;
+      text-decoration: none;
+    }
+    @media (max-width: 520px) {
+      .account-page { padding: 12px; }
+      .account-card { padding: 26px 20px; border-radius: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="account-page">
+    <section class="account-card">
+      <div class="account-brand">
+        <img src="{% static 'imagens/logo.svg' %}" alt="">
+        <div>
+          <strong>E. M. Egídio Cordeiro Aquino</strong>
+          <span>Secretaria Digital</span>
+        </div>
+      </div>
 
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-        font-family: "Segoe UI", sans-serif;
-      }
-
-      body {
-        height: 100vh;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-
-      .container {
-        background: #fff;
-        padding: 40px;
-        width: 400px;
-        border-radius: 20px;
-        box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
-        animation: fadeIn 0.6s ease-in-out;
-      }
-
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(25px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-
-      h2 {
-        text-align: center;
-        margin-bottom: 30px;
-        color: #333;
-      }
-
-      .input-group {
-        position: relative;
-        margin-bottom: 18px;
-      }
-
-      .input-group input {
-        width: 100%;
-        padding: 12px 40px;
-        border-radius: 10px;
-        border: 1px solid #ccc;
-        outline: none;
-        transition: 0.3s;
-        font-size: 14px;
-      }
-
-      .input-group input:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 10px rgba(102, 126, 234, 0.4);
-      }
-
-      .icon {
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        left: 12px;
-        font-size: 16px;
-        color: #888;
-      }
-
-      .toggle-password {
-        position: absolute;
-        right: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        cursor: pointer;
-        font-size: 13px;
-        color: #667eea;
-      }
-
-      button {
-        width: 100%;
-        padding: 12px;
-        border: none;
-        border-radius: 10px;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
-        font-size: 16px;
-        cursor: pointer;
-        transition: 0.3s;
-        margin-top: 10px;
-      }
-
-      button:hover {
-        opacity: 0.9;
-        transform: translateY(-2px);
-      }
-
-      .error {
-        background: #ffe5e5;
-        color: #d8000c;
-        padding: 8px;
-        border-radius: 8px;
-        margin-bottom: 15px;
-        font-size: 13px;
-        text-align: center;
-      }
-
-      .footer-text {
-        text-align: center;
-        margin-top: 18px;
-        font-size: 13px;
-        color: #666;
-      }
-
-      .footer-text a {
-        color: #667eea;
-        text-decoration: none;
-        font-weight: 500;
-      }
-
-      .footer-text a:hover {
-        text-decoration: underline;
-      }
-    </style>
-  </head>
-
-  <body>
-    <div class="container">
-      <h2>Criar Conta</h2>
+      <h1>Cadastrar usuário</h1>
+      <p>Crie um acesso para um servidor autorizado utilizar os serviços internos da secretaria.</p>
 
       {% if form.errors %}
-      <div class="error">Corrija os erros abaixo.</div>
+        <div class="account-error" role="alert">
+          Confira os campos abaixo. A senha deve atender aos requisitos de segurança do sistema.
+        </div>
       {% endif %}
 
       <form method="POST">
         {% csrf_token %}
 
-        <div class="input-group">
-          <span class="icon">👤</span>
+        <div class="account-field">
+          <label for="id_username">Usuário</label>
           {{ form.username }}
+          {{ form.username.errors }}
         </div>
 
-        <div class="input-group">
-          <span class="icon">📧</span>
+        <div class="account-field">
+          <label for="id_email">E-mail</label>
           {{ form.email }}
+          {{ form.email.errors }}
         </div>
 
-        <div class="input-group">
-          <span class="icon">🔒</span>
+        <div class="account-field account-password">
+          <label for="id_password">Senha</label>
           {{ form.password }}
-          <span class="toggle-password" onclick="togglePassword()"
-            >Mostrar</span
-          >
+          <button class="account-toggle" type="button" onclick="togglePassword()">Mostrar</button>
+          {{ form.password.errors }}
         </div>
 
-        <button type="submit">Cadastrar</button>
+        <button class="account-submit" type="submit">Cadastrar usuário</button>
       </form>
 
-      <div class="footer-text">
-        Já tem conta? <a href="/accounts/login/">Entrar</a>
+      <div class="account-back">
+        <a href="{% url 'dashboard' %}">Voltar para a Secretaria</a>
       </div>
-    </div>
+    </section>
+  </main>
 
-    <script>
-      function togglePassword() {
-        const passwordField = document.getElementById("id_password");
-        const toggleText = document.querySelector(".toggle-password");
-
-        if (passwordField.type === "password") {
-          passwordField.type = "text";
-          toggleText.innerText = "Ocultar";
-        } else {
-          passwordField.type = "password";
-          toggleText.innerText = "Mostrar";
-        }
-      }
-    </script>
-  </body>
+  <script>
+    function togglePassword() {
+      const campo = document.getElementById("id_password");
+      const botao = document.querySelector(".account-toggle");
+      const mostrando = campo.type === "text";
+      campo.type = mostrando ? "password" : "text";
+      botao.textContent = mostrando ? "Mostrar" : "Ocultar";
+    }
+  </script>
+</body>
 </html>
