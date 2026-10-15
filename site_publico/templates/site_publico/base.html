@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
-  <link rel="stylesheet" href="{% static 'site_publico/site.css' %}?v=20261015-boletim-12">
+  <link rel="stylesheet" href="{% static 'site_publico/site.css' %}?v=20261016-pages-01">
   {% block extra_head %}{% endblock %}
 </head>
 <body class="public-site">
@@ -29,15 +29,19 @@
         </a>
 
         <div class="site-header__actions">
-          <a class="header-report{% if request.resolver_match.url_name == 'boletim' %} active{% endif %}" href="{% url 'site_publico:boletim' %}">
-            <i data-lucide="file-text"></i>
-            <span>Boletim</span>
-          </a>
+          {% if paginas_ativas.boletim %}
+            <a class="header-report{% if request.resolver_match.url_name == 'boletim' %} active{% endif %}" href="{% url 'site_publico:boletim' %}">
+              <i data-lucide="file-text"></i>
+              <span>Boletim</span>
+            </a>
+          {% endif %}
 
-          <a class="header-enrollment{% if request.resolver_match.url_name == 'matricula_landing' %} active{% endif %}" href="{% url 'site_publico:matricula_landing' %}">
-            <i data-lucide="clipboard-pen-line"></i>
-            <span>Matrícula</span>
-          </a>
+          {% if paginas_ativas.matricula %}
+            <a class="header-enrollment{% if request.resolver_match.url_name == 'matricula_landing' %} active{% endif %}" href="{% url 'site_publico:matricula_landing' %}">
+              <i data-lucide="clipboard-pen-line"></i>
+              <span>Matrícula</span>
+            </a>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -54,25 +58,35 @@
             <i data-lucide="house"></i><span>Início</span>
           </a>
 
+          {% if paginas_ativas.escola %}
           <a class="nav-main{% if request.resolver_match.url_name == 'escola' %} active{% endif %}" href="{% url 'site_publico:escola' %}">
             <i data-lucide="school"></i><span>A Escola</span>
           </a>
+          {% endif %}
 
+          {% if paginas_ativas.vida_escolar %}
           <a class="nav-main{% if request.resolver_match.url_name == 'vida_escolar' %} active{% endif %}" href="{% url 'site_publico:vida_escolar' %}">
             <i data-lucide="graduation-cap"></i><span>Vida Escolar</span>
           </a>
+          {% endif %}
 
+          {% if paginas_ativas.atividades %}
           <a class="nav-main{% if request.resolver_match.url_name == 'atividades' or request.resolver_match.url_name == 'atividade' %} active{% endif %}" href="{% url 'site_publico:atividades' %}">
             <i data-lucide="gamepad-2"></i><span>Atividades e Jogos</span>
           </a>
+          {% endif %}
 
+          {% if paginas_ativas.projetos %}
           <a class="nav-main{% if request.resolver_match.url_name == 'projetos' or request.resolver_match.url_name == 'projeto' %} active{% endif %}" href="{% url 'site_publico:projetos' %}">
             <i data-lucide="users-round"></i><span>Projetos</span>
           </a>
+          {% endif %}
 
+          {% if paginas_ativas.noticias %}
           <a class="nav-main{% if request.resolver_match.url_name == 'noticias' or request.resolver_match.url_name == 'noticia' %} active{% endif %}" href="{% url 'site_publico:noticias' %}">
             <i data-lucide="newspaper"></i><span>Notícias</span>
           </a>
+          {% endif %}
 
           <details class="site-nav-more{% if request.resolver_match.url_name == 'galeria' or request.resolver_match.url_name == 'album' or request.resolver_match.url_name == 'documentos' or request.resolver_match.url_name == 'faq' or request.resolver_match.url_name == 'contato' %} active{% endif %}">
             <summary>
@@ -81,10 +95,10 @@
               <i data-lucide="chevron-down"></i>
             </summary>
             <div class="site-nav-more__panel">
-              <a href="{% url 'site_publico:galeria' %}"><i data-lucide="images"></i><span><strong>Galeria</strong><small>Fotos e momentos da escola</small></span></a>
-              <a href="{% url 'site_publico:documentos' %}"><i data-lucide="folder-down"></i><span><strong>Documentos</strong><small>Arquivos e orientações</small></span></a>
-              <a href="{% url 'site_publico:faq' %}"><i data-lucide="circle-help"></i><span><strong>Perguntas frequentes</strong><small>Dúvidas de famílias e alunos</small></span></a>
-              <a href="{% url 'site_publico:contato' %}"><i data-lucide="messages-square"></i><span><strong>Contato</strong><small>Fale com a escola</small></span></a>
+              {% if paginas_ativas.galeria %}<a href="{% url 'site_publico:galeria' %}"><i data-lucide="images"></i><span><strong>Galeria</strong><small>Fotos e momentos da escola</small></span></a>{% endif %}
+              {% if paginas_ativas.documentos %}<a href="{% url 'site_publico:documentos' %}"><i data-lucide="folder-down"></i><span><strong>Documentos</strong><small>Arquivos e orientações</small></span></a>{% endif %}
+              {% if paginas_ativas.faq %}<a href="{% url 'site_publico:faq' %}"><i data-lucide="circle-help"></i><span><strong>Perguntas frequentes</strong><small>Dúvidas de famílias e alunos</small></span></a>{% endif %}
+              {% if paginas_ativas.contato %}<a href="{% url 'site_publico:contato' %}"><i data-lucide="messages-square"></i><span><strong>Contato</strong><small>Fale com a escola</small></span></a>{% endif %}
               <a href="{% url 'login' %}"><i data-lucide="lock-keyhole"></i><span><strong>Área Interna</strong><small>Acessar a Secretaria Digital</small></span></a>
             </div>
           </details>
@@ -119,18 +133,18 @@
 
       <div>
         <h3>Escola</h3>
-        <a href="{% url 'site_publico:escola' %}">A Escola</a>
-        <a href="{% url 'site_publico:vida_escolar' %}">Vida Escolar</a>
-        <a href="{% url 'site_publico:projetos' %}">Projetos</a>
-        <a href="{% url 'site_publico:noticias' %}">Notícias</a>
+        {% if paginas_ativas.escola %}<a href="{% url 'site_publico:escola' %}">A Escola</a>{% endif %}
+        {% if paginas_ativas.vida_escolar %}<a href="{% url 'site_publico:vida_escolar' %}">Vida Escolar</a>{% endif %}
+        {% if paginas_ativas.projetos %}<a href="{% url 'site_publico:projetos' %}">Projetos</a>{% endif %}
+        {% if paginas_ativas.noticias %}<a href="{% url 'site_publico:noticias' %}">Notícias</a>{% endif %}
       </div>
 
       <div>
         <h3>Serviços</h3>
-        <a href="{% url 'site_publico:matricula_landing' %}">Matrícula Online</a>
-        <a href="{% url 'site_publico:atividades' %}">Atividades e Jogos</a>
-        <a href="{% url 'site_publico:documentos' %}">Documentos</a>
-        <a href="{% url 'site_publico:faq' %}">Perguntas frequentes</a>
+        {% if paginas_ativas.matricula %}<a href="{% url 'site_publico:matricula_landing' %}">Matrícula Online</a>{% endif %}
+        {% if paginas_ativas.atividades %}<a href="{% url 'site_publico:atividades' %}">Atividades e Jogos</a>{% endif %}
+        {% if paginas_ativas.documentos %}<a href="{% url 'site_publico:documentos' %}">Documentos</a>{% endif %}
+        {% if paginas_ativas.faq %}<a href="{% url 'site_publico:faq' %}">Perguntas frequentes</a>{% endif %}
       </div>
 
       <div>
@@ -140,7 +154,7 @@
         {% if config_site.telefone %}<p>{{ config_site.telefone }}</p>{% endif %}
         {% if config_site.email %}<p>{{ config_site.email }}</p>{% endif %}
         {% if config_site.horario_atendimento %}<p>{{ config_site.horario_atendimento }}</p>{% endif %}
-        <a href="{% url 'site_publico:contato' %}">Enviar mensagem</a>
+        {% if paginas_ativas.contato %}<a href="{% url 'site_publico:contato' %}">Enviar mensagem</a>{% endif %}
       </div>
     </div>
 
@@ -150,7 +164,7 @@
     </div>
   </footer>
 
-  <script src="{% static 'site_publico/site.js' %}?v=20261015-sticky-nav-10" defer></script>
+  <script src="{% static 'site_publico/site.js' %}?v=20261016-pages-01" defer></script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>
