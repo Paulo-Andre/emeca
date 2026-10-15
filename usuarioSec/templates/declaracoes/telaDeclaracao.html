@@ -12,196 +12,421 @@
 
     <style>
       :root {
-        --primary: #8b5cf6;
-        --sidebar: #1e1b4b;
-        --bg: #f8fafc;
-        --text: #1e293b;
-        --muted: #64748b;
-        --white: #ffffff;
-        --border: #e2e8f0;
-        --danger: #ef4444;
-        --success: #22c55e;
-        --add:#26cb37;
-        --addh:#009929;
+        --add: var(--school-accent);
+        --addh: #286b59;
       }
-      .modal {
-    display: none;
-    position: fixed;
-    z-index: 999;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.6);
-}
 
-.modal-content {
-    background: white;
-    width: 600px;
-    margin: 5% auto;
-    padding: 20px;
-    border-radius: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.modal-content input {
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-}
-
-.fechar {
-    font-size: 20px;
-    cursor: pointer;
-    text-align: right;
-}
-
-      * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Inter", sans-serif; }
-      body { background: var(--bg); display: flex; min-height: 100vh; }
-
-      /* SIDEBAR */
-      .sidebar { width: 260px; background: var(--sidebar); color: white; padding: 24px; flex-shrink: 0; }
-      .logo { font-size: 1.3rem; font-weight: 700; margin-bottom: 30px; }
-      .logo span { color: var(--primary); }
-      .nav-item { display: flex; align-items: center; gap: 10px; padding: 12px; text-decoration: none; color: #94a3b8; border-radius: 10px; margin-bottom: 5px; transition: 0.2s; cursor: pointer; }
-      .nav-item.active { background: var(--primary); color: white; }
-
-      /* MAIN */
-      .main { flex: 1; padding: 48px; overflow-y: auto; }
-      .header { display: flex; gap: 16px; margin-bottom: 40px; }
-      .header-icon { background: var(--primary); color: white; padding: 12px; border-radius: 12px; display: flex; align-items: center; }
-
-      /* CARD */
-      .card form {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-/* container automático dos botões */
-.card form button,
-.card form a {
-    width: 200px;
-}
-
-/* alinhar os botões */
-.card form button {
-    align-self: flex-start; /* esquerda */
-}
-
-.card form a {
-    align-self: flex-end; /* direita */
-}
-.posi{
-  margin-left: 50% ;
-  background-color: var(--add);
-  color: white; border: none; padding: 13px 20px; border-radius: 8px; cursor: pointer;
-display: flex;
-    justify-content: center; /* centraliza horizontal */
-    align-items: center;     /* centraliza vertical */ }
-  .posi:hover{
-    background-color: var(--addh);
-  }
-
-      .card { background: white; padding: 30px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04); }
-      select, input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 10px; outline: none; }
-      .btn-primary { background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 10px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-
-      /* TABELA */
-      .results-container { background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04); }
-      table { width: 100%; border-collapse: collapse; }
-      th { background: #f8fafc; padding: 16px 24px; color: var(--muted); font-size: 0.85rem; text-transform: uppercase; border-bottom: 1px solid var(--border); }
-      td { padding: 16px 24px; border-bottom: 1px solid var(--border); }
-
-      /* BOTÕES DE DECLARAÇÃO (ESTILO QUADRADO DA IMAGEM) */
-      .acoes-celula { display: flex; gap: 8px; }
-      .btn-decl { 
-        background: #f3f4f6; color: var(--text); border: none; padding: 8px; border-radius: 8px; 
-        cursor: pointer; display: flex; flex-direction: column; align-items: center; font-size: 10px; width: 60px;
+      .declaration-page {
+        background: var(--school-bg);
+        display: flex;
+        min-height: 100vh;
       }
-      .btn-decl:hover { background: var(--primary); color: white; }
-      .btn-del { background: #fef2f2; color: var(--danger); border: none; padding: 8px; border-radius: 8px; cursor: pointer; }
 
-      /* FORMULÁRIO DE EDIÇÃO */
-      .form-row { background: #fcfcfd; }
-      .form-container { padding: 25px; border-left: 4px solid var(--primary); }
+      .declaration-page .main {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .declaration-search-card {
+        max-width: 1180px;
+        margin: 0 auto 22px;
+        padding: 26px;
+        border: 1px solid var(--school-border);
+        border-radius: var(--school-radius-lg);
+        background: #fff;
+        box-shadow: var(--school-shadow-soft);
+      }
+
+      .declaration-search-card h3 {
+        margin: 0 0 16px;
+        color: var(--school-text);
+        font-size: 15px;
+      }
+
+      .declaration-search-form {
+        display: grid !important;
+        grid-template-columns: minmax(190px, 230px) minmax(260px, 1fr) auto auto !important;
+        align-items: center !important;
+        gap: 10px !important;
+      }
+
+      .declaration-search-form select,
+      .declaration-search-form input {
+        width: 100%;
+        min-width: 0;
+        height: 46px;
+        min-height: 46px;
+        margin: 0;
+        padding: 10px 13px;
+        border: 1px solid var(--school-border);
+        border-radius: 11px;
+        background: #fbfcfd;
+        color: var(--school-text);
+        font: inherit;
+        outline: none;
+      }
+
+      .declaration-search-form select:focus,
+      .declaration-search-form input:focus {
+        border-color: var(--school-primary);
+        background: #fff;
+        box-shadow: 0 0 0 4px rgba(15,95,120,.1);
+      }
+
+      .declaration-search-form .form-actions {
+        display: contents;
+      }
+
+      .declaration-search-form .btn-primary,
+      .declaration-search-form .btn-add-student {
+        width: auto !important;
+        min-width: 132px;
+        height: 46px;
+        min-height: 46px;
+        margin: 0 !important;
+        padding: 0 17px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        align-self: center !important;
+        border-radius: 11px;
+        font: 700 13px/1 Inter, sans-serif;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+
+      .declaration-search-form .btn-primary {
+        border: 0;
+        background: var(--school-primary);
+        color: #fff;
+        box-shadow: 0 7px 18px rgba(15,95,120,.15);
+      }
+
+      .declaration-search-form .btn-primary:hover {
+        background: var(--school-primary-hover);
+      }
+
+      .declaration-search-form .btn-add-student {
+        border: 1px solid #c7e2d8;
+        background: var(--school-accent-soft);
+        color: #285e4d;
+        text-decoration: none;
+      }
+
+      .declaration-search-form .btn-add-student:hover {
+        background: #dcefe7;
+        border-color: #afd4c5;
+      }
+
+      .results-container {
+        max-width: 1180px;
+        margin: 0 auto;
+        border: 1px solid var(--school-border);
+        border-radius: var(--school-radius-lg);
+        overflow: hidden;
+        background: #fff;
+        box-shadow: var(--school-shadow-soft);
+      }
+
+      .results-container table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .results-container th {
+        padding: 15px 20px;
+        border-bottom: 1px solid var(--school-border);
+        background: #f5f9fa;
+        color: #5e747e;
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .02em;
+        text-align: left;
+      }
+
+      .results-container td {
+        padding: 15px 20px;
+        border-bottom: 1px solid #e8eff2;
+        color: var(--school-text);
+        vertical-align: middle;
+      }
+
+      .acoes-celula {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+      }
+
+      .btn-decl {
+        width: 68px;
+        min-height: 58px;
+        padding: 7px 5px;
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        border: 1px solid var(--school-border);
+        border-radius: 10px;
+        background: #f8fafb;
+        color: #405b66;
+        font: 700 10px/1.1 Inter, sans-serif;
+        cursor: pointer;
+      }
+
+      .btn-decl .header-icon {
+        width: 25px;
+        height: 25px;
+        padding: 0;
+        border-radius: 7px;
+        background: #e8f3f6;
+        color: var(--school-primary);
+        box-shadow: none;
+      }
+
+      .btn-decl:hover {
+        border-color: #bfd4dc;
+        background: #eef6f8;
+        color: var(--school-primary);
+      }
+
+      .btn-del {
+        width: 38px;
+        height: 38px;
+        display: inline-grid;
+        place-items: center;
+        border: 1px solid #f0cfcc;
+        border-radius: 10px;
+        background: var(--school-danger-soft);
+        color: var(--school-danger);
+        cursor: pointer;
+      }
+
+      .form-row {
+        background: #f9fbfc;
+      }
+
+      .form-container {
+        padding: 22px;
+        border-left: 4px solid var(--school-primary);
+      }
+
       .form-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 15px;}
-  .full-width {
-  grid-column: span 4;
-}
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+      }
 
-.half-width {
-  grid-column: span 2;
-}
-.btn-add {
-    background: #16a34a;
-    color: white;
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    border: none;
-    padding: 12px 25px;
-    border-radius: 10px; 
-    cursor: pointer; 
-    font-weight: 600;
-    gap: 8px;
-}
+      .full-width { grid-column: span 4; }
+      .half-width { grid-column: span 2; }
 
+      .input-group label {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--school-muted);
+        font-size: 11px;
+        font-weight: 700;
+      }
 
-.btn-add:hover {
-    background: #15803d;
-}
-/* CONTAINER */
-.check-assinatura label,
-.check-carimbo label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    font-size: 14px;
-    color: #333;
-}
+      .input-group input,
+      .input-group select {
+        width: 100%;
+        min-height: 42px;
+        padding: 9px 11px;
+        border: 1px solid var(--school-border);
+        border-radius: 9px;
+        background: #fff;
+        font: inherit;
+        outline: none;
+      }
 
-/* CHECKBOX BASE */
-.check-assinatura input[type="checkbox"],
-.check-carimbo input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    accent-color: #000; /* cor moderna */
-    cursor: pointer;
-    transition: transform 0.1s ease;
-}
+      .campo-extra {
+        display: none;
+        flex-direction: column;
+      }
 
-/* CLICK EFFECT */
-.check-assinatura input[type="checkbox"]:active,
-.check-carimbo input[type="checkbox"]:active {
-    transform: scale(0.9);
-}
+      .form-actions {
+        margin-top: 18px;
+        padding-top: 15px;
+        display: flex;
+        gap: 9px;
+        border-top: 1px solid var(--school-border);
+      }
 
-/* HOVER SUAVE */
-.check-assinatura label:hover,
-.check-carimbo label:hover {
-    color: #000;
-}
-      .input-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
-      
-      /* CRITICAL: Esconder campos extras por padrão */
-      .campo-extra { display: none; flex-direction: column; }
+      .btn-salvar,
+      .btn-imprimir,
+      .btn-cancelar {
+        min-height: 40px;
+        padding: 0 15px;
+        border-radius: 9px;
+        font-weight: 700;
+        cursor: pointer;
+      }
 
-      .form-actions { margin-top: 20px; display: flex; gap: 10px; border-top: 1px solid var(--border); padding-top: 15px; }
-      .btn-salvar { background: var(--success); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
-      .btn-imprimir { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
-      .btn-cancelar { background: #e2e8f0; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+      .btn-salvar {
+        border: 0;
+        background: var(--school-accent);
+        color: #fff;
+      }
+
+      .btn-imprimir {
+        border: 0;
+        background: var(--school-primary);
+        color: #fff;
+      }
+
+      .btn-cancelar {
+        border: 1px solid var(--school-border);
+        background: #fff;
+        color: #405b66;
+      }
+
+      .check-assinatura label,
+      .check-carimbo label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        color: #405b66;
+      }
+
+      .check-assinatura input[type="checkbox"],
+      .check-carimbo input[type="checkbox"] {
+        width: 17px;
+        height: 17px;
+        accent-color: var(--school-primary);
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 999;
+        inset: 0;
+        padding: 24px;
+        overflow-y: auto;
+        background: rgba(18, 48, 59, .55);
+        backdrop-filter: blur(3px);
+      }
+
+      .modal-content {
+        width: min(760px, 100%);
+        margin: 3vh auto;
+        padding: 26px;
+        border: 1px solid var(--school-border);
+        border-radius: 18px;
+        background: #fff;
+        box-shadow: 0 25px 70px rgba(18,58,74,.22);
+      }
+
+      .fechar {
+        float: right;
+        width: 34px;
+        height: 34px;
+        display: grid;
+        place-items: center;
+        border-radius: 9px;
+        color: var(--school-muted);
+        font-size: 22px;
+        cursor: pointer;
+      }
+
+      .fechar:hover {
+        background: #eef3f5;
+      }
+
+      .modal-content > h3 {
+        margin: 2px 0 20px;
+      }
+
+      .modal-content .btn-primary {
+        min-height: 43px;
+        margin-top: 18px;
+        padding: 0 18px;
+        border: 0;
+        border-radius: 10px;
+        background: var(--school-primary);
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      @media (max-width: 1080px) {
+        .declaration-search-form {
+          grid-template-columns: 210px 1fr auto !important;
+        }
+
+        .declaration-search-form .btn-add-student {
+          grid-column: 1 / -1;
+          justify-self: end;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .declaration-search-card {
+          padding: 18px;
+          border-radius: 17px;
+        }
+
+        .declaration-search-form {
+          grid-template-columns: 1fr !important;
+        }
+
+        .declaration-search-form .form-actions {
+          display: contents;
+        }
+
+        .declaration-search-form .btn-primary,
+        .declaration-search-form .btn-add-student {
+          width: 100% !important;
+          justify-self: stretch;
+        }
+
+        .results-container {
+          overflow-x: auto;
+          border-radius: 17px;
+        }
+
+        .results-container table {
+          min-width: 820px;
+        }
+
+        .form-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .full-width,
+        .half-width {
+          grid-column: 1 / -1;
+        }
+      }
+
+      @media (max-width: 520px) {
+        .modal {
+          padding: 10px;
+        }
+
+        .modal-content {
+          padding: 20px 16px;
+          border-radius: 15px;
+        }
+
+        .form-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .full-width,
+        .half-width {
+          grid-column: auto;
+        }
+      }
     </style>
     <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261015-02">
   </head>
 
-  <body class="secretaria-dashboard"> <aside class="sidebar">
+  <body class="secretaria-dashboard declaration-page"> <aside class="sidebar">
       <div class="logo">
         <img class="logo__mark" src="{% static 'imagens/logo.svg' %}" alt="">
         <span class="logo__copy"><strong>E. M. Egídio Cordeiro Aquino</strong><span>Secretaria Digital</span></span>
@@ -253,26 +478,25 @@ display: flex;
       <div class="header">
         <div class="header-icon"><i data-lucide="file-text"></i></div>
         <div>
-          <h2>Declaração</h2>
+          <h2>Declarações</h2>
           <p>Pesquise e gerencie declarações de alunos</p>
         </div>
       </div>
 
-      <div class="card">
-        <h3>Pesquisar Aluno</h3>
-        <form action="{% url 'buscar_dados_declaracao' %} " method="POST">
+      <div class="declaration-search-card">
+        <h3>Pesquisar aluno</h3>
+        <form class="declaration-search-form" action="{% url 'buscar_dados_declaracao' %}" method="POST">
           {% csrf_token %}
           <select name="tipo" id="tipoBusca" onchange="alterarTipoBusca()">
-            <option value="nome">Buscar por Nome</option>
-            <option value="cpf">Buscar por CPF do aluno</option>
+            <option value="nome">Nome do aluno</option>
+            <option value="cpf">CPF do aluno</option>
           </select>
           <input name="busca" id="campoBusca" placeholder="Digite o nome do aluno" />
           
           <div class="form-actions">
-                    <button class="btn-primary" type="submit"  ><i data-lucide="search"></i> Pesquisar</button>
-                    <a class="posi" onclick="abrirModalAluno()"><i data-lucide="user-plus"></i> Adicionar Aluno</a>
-                    
-                  </div>
+            <button class="btn-primary" type="submit"><i data-lucide="search"></i> Pesquisar</button>
+            <button class="btn-add-student" type="button" onclick="abrirModalAluno()"><i data-lucide="user-plus"></i> Adicionar aluno</button>
+          </div>
               
         </form>
        
