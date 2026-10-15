@@ -2714,3 +2714,194 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+
+/* Colored navigation and cards — school palette */
+.nav-color {
+  border: 1px solid transparent;
+  box-shadow: none;
+}
+
+.nav-color--green {
+  background: #edf5e9 !important;
+  border-color: #d7e5cf !important;
+  color: #395723 !important;
+}
+
+.nav-color--green-soft {
+  background: #f4f8f1 !important;
+  border-color: #e0eadb !important;
+  color: #4c6f35 !important;
+}
+
+.nav-color--gold {
+  background: #fff7d2 !important;
+  border-color: #efd976 !important;
+  color: #7d6200 !important;
+}
+
+.nav-color--red {
+  background: #f8eaea !important;
+  border-color: #e8c8c8 !important;
+  color: #800000 !important;
+}
+
+.nav-color:hover,
+.nav-color.active {
+  transform: translateY(-1px);
+  box-shadow: 0 7px 16px rgba(42,67,29,.09);
+}
+
+.nav-color--green:hover,
+.nav-color--green.active {
+  background: #dfeeda !important;
+  border-color: #bfd4b5 !important;
+  color: #29451d !important;
+}
+
+.nav-color--green-soft:hover,
+.nav-color--green-soft.active {
+  background: #e8f1e3 !important;
+  border-color: #cadbc2 !important;
+  color: #395723 !important;
+}
+
+.nav-color--gold:hover,
+.nav-color--gold.active {
+  background: #ffe991 !important;
+  border-color: #d4aa00 !important;
+  color: #654f00 !important;
+}
+
+.nav-color--red:hover,
+.nav-color--red.active {
+  background: #efd7d7 !important;
+  border-color: #cda9a9 !important;
+  color: #650000 !important;
+}
+
+.site-nav-more > summary {
+  background: linear-gradient(135deg, #f2f7ef, #fff7d2) !important;
+  border: 1px solid #d9e4d3;
+  color: #395723 !important;
+}
+
+.site-nav-more > summary:hover,
+.site-nav-more.active > summary,
+.site-nav-more[open] > summary {
+  background: linear-gradient(135deg, #e5f0df, #ffeaa0) !important;
+  border-color: #d4aa00;
+}
+
+/* Stronger, colorful quick-access cards */
+.quick-card {
+  border-width: 1px;
+  border-style: solid;
+  box-shadow: 0 10px 24px rgba(42,67,29,.08);
+}
+
+.quick-card--red {
+  border-color: #e2bcbc;
+  border-top: 5px solid #800000;
+  background:
+    radial-gradient(circle at 90% 8%, rgba(128,0,0,.08), transparent 24%),
+    linear-gradient(180deg, #fff 0%, #fff4f4 100%);
+}
+
+.quick-card--red .quick-card__icon {
+  background: #f4dede;
+  border: 1px solid #e1baba;
+  color: #800000;
+}
+
+.quick-card--green {
+  border-color: #cfe0c6;
+  border-top: 5px solid #395723;
+  background:
+    radial-gradient(circle at 90% 8%, rgba(57,87,35,.10), transparent 24%),
+    linear-gradient(180deg, #fff 0%, #f2f8ef 100%);
+}
+
+.quick-card--green .quick-card__icon {
+  background: #dfeeda;
+  border: 1px solid #c2d7b9;
+  color: #395723;
+}
+
+.quick-card--green-alt {
+  border-color: #d7e2d1;
+  border-top: 5px solid #5b7d43;
+  background:
+    radial-gradient(circle at 90% 8%, rgba(91,125,67,.08), transparent 24%),
+    linear-gradient(180deg, #fff 0%, #f6faf3 100%);
+}
+
+.quick-card--green-alt .quick-card__icon {
+  background: #e9f1e4;
+  border: 1px solid #d4e1ce;
+  color: #4f7138;
+}
+
+.quick-card--gold {
+  border-color: #eadb9a;
+  border-top: 5px solid #d4aa00;
+  background:
+    radial-gradient(circle at 90% 8%, rgba(212,170,0,.12), transparent 24%),
+    linear-gradient(180deg, #fff 0%, #fff9df 100%);
+}
+
+.quick-card--gold .quick-card__icon {
+  background: #ffefad;
+  border: 1px solid #e7cf72;
+  color: #7f6200;
+}
+
+.quick-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 16px 32px rgba(42,67,29,.12);
+}
+
+/* Color accents across content cards */
+.content-card:nth-child(3n+1) {
+  border-top: 4px solid #395723;
+}
+
+.content-card:nth-child(3n+2) {
+  border-top: 4px solid #800000;
+}
+
+.content-card:nth-child(3n+3) {
+  border-top: 4px solid #d4aa00;
+}
+
+.learning-card:nth-child(4n+1),
+.learning-card:nth-child(4n+3) {
+  border-top: 4px solid #395723;
+}
+
+.learning-card:nth-child(4n+2) {
+  border-top: 4px solid #d4aa00;
+  background: linear-gradient(155deg, #fffef8, #fff9df);
+}
+
+.learning-card:nth-child(4n+4) {
+  border-top: 4px solid #800000;
+  background: linear-gradient(155deg, #fff, #fff5f5);
+}
+
+.learning-card:nth-child(4n+2) .learning-card__icon {
+  background: #fff0b9;
+  color: #806300;
+}
+
+.learning-card:nth-child(4n+4) .learning-card__icon {
+  background: #f4dddd;
+  color: #800000;
+}
+
+@media (max-width: 1160px) {
+  .nav-color,
+  .site-nav-more > summary {
+    border-radius: 10px;
+  }
+}
+
