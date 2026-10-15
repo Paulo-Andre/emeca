@@ -24,7 +24,7 @@
           <img src="{% static 'imagens/logo.svg' %}" alt="">
           <span>
             <strong>{{ config_site.nome_escola|default:"E. M. Egídio Cordeiro Aquino" }}</strong>
-            <small>Educação pública, acolhimento e aprendizagem</small>
+            <small>{{ config_site.subtitulo|default:"Educação pública, acolhimento e aprendizagem" }}</small>
           </span>
         </a>
 
