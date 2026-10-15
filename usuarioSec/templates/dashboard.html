@@ -1,258 +1,231 @@
+{% load static %}
 <!doctype html>
 <html lang="pt-br">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Secretaria - Matrícula</title>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-
-    <script src="https://unpkg.com/lucide@latest"></script>
-   {% load static %}
-<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
-
-    
-
-  </head>
-
-  <body>
-    <aside class="sidebar">
-      <div class="logo">Secretaria <span>Digital</span></div>
-
-      <a class="nav-item active" href="{% url 'dashboard' %}">
-        <i data-lucide="graduation-cap"></i>
-        Matrícula
-      </a>
-
-      <a class="nav-item" href="{% url 'telaDeclaracao' %}">
-        <i data-lucide="file-text"></i>
-        Declarações
-      </a>
-
-      <a class="nav-item" href="{% url 'historico:inicio' %}">
-        <i data-lucide="clock"></i>
-        Histórico Escolar
-      </a>
-      {% if request.user.is_superuser or perms.auth.add_user %}
-    <div class="grupo-botoes">
-         <a class="nav-item" href="{% url 'cadastro' %}">
-        <i data-lucide="user-plus"></i>
-        Cadastrar Usuário
-      </a>
-        <a class="nav-item" href="{% url 'importar_alunos' %}">
-        <i data-lucide="file-up"></i>
-          Upload Dados Declaração
-      </a>
-      <a class="nav-item" href="{% url 'apagar_todos_alunos_matricula' %}" onclick="return confirmarExclusao()">
-        <i data-lucide="folder-x"></i>
-          Apagar dados Matrícula
-      </a>
-       <a class="nav-item" href="{% url 'apagar_todos_alunos' %}" onclick="return confirmarExclusao()">
-        <i data-lucide="file-x"></i>
-          Apagar dados Declaração
-      </a>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secretaria Escolar · Matrículas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+  <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261015-01">
+</head>
+<body>
+  <aside class="sidebar" aria-label="Navegação da secretaria">
+    <div class="logo">
+      <img class="logo__mark" src="{% static 'imagens/logo.svg' %}" alt="">
+      <span class="logo__copy">
+        <strong>E. M. Egídio Cordeiro Aquino</strong>
+        <span>Secretaria Digital</span>
+      </span>
     </div>
-{% endif %}
 
-      <a class="nav-item" href="{% url 'sair' %}">
-        <i data-lucide="log-out"></i>
-        Sair
+    <div class="nav-section-label">Atendimento</div>
+    <a class="nav-item active" href="{% url 'dashboard' %}">
+      <i data-lucide="users-round"></i><span>Matrículas</span>
+    </a>
+    <a class="nav-item" href="{% url 'telaDeclaracao' %}">
+      <i data-lucide="file-text"></i><span>Declarações</span>
+    </a>
+    <a class="nav-item" href="{% url 'historico:inicio' %}">
+      <i data-lucide="graduation-cap"></i><span>Histórico Escolar</span>
+    </a>
+
+    {% if request.user.is_superuser or perms.auth.add_user %}
+      <div class="nav-section-label">Administração</div>
+      <div class="grupo-botoes">
+        <a class="nav-item" href="{% url 'cadastro' %}">
+          <i data-lucide="user-plus"></i><span>Cadastrar usuário</span>
+        </a>
+        <a class="nav-item" href="{% url 'importar_alunos' %}">
+          <i data-lucide="file-up"></i><span>Importar declarações</span>
+        </a>
+      </div>
+
+      <div class="nav-section-label">Zona de risco</div>
+      <a class="nav-item nav-danger" href="{% url 'apagar_todos_alunos_matricula' %}" onclick="return confirmarExclusaoGeral('matrículas')">
+        <i data-lucide="folder-x"></i><span>Apagar matrículas</span>
       </a>
+      <a class="nav-item nav-danger" href="{% url 'apagar_todos_alunos' %}" onclick="return confirmarExclusaoGeral('declarações')">
+        <i data-lucide="file-x"></i><span>Apagar declarações</span>
+      </a>
+    {% endif %}
 
-    </aside>
+    <a class="nav-item nav-logout" href="{% url 'sair' %}">
+      <i data-lucide="log-out"></i><span>Sair</span>
+    </a>
+  </aside>
 
-    <main class="main">
-      <div class="header">
-        <div class="header-icon">
-          <i data-lucide="graduation-cap"></i>
-        </div>
-
-        <div>
-          <h2>Matrícula</h2>
-          <p>Pesquise e gerencie matrículas de alunos</p>
-        </div>
+  <main class="main">
+    <header class="header">
+      <div class="header-icon"><i data-lucide="users-round"></i></div>
+      <div>
+        <h2>Matrículas</h2>
+        <p>Localize um aluno para consultar, editar ou imprimir sua ficha.</p>
       </div>
+    </header>
 
-      <div class="card">
-        <h3>Pesquisar Aluno</h3>
-        <form action="{% url 'buscar_cadrasto' %}" method="POST">
+    <section class="card" aria-labelledby="titulo-pesquisa">
+      <h3 id="titulo-pesquisa">Pesquisar aluno</h3>
+      <form action="{% url 'buscar_cadrasto' %}" method="POST" role="search">
+        {% csrf_token %}
+        <select name="tipo" id="tipoBusca" aria-label="Tipo de pesquisa" onchange="alterarTipoBusca()">
+          <option value="nome">Nome do aluno</option>
+          <option value="cpf">CPF do aluno</option>
+          <option value="cpf_mae">CPF da mãe</option>
+        </select>
 
-          {% csrf_token %}
-          <select name="tipo" id="tipoBusca" onchange="alterarTipoBusca()">
-            <option value="nome">Buscar por Nome</option>
-            <option value="cpf">Buscar por CPF do aluno</option>
-            <option value="cpf_mae">Buscar por CPF da mãe</option>
-          </select>
+        <input
+          name="busca"
+          id="campoBusca"
+          placeholder="Digite o nome do aluno"
+          aria-label="Termo de pesquisa"
+          autocomplete="off"
+        >
 
-          <input
-            name="busca"
-            id="campoBusca"
-            placeholder="Digite o nome do aluno"
-          />
+        <div id="cpfStatus" class="status" aria-live="polite"></div>
 
-          <div id="cpfStatus" class="status"></div>
+        <button type="submit" class="btn-primary">
+          <i data-lucide="search"></i><span>Pesquisar</span>
+        </button>
+      </form>
+    </section>
 
-          <button type="submit" class="btn-primary">
-            <i data-lucide="search"></i>
-            Pesquisar
-          </button>
-        </form>
-      </div>
-
-      <div class="results-container">
-        {% if pesquisa_realizada %}
-          {% if alunos %}
-        <table>
-          <thead>
-            <tr>
-              <th>Nome do Aluno</th>
-              <th>CPF</th>
-              <th style="text-align: right">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for aluno in alunos %}
-            <tr>
-              <td>{{ aluno.nomeDoAluno }}</td>
-              <td>{{ aluno.cpfDoAluno }}</td>
-              <td>
-                <div class="actions">
-                  <a href="{% url 'edit_aluno' aluno.id %}">
-                  <button class="btn-action btn-edit" title="Editar">
-                    <i data-lucide="edit-3" size="18"></i>
-                  </button></a>
-                <a href="{% url 'matriculaimpressao' aluno.id %}" target="_blank">
-                  <button class="btn-action btn-print" title="Imprimir">
-                    <i data-lucide="printer" size="18"></i>
-                  </button></a>
-                  <form method="POST" action="{% url 'deletar_aluno' aluno.id %}" onsubmit="return confirmarExclusao()">
-  {% csrf_token %}
-  <button type="submit" class="btn-action btn-delete" title="Excluir">
-    <i data-lucide="trash-2" size="18"></i>
-  </button>
-</form>
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-          {% else %}
-        <div class="empty-state">
-          <i
-            data-lucide="search-x"
-            size="48"
-            style="margin-bottom: 10px; opacity: 0.5"
-          ></i>
-          <p>Nenhum aluno encontrado para esta pesquisa.</p>
-        </div>
-          {% endif %}
+    <section class="results-container" aria-label="Resultados da pesquisa">
+      {% if pesquisa_realizada %}
+        {% if alunos %}
+          <table>
+            <thead>
+              <tr>
+                <th>Nome do aluno</th>
+                <th>CPF</th>
+                <th style="text-align:right">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for aluno in alunos %}
+                <tr>
+                  <td><strong>{{ aluno.nomeDoAluno }}</strong></td>
+                  <td>{{ aluno.cpfDoAluno|default:"Não informado" }}</td>
+                  <td>
+                    <div class="actions">
+                      <a class="btn-action btn-edit" href="{% url 'edit_aluno' aluno.id %}" title="Editar" aria-label="Editar {{ aluno.nomeDoAluno }}">
+                        <i data-lucide="edit-3" size="18"></i>
+                      </a>
+                      <a class="btn-action btn-print" href="{% url 'matriculaimpressao' aluno.id %}" target="_blank" rel="noopener" title="Imprimir" aria-label="Imprimir ficha de {{ aluno.nomeDoAluno }}">
+                        <i data-lucide="printer" size="18"></i>
+                      </a>
+                      <form method="POST" action="{% url 'deletar_aluno' aluno.id %}" onsubmit="return confirmarExclusao()">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-action btn-delete" title="Excluir" aria-label="Excluir {{ aluno.nomeDoAluno }}">
+                          <i data-lucide="trash-2" size="18"></i>
+                        </button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         {% else %}
-        <div class="empty-state">
-          <i data-lucide="search" size="48" style="margin-bottom: 10px; opacity: 0.5"></i>
-          <p>Digite um nome ou CPF e clique em Pesquisar.</p>
-        </div>
+          <div class="empty-state">
+            <i data-lucide="search-x" size="46"></i>
+            <p><strong>Nenhum aluno encontrado.</strong></p>
+            <p>Confira os dados digitados e tente novamente.</p>
+          </div>
         {% endif %}
+      {% else %}
+        <div class="empty-state">
+          <i data-lucide="search" size="46"></i>
+          <p><strong>Comece pela pesquisa.</strong></p>
+          <p>Nenhum dado de aluno é exibido antes de você pesquisar.</p>
+        </div>
+      {% endif %}
+    </section>
+
+    {% if messages %}
+      <div id="popup-container" aria-live="polite">
+        {% for message in messages %}
+          <div class="popup-success">{{ message }}</div>
+        {% endfor %}
       </div>
-      {% if messages %}
-  <div id="popup-container">
-    {% for message in messages %}
-      <div class="popup-success">
-        {{ message }}
-      </div>
-    {% endfor %}
-  </div>
-{% endif %}
-    </main>
+    {% endif %}
+  </main>
 
-    <script>
-      lucide.createIcons();
+  <script>
+    lucide.createIcons();
 
-      const campo = document.getElementById("campoBusca");
-      const tipo = document.getElementById("tipoBusca");
-      const statusCPF = document.getElementById("cpfStatus");
+    const campo = document.getElementById("campoBusca");
+    const tipo = document.getElementById("tipoBusca");
+    const statusCPF = document.getElementById("cpfStatus");
 
-      function alterarTipoBusca() {
-        campo.value = "";
-        statusCPF.innerHTML = "";
-
-        if (tipo.value === "cpf") {
-          campo.placeholder = "000.000.000-00";
-        } else if (tipo.value === "cpf_mae") {
-          campo.placeholder = "000.000.000-00";
-        } else {
-          campo.placeholder = "Digite o nome do aluno";
-        }
-      }
-
-      campo.addEventListener("input", function () {
-        if (tipo.value !== "cpf" && tipo.value !== "cpf_mae") {
-          statusCPF.innerHTML = "";
-          return;
-        }
-
-        let numeros = campo.value.replace(/\D/g, "");
-        if (numeros.length > 11) numeros = numeros.slice(0, 11);
-
-        let valor = numeros;
-        valor = valor.replace(/(\d{3})(\d)/, "$1.$2");
-        valor = valor.replace(/(\d{3})(\d)/, "$1.$2");
-        valor = valor.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-        campo.value = valor;
-
-        if (numeros.length === 11) {
-          if (validarCPF(numeros)) {
-            statusCPF.innerHTML = "CPF válido";
-            statusCPF.className = "status valido";
-          } else {
-            statusCPF.innerHTML = "CPF inválido";
-            statusCPF.className = "status invalido";
-          }
-        } else {
-          statusCPF.innerHTML = "CPF deve ter 11 dígitos";
-          statusCPF.className = "status";
-        }
-      });
-
-      function validarCPF(cpf) {
-        if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
-        let soma = 0,
-          resto;
-        for (let i = 1; i <= 9; i++)
-          soma += parseInt(cpf.substring(i - 1, i)) * (11 - i);
-        resto = (soma * 10) % 11;
-        if (resto === 10 || resto === 11) resto = 0;
-        if (resto !== parseInt(cpf.substring(9, 10))) return false;
-        soma = 0;
-        for (let i = 1; i <= 10; i++)
-          soma += parseInt(cpf.substring(i - 1, i)) * (12 - i);
-        resto = (soma * 10) % 11;
-        if (resto === 10 || resto === 11) resto = 0;
-        return resto === parseInt(cpf.substring(10, 11));
-      }
-      setTimeout(function(){
-
-    const popup = document.querySelector(".popup-success");
-
-    if(popup){
-        popup.style.opacity = "0";
-
-        setTimeout(() => {
-            popup.remove();
-        }, 500);
+    function alterarTipoBusca() {
+      campo.value = "";
+      statusCPF.innerHTML = "";
+      statusCPF.className = "status";
+      campo.placeholder = tipo.value === "nome" ? "Digite o nome do aluno" : "000.000.000-00";
+      campo.inputMode = tipo.value === "nome" ? "text" : "numeric";
+      campo.focus();
     }
 
-}, 3000);
-function confirmarExclusao() {
+    campo.addEventListener("input", function () {
+      if (tipo.value !== "cpf" && tipo.value !== "cpf_mae") {
+        statusCPF.innerHTML = "";
+        return;
+      }
 
-    return confirm("⚠️ Tem certeza que deseja apagar esta criança do banco de dados?\n\nEssa ação não pode ser desfeita.");
-};
+      let numeros = campo.value.replace(/\D/g, "").slice(0, 11);
+      let valor = numeros
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+      campo.value = valor;
 
-    </script>
-    
-  </body>
+      if (!numeros.length) {
+        statusCPF.innerHTML = "";
+        statusCPF.className = "status";
+      } else if (numeros.length < 11) {
+        statusCPF.innerHTML = "Digite os 11 dígitos do CPF.";
+        statusCPF.className = "status";
+      } else if (validarCPF(numeros)) {
+        statusCPF.innerHTML = "CPF válido";
+        statusCPF.className = "status valido";
+      } else {
+        statusCPF.innerHTML = "CPF inválido";
+        statusCPF.className = "status invalido";
+      }
+    });
+
+    function validarCPF(cpf) {
+      if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
+      let soma = 0, resto;
+      for (let i = 1; i <= 9; i++) soma += parseInt(cpf.substring(i - 1, i)) * (11 - i);
+      resto = (soma * 10) % 11;
+      if (resto === 10 || resto === 11) resto = 0;
+      if (resto !== parseInt(cpf.substring(9, 10))) return false;
+      soma = 0;
+      for (let i = 1; i <= 10; i++) soma += parseInt(cpf.substring(i - 1, i)) * (12 - i);
+      resto = (soma * 10) % 11;
+      if (resto === 10 || resto === 11) resto = 0;
+      return resto === parseInt(cpf.substring(10, 11));
+    }
+
+    setTimeout(function () {
+      const popup = document.querySelector(".popup-success");
+      if (popup) {
+        popup.style.opacity = "0";
+        setTimeout(() => popup.remove(), 500);
+      }
+    }, 3200);
+
+    function confirmarExclusao() {
+      return confirm("Tem certeza que deseja excluir este aluno?\n\nEssa ação não pode ser desfeita.");
+    }
+
+    function confirmarExclusaoGeral(tipoDado) {
+      return confirm("ATENÇÃO: esta ação apagará TODOS os dados de " + tipoDado + ".\n\nDeseja realmente continuar?");
+    }
+  </script>
+</body>
 </html>
