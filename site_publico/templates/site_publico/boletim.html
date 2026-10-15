@@ -31,10 +31,12 @@
       <span><i data-lucide="school"></i></span>
       <h3>Precisa de orientação?</h3>
       <p>Entre em contato com a escola para informações sobre resultados, avaliações e acompanhamento escolar.</p>
-      <a class="button button--soft" href="{% url 'site_publico:contato' %}">
-        Falar com a escola
-        <i data-lucide="arrow-right"></i>
-      </a>
+      {% if paginas_ativas.contato %}
+        <a class="button button--soft" href="{% url 'site_publico:contato' %}">
+          Falar com a escola
+          <i data-lucide="arrow-right"></i>
+        </a>
+      {% endif %}
     </aside>
   </div>
 </section>
