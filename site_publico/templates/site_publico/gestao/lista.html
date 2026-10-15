@@ -1,0 +1,40 @@
+{% extends 'site_publico/gestao/base.html' %}
+{% block title %}{{ config.label }}{% endblock %}
+{% block header_icon %}{{ config.icon }}{% endblock %}
+{% block header_title %}{{ config.label }}{% endblock %}
+{% block header_subtitle %}Crie, edite ou remova conteúdos publicados nesta área do site.{% endblock %}
+
+{% block content %}
+<div class="manager-toolbar">
+  <a class="manager-back" href="{% url 'site_publico:gestao_site' %}"><i data-lucide="arrow-left"></i> Voltar</a>
+  <a class="manager-btn manager-btn--primary" href="{% url 'site_publico:gestao_conteudo_novo' tipo %}"><i data-lucide="plus"></i> Novo {{ config.singular }}</a>
+</div>
+
+<section class="manager-list-card">
+  {% if linhas %}
+    {% for linha in linhas %}
+      <article class="manager-list-row">
+        <div class="manager-list-row__title">
+          <span><i data-lucide="{{ config.icon }}"></i></span>
+          <div><strong>{{ linha.obj }}</strong><small>{{ config.label }}</small></div>
+        </div>
+        <div class="manager-list-row__status">
+          {% if linha.ativo is not None %}
+            <span class="manager-badge {% if linha.ativo %}is-on{% else %}is-off{% endif %}">{% if linha.ativo %}Ativo{% else %}Inativo{% endif %}</span>
+          {% endif %}
+          {% if linha.destaque %}<span class="manager-badge is-highlight">Destaque</span>{% endif %}
+        </div>
+        <div class="manager-row-actions">
+          <a class="manager-icon-btn" href="{% url 'site_publico:gestao_conteudo_editar' tipo linha.obj.pk %}" title="Editar"><i data-lucide="pencil"></i></a>
+          <form method="post" action="{% url 'site_publico:gestao_conteudo_excluir' tipo linha.obj.pk %}" onsubmit="return confirm('Remover este conteúdo?');">
+            {% csrf_token %}
+            <button class="manager-icon-btn danger" type="submit" title="Excluir"><i data-lucide="trash-2"></i></button>
+          </form>
+        </div>
+      </article>
+    {% endfor %}
+  {% else %}
+    <div class="manager-empty"><i data-lucide="{{ config.icon }}"></i><strong>Nenhum conteúdo cadastrado</strong><p>Use o botão acima para adicionar o primeiro item.</p></div>
+  {% endif %}
+</section>
+{% endblock %}
