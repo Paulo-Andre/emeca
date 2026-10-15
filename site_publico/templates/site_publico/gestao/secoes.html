@@ -21,7 +21,7 @@
 
   <div class="editable-section-grid">
     {% for secao in grupo.secoes %}
-      <article class="editable-section-card{% if not secao.ativa %} is-off{% endif %}">
+      <article class="editable-section-card">
         <div class="editable-section-card__media">
           {% if secao.imagem %}
             <img src="{{ secao.imagem.url }}" alt="">
@@ -32,9 +32,6 @@
         <div class="editable-section-card__body">
           <div class="editable-section-card__top">
             <strong>{{ secao.nome }}</strong>
-            <span class="manager-badge {% if secao.ativa %}is-on{% else %}is-off{% endif %}">
-              {% if secao.ativa %}Visível{% else %}Oculto{% endif %}
-            </span>
           </div>
           {% if secao.titulo %}<p><strong>{{ secao.titulo }}</strong></p>{% endif %}
           {% if secao.texto %}<p>{{ secao.texto|truncatechars:160 }}</p>{% endif %}
