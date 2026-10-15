@@ -375,14 +375,14 @@ form > .section-title:first-child {
   box-shadow: 0 10px 23px rgba(128,0,0,.18);
 }
 
-.btn-next[style] {
+.btn-back {
   border: 1px solid var(--form-border);
   background: #fff !important;
   color: #5e5450 !important;
   box-shadow: none;
 }
 
-.btn-next[style]:hover {
+.btn-back:hover {
   border-color: #d5c4c0;
   background: #f8f4f2 !important;
   color: var(--form-wine) !important;
