@@ -60,9 +60,9 @@
         <article class="hero-slide hero-slide--learning" data-slide>
           <div class="hero-slide__veil"></div>
           <div class="hero-slide__content">
-            <span class="hero-badge">Aprender e participar</span>
-            <h1>Atividades, projetos e notícias da escola</h1>
-            <p>Quando fotos e notícias forem publicadas, elas passam a ocupar este carrossel automaticamente.</p>
+            <span class="hero-badge">{{ secoes_site.home_fallback_slide.rotulo|default:"Aprender e participar" }}</span>
+            <h1>{{ secoes_site.home_fallback_slide.titulo|default:"Atividades, projetos e notícias da escola" }}</h1>
+            <p>{{ secoes_site.home_fallback_slide.texto|default:"Quando fotos e notícias forem publicadas, elas passam a ocupar este carrossel automaticamente." }}</p>
             {% if paginas_ativas.noticias %}
               <a class="button button--light" href="{% url 'site_publico:noticias' %}">
                 Ver notícias
@@ -101,10 +101,10 @@
 <section class="section section--notices" id="avisos-escola">
   <div class="section-heading section-heading--row">
     <div>
-      <span class="section-kicker">Comunicados</span>
-      <h2>Avisos importantes</h2>
+      <span class="section-kicker">{{ secoes_site.home_avisos.rotulo|default:"Comunicados" }}</span>
+      <h2>{{ secoes_site.home_avisos.titulo|default:"Avisos importantes" }}</h2>
     </div>
-    <span class="section-help">Informações ativas da escola</span>
+    <span class="section-help">{{ secoes_site.home_avisos.texto|default:"Informações ativas da escola" }}</span>
   </div>
 
   <div class="notice-stack">
@@ -134,9 +134,9 @@
 
 <section class="section">
   <div class="section-heading section-heading--center">
-    <span class="section-kicker">Acesso rápido</span>
-    <h2>Informações e serviços da escola</h2>
-    <p>Encontre rapidamente os principais caminhos para estudantes e famílias.</p>
+    <span class="section-kicker">{{ secoes_site.home_acesso.rotulo|default:"Acesso rápido" }}</span>
+    <h2>{{ secoes_site.home_acesso.titulo|default:"Informações e serviços da escola" }}</h2>
+    <p>{{ secoes_site.home_acesso.texto|default:"Encontre rapidamente os principais caminhos para estudantes e famílias." }}</p>
   </div>
 
   <div class="quick-grid">
@@ -181,7 +181,7 @@
 <section class="section school-model">
   <div class="school-model__intro">
     <div>
-      <span class="section-kicker">Nossa escola</span>
+      <span class="section-kicker">{{ secoes_site.home_modelo.rotulo|default:"Nossa escola" }}</span>
       <h2>{{ config_site.home_titulo|default:"Um espaço para aprender, conviver e crescer" }}</h2>
       <p>{{ config_site.home_texto|default:config_site.apresentacao|default:"A escola é um espaço de aprendizagem, convivência e desenvolvimento. Nosso objetivo é aproximar estudantes, famílias e comunidade em torno de uma educação pública acolhedora, responsável e participativa." }}</p>
       {% if paginas_ativas.escola %}
@@ -194,7 +194,7 @@
 
     <div class="school-model__mark" aria-hidden="true">
       <i data-lucide="school"></i>
-      <span>Educação pública com participação e cuidado</span>
+      <span>{{ secoes_site.home_modelo.texto|default:config_site.subtitulo|default:"Educação pública com participação e cuidado" }}</span>
     </div>
   </div>
 
@@ -223,9 +223,9 @@
 <section class="section section--tinted">
   <div class="section-heading section-heading--row">
     <div>
-      <span class="section-kicker">Acontece na escola</span>
-      <h2>Últimas notícias</h2>
-      <p>Projetos, eventos, atividades e acontecimentos da comunidade escolar.</p>
+      <span class="section-kicker">{{ secoes_site.home_noticias.rotulo|default:"Acontece na escola" }}</span>
+      <h2>{{ secoes_site.home_noticias.titulo|default:"Últimas notícias" }}</h2>
+      <p>{{ secoes_site.home_noticias.texto|default:"Projetos, eventos, atividades e acontecimentos da comunidade escolar." }}</p>
     </div>
     <a class="button button--soft" href="{% url 'site_publico:noticias' %}">
       Ver todas
@@ -260,9 +260,9 @@
 <section class="section">
   <div class="section-heading section-heading--row">
     <div>
-      <span class="section-kicker">Aprender brincando</span>
-      <h2>Atividades e jogos em destaque</h2>
-      <p>Conteúdos para aprender, revisar e se divertir.</p>
+      <span class="section-kicker">{{ secoes_site.home_atividades.rotulo|default:"Aprender brincando" }}</span>
+      <h2>{{ secoes_site.home_atividades.titulo|default:"Atividades e jogos em destaque" }}</h2>
+      <p>{{ secoes_site.home_atividades.texto|default:"Conteúdos para aprender, revisar e se divertir." }}</p>
     </div>
     <a class="button button--soft" href="{% url 'site_publico:atividades' %}">
       Explorar tudo
@@ -294,9 +294,9 @@
 <section class="section section--tinted">
   <div class="section-heading section-heading--row">
     <div>
-      <span class="section-kicker">Nossa escola em movimento</span>
-      <h2>Projetos em destaque</h2>
-      <p>Iniciativas que fortalecem aprendizagem, participação e convivência.</p>
+      <span class="section-kicker">{{ secoes_site.home_projetos.rotulo|default:"Nossa escola em movimento" }}</span>
+      <h2>{{ secoes_site.home_projetos.titulo|default:"Projetos em destaque" }}</h2>
+      <p>{{ secoes_site.home_projetos.texto|default:"Iniciativas que fortalecem aprendizagem, participação e convivência." }}</p>
     </div>
     <a class="button button--soft" href="{% url 'site_publico:projetos' %}">
       Ver projetos
@@ -330,9 +330,9 @@
 <section class="section">
   <div class="section-heading section-heading--row">
     <div>
-      <span class="section-kicker">Nossa escola em imagens</span>
-      <h2>Galeria de fotos</h2>
-      <p>Momentos que fazem parte da nossa história.</p>
+      <span class="section-kicker">{{ secoes_site.home_galeria.rotulo|default:"Nossa escola em imagens" }}</span>
+      <h2>{{ secoes_site.home_galeria.titulo|default:"Galeria de fotos" }}</h2>
+      <p>{{ secoes_site.home_galeria.texto|default:"Momentos que fazem parte da nossa história." }}</p>
     </div>
     <a class="button button--soft" href="{% url 'site_publico:galeria' %}">
       Ver galeria
@@ -363,8 +363,8 @@
 {% if eventos %}
 <section class="section section--events">
   <div class="section-heading">
-    <span class="section-kicker">Agenda</span>
-    <h2>Próximos acontecimentos</h2>
+    <span class="section-kicker">{{ secoes_site.home_agenda.rotulo|default:"Agenda" }}</span>
+    <h2>{{ secoes_site.home_agenda.titulo|default:"Próximos acontecimentos" }}</h2>
   </div>
 
   <div class="events-list">
@@ -390,9 +390,9 @@
   <div class="home-contact-band">
     <div class="home-contact-band__icon"><i data-lucide="school"></i></div>
     <div>
-      <span class="section-kicker">Escola e família juntas</span>
-      <h2>Precisa falar com a escola?</h2>
-      <p>Use nossos canais de atendimento ou envie uma mensagem diretamente pelo site.</p>
+      <span class="section-kicker">{{ secoes_site.home_contato.rotulo|default:"Escola e família juntas" }}</span>
+      <h2>{{ secoes_site.home_contato.titulo|default:"Precisa falar com a escola?" }}</h2>
+      <p>{{ secoes_site.home_contato.texto|default:"Use nossos canais de atendimento ou envie uma mensagem diretamente pelo site." }}</p>
     </div>
     <a class="button button--light" href="{% url 'site_publico:contato' %}">
       Entrar em contato
