@@ -9,7 +9,7 @@ def site_publico(request):
         paginas = {item.chave: item for item in PaginaPublica.objects.all()}
         paginas_ativas.update({chave: pagina.ativa for chave, pagina in paginas.items()})
         config_site = ConfiguracaoSite.objects.first()
-        secoes_site = {item.chave: item for item in SecaoPagina.objects.filter(ativa=True)}
+        secoes_site = {item.chave: item for item in SecaoPagina.objects.all()}
     except (OperationalError, ProgrammingError):
         paginas = {}
         config_site = None
