@@ -1,0 +1,41 @@
+{% extends 'site_publico/gestao/base.html' %}
+{% block title %}Páginas do Site{% endblock %}
+{% block header_icon %}toggle-right{% endblock %}
+{% block header_title %}Páginas do Site{% endblock %}
+{% block header_subtitle %}Ative, desative e edite os conteúdos principais de cada página pública.{% endblock %}
+
+{% block content %}
+<div class="manager-toolbar">
+  <a class="manager-back" href="{% url 'site_publico:gestao_site' %}"><i data-lucide="arrow-left"></i> Voltar</a>
+  <span>Início permanece sempre disponível como porta de entrada do site.</span>
+</div>
+
+<section class="manager-table-card">
+  <div class="manager-table-head">
+    <span>Página</span><span>Estado</span><span>Última alteração</span><span>Ações</span>
+  </div>
+  {% for pagina in paginas %}
+    <div class="manager-table-row">
+      <div class="manager-page-name">
+        {% if pagina.imagem_capa %}
+          <img src="{{ pagina.imagem_capa.url }}" alt="">
+        {% else %}
+          <span><i data-lucide="layout-template"></i></span>
+        {% endif %}
+        <div><strong>{{ pagina.nome }}</strong><small>/{{ pagina.chave|cut:"_" }}/</small></div>
+      </div>
+      <div><span class="manager-badge {% if pagina.ativa %}is-on{% else %}is-off{% endif %}">{% if pagina.ativa %}Ativa{% else %}Desativada{% endif %}</span></div>
+      <div class="manager-muted">{{ pagina.atualizado_em|date:"d/m/Y H:i" }}</div>
+      <div class="manager-row-actions">
+        <a class="manager-icon-btn" href="{% url 'site_publico:gestao_pagina_editar' pagina.chave %}" title="Editar"><i data-lucide="pencil"></i></a>
+        <form method="post" action="{% url 'site_publico:gestao_pagina_toggle' pagina.chave %}">
+          {% csrf_token %}<input type="hidden" name="next" value="{% url 'site_publico:gestao_paginas' %}">
+          <button class="manager-icon-btn {% if pagina.ativa %}danger{% else %}success{% endif %}" type="submit" title="{% if pagina.ativa %}Desativar{% else %}Ativar{% endif %}">
+            <i data-lucide="{% if pagina.ativa %}eye-off{% else %}eye{% endif %}"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+  {% endfor %}
+</section>
+{% endblock %}
