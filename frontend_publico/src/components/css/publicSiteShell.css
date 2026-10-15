@@ -1073,3 +1073,61 @@
   position: static !important;
   top: auto !important;
 }
+
+/* Sticky navigation only: white enrollment header scrolls away */
+.school-public-header {
+  position: static !important;
+  top: auto !important;
+}
+
+.school-public-nav-band {
+  position: sticky !important;
+  top: 0;
+  z-index: 180;
+  width: min(1560px, calc(100% - 24px));
+  margin: 0 auto;
+  box-shadow: 0 8px 22px rgba(16,73,32,.16);
+}
+
+.school-public-nav-band .shell-menu-button {
+  display: none;
+}
+
+@media (max-width: 1020px) {
+  .school-public-nav-band {
+    width: calc(100% - 16px);
+    min-height: 54px;
+    padding-top: 5px;
+  }
+
+  .school-public-nav-band .shell-menu-button {
+    min-height: 42px;
+    margin: 0 10px 5px;
+    padding: 0 15px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border: 0;
+    border-radius: 11px;
+    background: linear-gradient(180deg, #ffd65a, #f9c232);
+    color: #104920;
+    font-weight: 850;
+    box-shadow: 0 4px 12px rgba(0,0,0,.10);
+  }
+
+  .school-public-nav-band .school-public-nav {
+    top: 54px;
+  }
+}
+
+@media (max-width: 650px) {
+  .school-public-nav-band .shell-menu-button {
+    width: auto;
+    min-width: 42px;
+    padding: 0 12px;
+  }
+
+  .school-public-nav-band .shell-menu-button span {
+    display: inline;
+  }
+}
