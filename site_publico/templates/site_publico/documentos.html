@@ -1,0 +1,29 @@
+{% extends 'site_publico/base.html' %}
+{% block title %}Documentos · E. M. Egídio Cordeiro Aquino{% endblock %}
+{% block content %}
+<section class="page-hero">
+  <div class="page-heading">
+    <span class="section-kicker">Arquivos públicos</span>
+    <h1>Documentos e Downloads</h1>
+    <p>Formulários, listas, orientações e materiais disponibilizados pela escola.</p>
+  </div>
+</section>
+<section class="section">
+  {% if itens %}
+    <div class="download-list">
+      {% for item in itens %}
+        <article class="download-row">
+          <span class="download-row__icon"><i data-lucide="file-down"></i></span>
+          <div>
+            <h3>{{ item.titulo }}</h3>
+            <p>{{ item.get_categoria_display }}{% if item.descricao %} · {{ item.descricao }}{% endif %}</p>
+          </div>
+          <a class="button button--ghost" href="{{ item.arquivo.url }}">Baixar</a>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-public"><i data-lucide="folder-down"></i><strong>Nenhum documento publicado</strong><span>Os arquivos disponibilizados pela escola aparecerão aqui.</span></div>
+  {% endif %}
+</section>
+{% endblock %}
