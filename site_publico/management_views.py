@@ -4,8 +4,14 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from .forms import CONTENT_FORMS, ConfiguracaoSiteForm, PaginaPublicaForm, get_content_form
-from .models import ConfiguracaoSite, PaginaPublica
+from .forms import (
+    CONTENT_FORMS,
+    ConfiguracaoSiteForm,
+    PaginaPublicaForm,
+    SecaoPaginaForm,
+    get_content_form,
+)
+from .models import ConfiguracaoSite, PaginaPublica, SecaoPagina
 
 
 def _tipo_config(tipo):
@@ -29,6 +35,41 @@ def gestao_site(request):
     return render(request, "site_publico/gestao/dashboard.html", {
         "paginas": paginas,
         "conteudos": conteudos,
+        "total_secoes": SecaoPagina.objects.count(),
+    })
+
+
+@login_required
+def gestao_secoes(request):
+    grupos = []
+    for chave_pagina, nome_pagina in SecaoPagina.PAGINAS:
+        secoes = list(SecaoPagina.objects.filter(pagina=chave_pagina))
+        if secoes:
+            grupos.append({
+                "chave": chave_pagina,
+                "nome": nome_pagina,
+                "secoes": secoes,
+            })
+    return render(request, "site_publico/gestao/secoes.html", {
+        "grupos": grupos,
+    })
+
+
+@login_required
+def gestao_secao_editar(request, chave):
+    secao = get_object_or_404(SecaoPagina, chave=chave)
+    form = SecaoPaginaForm(request.POST or None, request.FILES or None, instance=secao)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, f'Bloco "{secao.nome}" atualizado.')
+        return redirect("site_publico:gestao_secoes")
+    return render(request, "site_publico/gestao/form.html", {
+        "form": form,
+        "titulo": secao.nome,
+        "descricao": "Edite o conteúdo visual deste bloco. Menus e textos de botões permanecem protegidos.",
+        "objeto": secao,
+        "imagem_atual": secao.imagem,
+        "voltar": "site_publico:gestao_secoes",
     })
 
 
