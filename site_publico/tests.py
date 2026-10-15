@@ -1,10 +1,11 @@
 from datetime import timedelta
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Aviso, Noticia
+from .models import Aviso, Noticia, PaginaPublica
 
 
 class SitePublicoTests(TestCase):
@@ -91,3 +92,45 @@ class SitePublicoTests(TestCase):
         )
         response = self.client.get(reverse("site_publico:home"))
         self.assertNotContains(response, "Futura")
+
+
+    def test_gestao_site_exige_autenticacao(self):
+        response = self.client.get(reverse("site_publico:gestao_site"))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    def test_usuario_autenticado_acessa_gestao_site(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="gestor_site",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+
+        response = self.client.get(reverse("site_publico:gestao_site"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Gestão do Site")
+        self.assertContains(response, "Páginas públicas")
+
+    def test_pagina_desativada_some_do_menu_e_retorna_404(self):
+        pagina = PaginaPublica.objects.get(chave="noticias")
+        pagina.ativa = False
+        pagina.save(update_fields=["ativa", "atualizado_em"])
+
+        home = self.client.get(reverse("site_publico:home"))
+        pagina_response = self.client.get(reverse("site_publico:noticias"))
+
+        self.assertEqual(home.status_code, 200)
+        self.assertNotContains(home, 'href="/noticias/"')
+        self.assertEqual(pagina_response.status_code, 404)
+
+    def test_configuracao_publica_reflete_pagina_desativada(self):
+        pagina = PaginaPublica.objects.get(chave="boletim")
+        pagina.ativa = False
+        pagina.save(update_fields=["ativa", "atualizado_em"])
+
+        response = self.client.get(reverse("site_publico:configuracao_publica"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["paginas"]["boletim"])
