@@ -1,26 +1,26 @@
 :root {
-  --public-wine: #800000;
-  --public-wine-dark: #5b0000;
-  --public-wine-soft: #f7ecec;
+  --public-wine: #395723;
+  --public-wine-dark: #243b17;
+  --public-wine-soft: #eef4ea;
   --public-gold: #d4aa00;
   --public-gold-bright: #ffc200;
   --public-gold-soft: #fff8dc;
-  --public-blue: #5c9ad7;
+  --public-blue: #800000;
   --public-green: #395723;
   --public-green-soft: #eef4ea;
-  --public-bg: #f7f4f1;
+  --public-bg: #f5f8f2;
   --public-surface: #ffffff;
-  --public-text: #3f3a3a;
-  --public-muted: #706a68;
-  --public-border: #e6dedb;
+  --public-text: #374033;
+  --public-muted: #697263;
+  --public-border: #dde5d7;
   --public-danger: #b42318;
-  --public-shadow: 0 18px 48px rgba(73,34,31,.11);
+  --public-shadow: 0 18px 48px rgba(42,67,29,.11);
 }
 
 .public-page {
   min-height: 100%;
   background:
-    radial-gradient(circle at 10% 8%, rgba(128,0,0,.045), transparent 26%),
+    radial-gradient(circle at 10% 8%, rgba(57,87,35,.05), transparent 26%),
     radial-gradient(circle at 92% 18%, rgba(212,170,0,.06), transparent 24%),
     var(--public-bg);
   color: var(--public-text);
@@ -152,12 +152,12 @@
   place-items: center;
   border-radius: 11px;
   background: #edf5fc;
-  color: #356fa7;
+  color: #800000;
 }
 
 .matricula-doc-grid h3 {
   margin: 0 0 7px;
-  color: #4d4542;
+  color: #4f584a;
   font-size: 12.5px;
 }
 
@@ -179,10 +179,10 @@
   display: flex;
   align-items: flex-start;
   gap: 11px;
-  border: 1px solid #d8c7c6;
+  border: 1px solid #cad8c3;
   border-radius: 13px;
-  background: #fffafa;
-  color: #5a4c49;
+  background: #fbfdf9;
+  color: #56604f;
   cursor: pointer;
   font-size: 12px;
   font-weight: 650;
@@ -190,7 +190,7 @@
 }
 
 .confirmacao-container:hover {
-  border-color: #cfaead;
+  border-color: #afc0a6;
   background: var(--public-wine-soft);
 }
 
@@ -228,7 +228,7 @@
   border: 0;
   background: var(--public-wine);
   color: #fff;
-  box-shadow: 0 8px 20px rgba(128,0,0,.17);
+  box-shadow: 0 8px 20px rgba(57,87,35,.18);
 }
 
 .matricula-btn-primary:hover {
@@ -243,13 +243,13 @@
 }
 
 .matricula-btn-secondary:hover {
-  border-color: #d5bcba;
+  border-color: #bdcdb6;
   background: var(--public-wine-soft);
 }
 
 .matricula-btn-primary.disabled {
-  background: #e7dfdc;
-  color: #8c807c;
+  background: #dfe6da;
+  color: #7d8877;
   box-shadow: none;
   pointer-events: none;
 }
