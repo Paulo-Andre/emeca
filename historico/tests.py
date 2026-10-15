@@ -1385,6 +1385,19 @@ class DocumentoAutenticadoTests(TestCase):
         self.assertContains(pagina, "Histórico autenticado")
         self.assertContains(pagina, "data:image/svg+xml;base64")
 
+    def test_impressao_oficial_fica_isolada_da_interface_interna(self):
+        self.client.login(username="emissor", password="senha-teste")
+
+        response = self.client.get(
+            reverse("historico:historico", args=[self.aluno.codigo])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "CERTIFICADO DE CONCLUSÃO")
+        self.assertContains(response, "historico/css/document.css")
+        self.assertNotContains(response, "school-ui.css")
+        self.assertNotContains(response, 'class="sidebar"')
+
     def test_emissao_exige_login(self):
         self.client.logout()
         response = self.client.post(
