@@ -100,17 +100,35 @@ def gestao_paginas(request):
 @login_required
 def gestao_pagina_editar(request, chave):
     pagina = get_object_or_404(PaginaPublica, chave=chave)
+    visibilidade_alterada = False
+
+    if request.method == "POST":
+        nova_ativa = request.POST.get("ativa") == "on"
+        if pagina.ativa != nova_ativa:
+            pagina.ativa = nova_ativa
+            pagina.save(update_fields=["ativa", "atualizado_em"])
+            visibilidade_alterada = True
+
     form = PaginaPublicaForm(request.POST or None, request.FILES or None, instance=pagina)
     if request.method == "POST" and form.is_valid():
         form.save()
         messages.success(request, f'Página "{pagina.nome}" atualizada.')
         return redirect("site_publico:gestao_paginas")
+
+    if request.method == "POST" and visibilidade_alterada:
+        estado = "ativada" if pagina.ativa else "desativada"
+        messages.warning(
+            request,
+            f'A página "{pagina.nome}" foi {estado}, mas há outro campo que precisa ser corrigido antes de salvar o restante.',
+        )
+
     return render(request, "site_publico/gestao/form.html", {
         "form": form,
         "titulo": f"Editar página: {pagina.nome}",
-        "descricao": "Altere os textos, imagem principal e disponibilidade pública desta página.",
+        "descricao": "Altere os textos, imagem/PDF principal e disponibilidade pública desta página.",
         "objeto": pagina,
         "imagem_atual": pagina.imagem_capa,
+        "imagem_atual_e_pdf": pagina.capa_e_pdf,
         "voltar": "site_publico:gestao_paginas",
     })
 
