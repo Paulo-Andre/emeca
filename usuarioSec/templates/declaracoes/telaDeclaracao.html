@@ -1,3 +1,4 @@
+{% load static %}
 <!doctype html>
 <html lang="pt-br">
   <head>
@@ -197,10 +198,14 @@ display: flex;
       .btn-imprimir { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
       .btn-cancelar { background: #e2e8f0; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
     </style>
+    <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261015-02">
   </head>
 
-  <body> <aside class="sidebar">
-      <div class="logo">Secretaria <span>Digital</span></div>
+  <body class="secretaria-dashboard"> <aside class="sidebar">
+      <div class="logo">
+        <img class="logo__mark" src="{% static 'imagens/logo.svg' %}" alt="">
+        <span class="logo__copy"><strong>E. M. Egídio Cordeiro Aquino</strong><span>Secretaria Digital</span></span>
+      </div>
 
       <a class="nav-item " href="{% url 'dashboard' %}">
         <i data-lucide="graduation-cap"></i>
@@ -212,11 +217,11 @@ display: flex;
         Declarações
       </a>
 
-      <a class="nav-item">
-        <i data-lucide="clock"></i>
-        Histórico
+      <a class="nav-item" href="{% url 'historico:inicio' %}">
+        <i data-lucide="graduation-cap"></i>
+        Histórico Escolar
       </a>
-      {% if request.user.username == "Paulo" %}
+      {% if request.user.is_superuser or perms.auth.add_user %}
     <div class="grupo-botoes">
          <a class="nav-item" href="{% url 'cadastro' %}">
         <i data-lucide="user-plus"></i>
@@ -226,18 +231,18 @@ display: flex;
         <i data-lucide="file-up"></i>
           Upload Dados Declaração
       </a>
-      <a class="nav-item" href="{% url 'apagar_todos_alunos_matricula' %}" onclick="return confirmarExclusao()">
+      <a class="nav-item nav-danger" href="{% url 'apagar_todos_alunos_matricula' %}" onclick="return confirmarExclusao()">
         <i data-lucide="folder-x"></i>
           Apagar dados Matrícula
       </a>
-       <a class="nav-item" href="{% url 'apagar_todos_alunos' %}" onclick="return confirmarExclusao()">
+       <a class="nav-item nav-danger" href="{% url 'apagar_todos_alunos' %}" onclick="return confirmarExclusao()">
         <i data-lucide="file-x"></i>
           Apagar dados Declaração
       </a>
     </div>
 {% endif %}
 
-      <a class="nav-item" href="{% url 'sair' %}">
+      <a class="nav-item nav-logout" href="{% url 'sair' %}">
         <i data-lucide="log-out"></i>
         Sair
       </a>
