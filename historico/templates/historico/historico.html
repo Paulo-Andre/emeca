@@ -4,7 +4,7 @@
 {% block title %}Histórico Escolar — {{ aluno.nome }}{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'historico/css/document.css' %}?v=20261010-09">
+<link rel="stylesheet" href="{% static 'historico/css/document.css' %}?v=20261015-restaurado-01">
 {% endblock %}
 
 {% block content %}
@@ -50,7 +50,7 @@
       <header class="official-letterhead">
         <img
           data-letterhead
-          src="{% static 'historico/img/timbragem_historico_egidio.jpeg' %}"
+          src="{% static 'historico/img/timbragem_historico_egidio.jpeg' %}?v=20261015-restaurado-01"
           data-fallback-b64-url="{% static 'historico/img/timbragem_historico_egidio.b64' %}"
           alt="Cabeçalho oficial da Escola Municipal Egídio Cordeiro Aquino"
         >
@@ -329,5 +329,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'historico/js/historico-editor.js' %}?v=20261010-03" defer></script>
+<script src="{% static 'historico/js/historico-editor.js' %}?v=20261015-restaurado-01" defer></script>
 {% endblock %}
