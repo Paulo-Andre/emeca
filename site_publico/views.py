@@ -8,6 +8,8 @@ from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from .services import pagina_publica_required, paginas_ativas_dict
+
 from .models import (
     AlbumGaleria,
     AtividadeJogo,
@@ -41,7 +43,7 @@ def _base_context():
     return {"config_site": _config()}
 
 
-def _slides_home(agora):
+def _slides_home(agora, paginas_ativas):
     """Monta o carrossel com destaques, notícias e fotos da galeria."""
     slides = []
 
@@ -55,72 +57,91 @@ def _slides_home(agora):
             "texto_botao": item.texto_botao or "Saiba mais",
         })
 
-    noticias = (
-        Noticia.objects
-        .filter(ativo=True, publicado_em__lte=agora)
-        .exclude(imagem="")
-        .order_by("-destaque", "-publicado_em")
-    )
-    for item in noticias[:4]:
-        if len(slides) >= 7:
-            break
-        slides.append({
-            "rotulo": "Notícia",
-            "titulo": item.titulo,
-            "descricao": item.resumo,
-            "imagem": item.imagem.url,
-            "link": item.get_absolute_url(),
-            "texto_botao": "Ler notícia",
-        })
+    if paginas_ativas.get("noticias", True):
+        noticias = (
+            Noticia.objects
+            .filter(ativo=True, publicado_em__lte=agora)
+            .exclude(imagem="")
+            .order_by("-destaque", "-publicado_em")
+        )
+        for item in noticias[:4]:
+            if len(slides) >= 7:
+                break
+            slides.append({
+                "rotulo": "Notícia",
+                "titulo": item.titulo,
+                "descricao": item.resumo,
+                "imagem": item.imagem.url,
+                "link": item.get_absolute_url(),
+                "texto_botao": "Ler notícia",
+            })
 
-    albuns = (
-        AlbumGaleria.objects
-        .filter(ativo=True)
-        .prefetch_related("fotos")
-        .order_by("-data_evento", "-id")
-    )
-    for item in albuns[:5]:
-        if len(slides) >= 8:
-            break
-        fotos = list(item.fotos.all())
-        imagem = item.capa.url if item.capa else (fotos[0].imagem.url if fotos else "")
-        if not imagem:
-            continue
-        slides.append({
-            "rotulo": "Fotos",
-            "titulo": item.titulo,
-            "descricao": item.descricao,
-            "imagem": imagem,
-            "link": item.get_absolute_url(),
-            "texto_botao": "Ver fotos",
-        })
+    if paginas_ativas.get("galeria", True):
+        albuns = (
+            AlbumGaleria.objects
+            .filter(ativo=True)
+            .prefetch_related("fotos")
+            .order_by("-data_evento", "-id")
+        )
+        for item in albuns[:5]:
+            if len(slides) >= 8:
+                break
+            fotos = list(item.fotos.all())
+            imagem = item.capa.url if item.capa else (fotos[0].imagem.url if fotos else "")
+            if not imagem:
+                continue
+            slides.append({
+                "rotulo": "Fotos",
+                "titulo": item.titulo,
+                "descricao": item.descricao,
+                "imagem": imagem,
+                "link": item.get_absolute_url(),
+                "texto_botao": "Ver fotos",
+            })
 
     return slides
 
 
 def home(request):
     agora = timezone.now()
+    paginas_ativas = paginas_ativas_dict()
     contexto = _base_context()
     contexto.update({
-        "slides_home": _slides_home(agora),
+        "slides_home": _slides_home(agora, paginas_ativas),
         "avisos": _visiveis_no_periodo(Aviso.objects.all())[:4],
-        "noticias": Noticia.objects.filter(ativo=True, publicado_em__lte=agora)[:3],
-        "atividades": AtividadeJogo.objects.filter(ativo=True, destaque=True)[:4],
-        "projetos": Projeto.objects.filter(ativo=True, destaque=True)[:3],
+        "noticias": (
+            Noticia.objects.filter(ativo=True, publicado_em__lte=agora)[:3]
+            if paginas_ativas.get("noticias", True) else []
+        ),
+        "atividades": (
+            AtividadeJogo.objects.filter(ativo=True, destaque=True)[:4]
+            if paginas_ativas.get("atividades", True) else []
+        ),
+        "projetos": (
+            Projeto.objects.filter(ativo=True, destaque=True)[:3]
+            if paginas_ativas.get("projetos", True) else []
+        ),
         "eventos": Evento.objects.filter(ativo=True, inicio__gte=agora)[:4],
-        "albuns": AlbumGaleria.objects.filter(ativo=True).prefetch_related("fotos")[:4],
+        "albuns": (
+            AlbumGaleria.objects.filter(ativo=True).prefetch_related("fotos")[:4]
+            if paginas_ativas.get("galeria", True) else []
+        ),
+        "paginas_ativas_home": paginas_ativas,
     })
     return render(request, "site_publico/home.html", contexto)
 
 
+@pagina_publica_required("escola")
 def escola(request):
     return render(request, "site_publico/escola.html", _base_context())
 
 
+@pagina_publica_required("vida_escolar")
 def vida_escolar(request):
     return render(request, "site_publico/vida_escolar.html", _base_context())
 
 
+@pagina_publica_required("atividades")
 def atividades(request):
     qs = AtividadeJogo.objects.filter(ativo=True)
     tipo = request.GET.get("tipo", "").strip().upper()
@@ -131,6 +152,7 @@ def atividades(request):
     return render(request, "site_publico/atividades.html", contexto)
 
 
+@pagina_publica_required("atividades")
 def atividade(request, slug):
     item = get_object_or_404(AtividadeJogo, slug=slug, ativo=True)
     contexto = _base_context()
@@ -138,12 +160,14 @@ def atividade(request, slug):
     return render(request, "site_publico/atividade.html", contexto)
 
 
+@pagina_publica_required("projetos")
 def projetos(request):
     contexto = _base_context()
     contexto["itens"] = Projeto.objects.filter(ativo=True)
     return render(request, "site_publico/projetos.html", contexto)
 
 
+@pagina_publica_required("projetos")
 def projeto(request, slug):
     item = get_object_or_404(Projeto, slug=slug, ativo=True)
     contexto = _base_context()
@@ -151,6 +175,7 @@ def projeto(request, slug):
     return render(request, "site_publico/projeto.html", contexto)
 
 
+@pagina_publica_required("noticias")
 def noticias(request):
     agora = timezone.now()
     contexto = _base_context()
@@ -158,6 +183,7 @@ def noticias(request):
     return render(request, "site_publico/noticias.html", contexto)
 
 
+@pagina_publica_required("noticias")
 def noticia(request, slug):
     item = get_object_or_404(Noticia, slug=slug, ativo=True, publicado_em__lte=timezone.now())
     contexto = _base_context()
@@ -165,12 +191,14 @@ def noticia(request, slug):
     return render(request, "site_publico/noticia.html", contexto)
 
 
+@pagina_publica_required("galeria")
 def galeria(request):
     contexto = _base_context()
     contexto["itens"] = AlbumGaleria.objects.filter(ativo=True).prefetch_related("fotos")
     return render(request, "site_publico/galeria.html", contexto)
 
 
+@pagina_publica_required("galeria")
 def album(request, slug):
     item = get_object_or_404(
         AlbumGaleria.objects.prefetch_related("fotos"),
@@ -182,26 +210,31 @@ def album(request, slug):
     return render(request, "site_publico/album.html", contexto)
 
 
+@pagina_publica_required("matricula")
 def matricula_landing(request):
     return render(request, "site_publico/matricula.html", _base_context())
 
 
+@pagina_publica_required("boletim")
 def boletim(request):
     return render(request, "site_publico/boletim.html", _base_context())
 
 
+@pagina_publica_required("documentos")
 def documentos(request):
     contexto = _base_context()
     contexto["itens"] = DocumentoPublico.objects.filter(ativo=True)
     return render(request, "site_publico/documentos.html", contexto)
 
 
+@pagina_publica_required("faq")
 def faq(request):
     contexto = _base_context()
     contexto["itens"] = PerguntaFrequente.objects.filter(ativo=True)
     return render(request, "site_publico/faq.html", contexto)
 
 
+@pagina_publica_required("contato")
 def contato(request):
     contexto = _base_context()
     if request.method == "POST":
