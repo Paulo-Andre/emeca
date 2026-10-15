@@ -107,6 +107,8 @@
     <span class="section-help">{{ secoes_site.home_avisos.texto|default:"Informações ativas da escola" }}</span>
   </div>
 
+  {% if secoes_site.home_avisos.imagem %}<img class="editable-public-image" src="{{ secoes_site.home_avisos.imagem.url }}" alt="">{% endif %}
+
   <div class="notice-stack">
     {% for aviso in avisos %}
       <article class="notice notice--{{ aviso.tipo|lower }}">
@@ -138,6 +140,8 @@
     <h2>{{ secoes_site.home_acesso.titulo|default:"Informações e serviços da escola" }}</h2>
     <p>{{ secoes_site.home_acesso.texto|default:"Encontre rapidamente os principais caminhos para estudantes e famílias." }}</p>
   </div>
+
+  {% if secoes_site.home_acesso.imagem %}<img class="editable-public-image" src="{{ secoes_site.home_acesso.imagem.url }}" alt="">{% endif %}
 
   <div class="quick-grid">
     {% if paginas_ativas.matricula %}
@@ -233,6 +237,8 @@
     </a>
   </div>
 
+  {% if secoes_site.home_noticias.imagem %}<img class="editable-public-image" src="{{ secoes_site.home_noticias.imagem.url }}" alt="">{% endif %}
+
   <div class="cards-grid cards-grid--3">
     {% for item in noticias %}
       <article class="content-card">
@@ -270,6 +276,8 @@
     </a>
   </div>
 
+  {% if secoes_site.home_atividades.imagem %}<img class="editable-public-image" src="{{ secoes_site.home_atividades.imagem.url }}" alt="">{% endif %}
+
   <div class="learning-grid">
     {% for item in atividades %}
       <a class="learning-card" href="{{ item.get_absolute_url }}">
@@ -303,6 +311,8 @@
       <i data-lucide="arrow-right"></i>
     </a>
   </div>
+
+  {% if secoes_site.home_projetos.imagem %}<img class="editable-public-image" src="{{ secoes_site.home_projetos.imagem.url }}" alt="">{% endif %}
 
   <div class="cards-grid cards-grid--3">
     {% for item in projetos %}
@@ -340,6 +350,8 @@
     </a>
   </div>
 
+  {% if secoes_site.home_galeria.imagem %}<img class="editable-public-image" src="{{ secoes_site.home_galeria.imagem.url }}" alt="">{% endif %}
+
   <div class="home-gallery">
     {% for item in albuns %}
       <a class="home-gallery__item" href="{{ item.get_absolute_url }}">
@@ -366,6 +378,8 @@
     <span class="section-kicker">{{ secoes_site.home_agenda.rotulo|default:"Agenda" }}</span>
     <h2>{{ secoes_site.home_agenda.titulo|default:"Próximos acontecimentos" }}</h2>
   </div>
+
+  {% if secoes_site.home_agenda.imagem %}<img class="editable-public-image" src="{{ secoes_site.home_agenda.imagem.url }}" alt="">{% endif %}
 
   <div class="events-list">
     {% for evento in eventos %}
