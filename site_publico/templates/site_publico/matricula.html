@@ -66,14 +66,18 @@
       <h2>Estamos disponíveis</h2>
       <p>Se tiver dúvidas antes ou durante o preenchimento, consulte as perguntas frequentes ou entre em contato com a escola.</p>
       <div class="enrollment-support__links">
-        <a class="button button--soft" href="{% url 'site_publico:faq' %}">
-          Perguntas frequentes
-          <i data-lucide="circle-help"></i>
-        </a>
-        <a class="button button--soft" href="{% url 'site_publico:contato' %}">
-          Falar com a escola
-          <i data-lucide="messages-square"></i>
-        </a>
+        {% if paginas_ativas.faq %}
+          <a class="button button--soft" href="{% url 'site_publico:faq' %}">
+            Perguntas frequentes
+            <i data-lucide="circle-help"></i>
+          </a>
+        {% endif %}
+        {% if paginas_ativas.contato %}
+          <a class="button button--soft" href="{% url 'site_publico:contato' %}">
+            Falar com a escola
+            <i data-lucide="messages-square"></i>
+          </a>
+        {% endif %}
       </div>
     </article>
   </div>
