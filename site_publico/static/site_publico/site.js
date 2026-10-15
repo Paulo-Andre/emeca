@@ -3,6 +3,12 @@
 
   const menuButton = document.querySelector(".mobile-menu-button");
   const nav = document.getElementById("menu-principal");
+  const more = document.querySelector(".site-nav-more");
+
+  const closeMenu = () => {
+    nav?.classList.remove("is-open");
+    menuButton?.setAttribute("aria-expanded", "false");
+  };
 
   menuButton?.addEventListener("click", () => {
     const aberto = menuButton.getAttribute("aria-expanded") === "true";
@@ -11,10 +17,20 @@
   });
 
   nav?.querySelectorAll("a").forEach((link) => {
-    link.addEventListener("click", () => {
-      nav.classList.remove("is-open");
-      menuButton?.setAttribute("aria-expanded", "false");
-    });
+    link.addEventListener("click", closeMenu);
+  });
+
+  document.addEventListener("click", (event) => {
+    if (more?.open && !more.contains(event.target)) {
+      more.removeAttribute("open");
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      more?.removeAttribute("open");
+      closeMenu();
+    }
   });
 
   const carousel = document.querySelector("[data-carousel]");
@@ -26,11 +42,16 @@
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let index = 0;
     let timer = null;
+    let touchStartX = 0;
 
     function show(target) {
       if (!slides.length) return;
       index = (target + slides.length) % slides.length;
-      slides.forEach((slide, i) => slide.classList.toggle("is-active", i === index));
+      slides.forEach((slide, i) => {
+        const active = i === index;
+        slide.classList.toggle("is-active", active);
+        slide.setAttribute("aria-hidden", active ? "false" : "true");
+      });
       dots.forEach((dot, i) => {
         dot.classList.toggle("active", i === index);
         dot.setAttribute("aria-current", i === index ? "true" : "false");
@@ -52,10 +73,25 @@
     prev?.addEventListener("click", () => { show(index - 1); start(); });
     next?.addEventListener("click", () => { show(index + 1); start(); });
     dots.forEach((dot, i) => dot.addEventListener("click", () => { show(i); start(); }));
+
     carousel.addEventListener("mouseenter", stop);
     carousel.addEventListener("mouseleave", start);
     carousel.addEventListener("focusin", stop);
     carousel.addEventListener("focusout", start);
+
+    carousel.addEventListener("touchstart", (event) => {
+      touchStartX = event.changedTouches[0]?.clientX || 0;
+      stop();
+    }, { passive: true });
+
+    carousel.addEventListener("touchend", (event) => {
+      const endX = event.changedTouches[0]?.clientX || 0;
+      const delta = endX - touchStartX;
+      if (Math.abs(delta) > 45) {
+        show(delta > 0 ? index - 1 : index + 1);
+      }
+      start();
+    }, { passive: true });
 
     show(0);
     start();
