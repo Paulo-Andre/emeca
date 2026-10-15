@@ -11,25 +11,15 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
-  <link rel="stylesheet" href="{% static 'site_publico/site.css' %}?v=20261015-designer-03">
+  <link rel="stylesheet" href="{% static 'site_publico/site.css' %}?v=20261015-menu-04">
   {% block extra_head %}{% endblock %}
 </head>
 <body class="public-site">
   <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
 
   <header class="site-header">
-    <div class="site-utility">
-      <div class="site-utility__inner">
-        <span>Escola Municipal · Montes Claros/MG</span>
-        <nav aria-label="Acessos complementares">
-          <a href="{% url 'site_publico:documentos' %}">Documentos</a>
-          <a href="{% url 'site_publico:faq' %}">Perguntas frequentes</a>
-          <a class="utility-login" href="{% url 'login' %}">
-            <i data-lucide="lock-keyhole"></i>
-            Área Interna
-          </a>
-        </nav>
-      </div>
+    <div class="site-header__colors" aria-hidden="true">
+      <span></span><span></span><span></span>
     </div>
 
     <div class="site-header__inner">
@@ -70,6 +60,11 @@
         <a class="enrollment-access {% if request.resolver_match.url_name == 'matricula_landing' %}active{% endif %}" href="{% url 'site_publico:matricula_landing' %}">
           <i data-lucide="clipboard-pen-line"></i>
           Matrícula
+        </a>
+
+        <a class="internal-access-main" href="{% url 'login' %}" title="Acessar Secretaria Digital">
+          <i data-lucide="lock-keyhole"></i>
+          <span>Área Interna</span>
         </a>
       </nav>
     </div>
@@ -130,7 +125,7 @@
     </div>
   </footer>
 
-  <script src="{% static 'site_publico/site.js' %}?v=20261015-designer-03" defer></script>
+  <script src="{% static 'site_publico/site.js' %}?v=20261015-menu-04" defer></script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>
