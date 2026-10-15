@@ -30,6 +30,7 @@ class SitePublicoTests(TestCase):
             with self.subTest(nome=nome):
                 response = self.client.get(reverse(nome))
                 self.assertEqual(response.status_code, 200)
+                self.assertContains(response, 'id="menu-principal"')
 
     def test_area_de_avisos_some_quando_nao_ha_aviso(self):
         response = self.client.get(reverse("site_publico:home"))
@@ -50,6 +51,33 @@ class SitePublicoTests(TestCase):
         )
         response = self.client.get(reverse("site_publico:home"))
         self.assertNotContains(response, "Não deve aparecer.")
+
+
+    def test_noticia_com_imagem_entra_no_carrossel(self):
+        noticia = Noticia.objects.create(
+            titulo="Feira Cultural",
+            resumo="Um dia de aprendizagem e participação.",
+            conteudo="Conteúdo da notícia.",
+            imagem="site_publico/noticias/feira-cultural.jpg",
+            publicado_em=timezone.now(),
+            ativo=True,
+            destaque=True,
+        )
+
+        response = self.client.get(reverse("site_publico:home"))
+
+        self.assertEqual(response.status_code, 200)
+        slides = response.context["slides_home"]
+        self.assertTrue(
+            any(
+                slide["rotulo"] == "Notícia"
+                and slide["titulo"] == noticia.titulo
+                and slide["imagem"].endswith("feira-cultural.jpg")
+                for slide in slides
+            )
+        )
+        self.assertContains(response, "Feira Cultural")
+        self.assertContains(response, "hero-carousel")
 
     def test_noticia_futura_nao_aparece(self):
         Noticia.objects.create(
