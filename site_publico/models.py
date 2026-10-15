@@ -77,6 +77,7 @@ class PaginaPublica(models.Model):
     chave = models.CharField(max_length=40, choices=CHAVES, unique=True)
     nome = models.CharField(max_length=120)
     ativa = models.BooleanField(default=True)
+    rotulo = models.CharField(max_length=180, blank=True)
     titulo = models.CharField(max_length=180, blank=True)
     subtitulo = models.CharField(max_length=360, blank=True)
     texto_principal = models.TextField(blank=True)
