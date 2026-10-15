@@ -144,8 +144,8 @@ export default function PublicSiteShell({ children }: { children: ReactNode }) {
           <div className="school-public-footer__brand">
             <img src={logo} alt="" />
             <div>
-              <strong>E. M. Egídio Cordeiro Aquino</strong>
-              <span>Secretaria escolar e matrícula online</span>
+              <strong>{site.nome_escola}</strong>
+              <span>{site.subtitulo}</span>
             </div>
           </div>
 
