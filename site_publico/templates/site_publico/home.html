@@ -182,12 +182,8 @@
   <div class="school-model__intro">
     <div>
       <span class="section-kicker">Nossa escola</span>
-      <h2>Um espaço para aprender, conviver e crescer</h2>
-      {% if config_site.apresentacao %}
-        <p>{{ config_site.apresentacao }}</p>
-      {% else %}
-        <p>A escola é um espaço de aprendizagem, convivência e desenvolvimento. Nosso objetivo é aproximar estudantes, famílias e comunidade em torno de uma educação pública acolhedora, responsável e participativa.</p>
-      {% endif %}
+      <h2>{{ config_site.home_titulo|default:"Um espaço para aprender, conviver e crescer" }}</h2>
+      <p>{{ config_site.home_texto|default:config_site.apresentacao|default:"A escola é um espaço de aprendizagem, convivência e desenvolvimento. Nosso objetivo é aproximar estudantes, famílias e comunidade em torno de uma educação pública acolhedora, responsável e participativa." }}</p>
       {% if paginas_ativas.escola %}
         <a class="button button--soft" href="{% url 'site_publico:escola' %}">
           Conheça mais sobre a escola
@@ -205,20 +201,20 @@
   <div class="school-pillars">
     <article class="school-pillar school-pillar--green">
       <span><i data-lucide="book-open-check"></i></span>
-      <h3>Aprendizagem</h3>
-      <p>Experiências que incentivam leitura, raciocínio, criatividade, autonomia e participação ativa dos estudantes.</p>
+      <h3>{{ config_site.home_pilar1_titulo|default:"Aprendizagem" }}</h3>
+      <p>{{ config_site.home_pilar1_texto|default:"Experiências que incentivam leitura, raciocínio, criatividade, autonomia e participação ativa dos estudantes." }}</p>
     </article>
 
     <article class="school-pillar school-pillar--red">
       <span><i data-lucide="heart-handshake"></i></span>
-      <h3>Convivência</h3>
-      <p>Respeito, cooperação e diálogo fazem parte da construção de um ambiente escolar acolhedor e responsável.</p>
+      <h3>{{ config_site.home_pilar2_titulo|default:"Convivência" }}</h3>
+      <p>{{ config_site.home_pilar2_texto|default:"Respeito, cooperação e diálogo fazem parte da construção de um ambiente escolar acolhedor e responsável." }}</p>
     </article>
 
     <article class="school-pillar school-pillar--gold">
       <span><i data-lucide="users-round"></i></span>
-      <h3>Família e comunidade</h3>
-      <p>A participação das famílias fortalece o acompanhamento escolar e aproxima a escola da comunidade.</p>
+      <h3>{{ config_site.home_pilar3_titulo|default:"Família e comunidade" }}</h3>
+      <p>{{ config_site.home_pilar3_texto|default:"A participação das famílias fortalece o acompanhamento escolar e aproxima a escola da comunidade." }}</p>
     </article>
   </div>
 </section>
