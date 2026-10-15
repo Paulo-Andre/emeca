@@ -76,7 +76,7 @@ def gestao_secao_editar(request, chave):
 @login_required
 def gestao_configuracao(request):
     config, _ = ConfiguracaoSite.objects.get_or_create(pk=1)
-    form = ConfiguracaoSiteForm(request.POST or None, instance=config)
+    form = ConfiguracaoSiteForm(request.POST or None, request.FILES or None, instance=config)
     if request.method == "POST" and form.is_valid():
         form.save()
         messages.success(request, "Informações institucionais atualizadas.")
