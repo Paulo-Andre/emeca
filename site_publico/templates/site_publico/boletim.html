@@ -1,0 +1,39 @@
+{% extends 'site_publico/base.html' %}
+{% block title %}Boletim · E. M. Egídio Cordeiro Aquino{% endblock %}
+
+{% block content %}
+<section class="page-hero bulletin-page-hero">
+  <div class="page-heading">
+    <span class="section-kicker">Acompanhamento escolar</span>
+    <h1>Boletim</h1>
+    <p>Consulte informações de desempenho escolar quando o serviço estiver integrado ao sistema.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="bulletin-shell">
+    <article class="bulletin-card">
+      <span class="bulletin-card__icon"><i data-lucide="file-text"></i></span>
+      <div>
+        <span class="section-kicker">Boletim online</span>
+        <h2>Consulta de notas e resultados</h2>
+        <p>Esta área foi preparada para receber a consulta de boletins. A integração com os dados acadêmicos poderá ser adicionada posteriormente sem alterar o menu ou a identidade visual do site.</p>
+        <div class="bulletin-info">
+          <i data-lucide="info"></i>
+          <span>Por enquanto, este é um modelo de apresentação. Nenhuma nota ou dado pessoal de aluno é exibido nesta página.</span>
+        </div>
+      </div>
+    </article>
+
+    <aside class="bulletin-help">
+      <span><i data-lucide="school"></i></span>
+      <h3>Precisa de orientação?</h3>
+      <p>Entre em contato com a escola para informações sobre resultados, avaliações e acompanhamento escolar.</p>
+      <a class="button button--soft" href="{% url 'site_publico:contato' %}">
+        Falar com a escola
+        <i data-lucide="arrow-right"></i>
+      </a>
+    </aside>
+  </div>
+</section>
+{% endblock %}
