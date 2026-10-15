@@ -11,12 +11,22 @@
     <p>As alterações salvas aqui aparecem no site público. Páginas desativadas deixam de aparecer na navegação e não podem ser abertas diretamente.</p>
   </div>
   <div class="manager-hero__actions">
-    <a class="manager-btn manager-btn--primary" href="{% url 'site_publico:gestao_paginas' %}">
-      <i data-lucide="toggle-right"></i> Páginas do Site
+    <a class="manager-btn manager-btn--primary" href="{% url 'site_publico:gestao_secoes' %}">
+      <i data-lucide="file-pen-line"></i> Textos e imagens
+    </a>
+    <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_paginas' %}">
+      <i data-lucide="toggle-right"></i> Ativar/desativar páginas
     </a>
     <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_configuracao' %}">
-      <i data-lucide="school"></i> Informações institucionais
+      <i data-lucide="school"></i> Informações institucionais e logo
     </a>
+  </div>
+</section>
+
+<section class="manager-section">
+  <div class="manager-section__heading">
+    <div><span class="manager-kicker">Editor</span><h2>Textos e imagens</h2><p>{{ total_secoes }} blocos de conteúdo podem ser alterados sem mexer nos menus ou botões.</p></div>
+    <a href="{% url 'site_publico:gestao_secoes' %}">Abrir editor <i data-lucide="arrow-right"></i></a>
   </div>
 </section>
 

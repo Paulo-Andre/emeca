@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
-  <link rel="stylesheet" href="{% static 'site_publico/site.css' %}?v=20261016-pages-01">
+  <link rel="stylesheet" href="{% static 'site_publico/site.css' %}?v=20261016-editor-02">
   {% block extra_head %}{% endblock %}
 </head>
 <body class="public-site">
@@ -21,7 +21,11 @@
     <div class="site-header__frame">
       <div class="site-header__top">
         <a class="site-brand" href="{% url 'site_publico:home' %}" aria-label="Página inicial da escola">
-          <img src="{% static 'imagens/logo.svg' %}" alt="">
+          {% if config_site.logo_site %}
+            <img src="{{ config_site.logo_site.url }}" alt="">
+          {% else %}
+            <img src="{% static 'imagens/logo.svg' %}" alt="">
+          {% endif %}
           <span>
             <strong>{{ config_site.nome_escola|default:"E. M. Egídio Cordeiro Aquino" }}</strong>
             <small>{{ config_site.subtitulo|default:"Educação pública, acolhimento e aprendizagem" }}</small>
@@ -124,7 +128,11 @@
   <footer class="site-footer">
     <div class="site-footer__inner">
       <div class="site-footer__brand">
-        <img src="{% static 'imagens/logo.svg' %}" alt="">
+        {% if config_site.logo_site %}
+            <img src="{{ config_site.logo_site.url }}" alt="">
+          {% else %}
+            <img src="{% static 'imagens/logo.svg' %}" alt="">
+          {% endif %}
         <div>
           <strong>{{ config_site.nome_escola|default:"E. M. Egídio Cordeiro Aquino" }}</strong>
           <p>{{ config_site.subtitulo|default:"Educação, acolhimento e aprendizagem construídos juntos." }}</p>
@@ -164,7 +172,7 @@
     </div>
   </footer>
 
-  <script src="{% static 'site_publico/site.js' %}?v=20261016-pages-01" defer></script>
+  <script src="{% static 'site_publico/site.js' %}?v=20261016-editor-02" defer></script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>

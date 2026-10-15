@@ -3,7 +3,7 @@
 {% block content %}
 <section class="page-hero">
   <div class="page-heading">
-    <span class="section-kicker">Nossa história</span>
+    <span class="section-kicker">{{ paginas_site.escola.rotulo|default:"Nossa história" }}</span>
     <h1>{{ paginas_site.escola.titulo|default:"A Escola" }}</h1>
     <p>{{ paginas_site.escola.subtitulo|default:"Conheça a identidade, os valores e o trabalho da Escola Municipal Egídio Cordeiro Aquino." }}</p>
     {% if paginas_site.escola.texto_principal %}<div class="page-heading__intro">{{ paginas_site.escola.texto_principal|linebreaksbr }}</div>{% endif %}
@@ -13,38 +13,53 @@
 
 <section class="section">
   <div class="two-column">
+    {% if not secoes_site.escola_quem_somos or secoes_site.escola_quem_somos.ativa %}
     <article class="prose-card">
-      <h2>Quem somos</h2>
-      {% if config_site.apresentacao %}
+      {% if secoes_site.escola_quem_somos.imagem %}<img class="editable-public-image" src="{{ secoes_site.escola_quem_somos.imagem.url }}" alt="">{% endif %}
+      <h2>{{ secoes_site.escola_quem_somos.titulo|default:"Quem somos" }}</h2>
+      {% if secoes_site.escola_quem_somos.texto %}
+        {{ secoes_site.escola_quem_somos.texto|linebreaks }}
+      {% elif config_site.apresentacao %}
         {{ config_site.apresentacao|linebreaks }}
       {% else %}
         <p>Somos uma escola pública comprometida com uma educação acolhedora, responsável e conectada à comunidade.</p>
         <p>Este espaço pode ser atualizado pela equipe da escola no painel administrativo, sem necessidade de alterar o código do site.</p>
       {% endif %}
     </article>
+    {% endif %}
 
+    {% if not secoes_site.escola_historia or secoes_site.escola_historia.ativa %}
     <article class="prose-card">
-      <h2>Nossa história</h2>
-      {% if config_site.historia %}
+      {% if secoes_site.escola_historia.imagem %}<img class="editable-public-image" src="{{ secoes_site.escola_historia.imagem.url }}" alt="">{% endif %}
+      <h2>{{ secoes_site.escola_historia.titulo|default:"Nossa história" }}</h2>
+      {% if secoes_site.escola_historia.texto %}
+        {{ secoes_site.escola_historia.texto|linebreaks }}
+      {% elif config_site.historia %}
         {{ config_site.historia|linebreaks }}
       {% else %}
         <p>A história da escola poderá ser publicada aqui com marcos importantes, transformações ao longo dos anos e sua relação com a comunidade.</p>
       {% endif %}
     </article>
+    {% endif %}
   </div>
 </section>
 
+{% if not secoes_site.escola_missao or secoes_site.escola_missao.ativa %}
 <section class="section section--soft">
   <div class="section-heading">
-    <span class="section-kicker">O que nos orienta</span>
-    <h2>Missão e valores</h2>
+    <span class="section-kicker">{{ secoes_site.escola_missao.rotulo|default:"O que nos orienta" }}</span>
+    <h2>{{ secoes_site.escola_missao.titulo|default:"Missão e valores" }}</h2>
   </div>
   <article class="prose-card">
-    {% if config_site.missao_valores %}
+    {% if secoes_site.escola_missao.imagem %}<img class="editable-public-image" src="{{ secoes_site.escola_missao.imagem.url }}" alt="">{% endif %}
+    {% if secoes_site.escola_missao.texto %}
+      {{ secoes_site.escola_missao.texto|linebreaks }}
+    {% elif config_site.missao_valores %}
       {{ config_site.missao_valores|linebreaks }}
     {% else %}
       <p>Valorizar cada estudante, promover aprendizagem com significado, fortalecer a convivência respeitosa e construir uma escola próxima das famílias e da comunidade.</p>
     {% endif %}
   </article>
 </section>
+{% endif %}
 {% endblock %}

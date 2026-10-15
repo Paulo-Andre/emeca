@@ -13,6 +13,7 @@ from .models import (
     Noticia,
     PaginaPublica,
     PerguntaFrequente,
+    SecaoPagina,
     Projeto,
 )
 
@@ -44,7 +45,7 @@ class ConfiguracaoSiteForm(StyledModelForm):
             "vida_escolar", "home_titulo", "home_texto",
             "home_pilar1_titulo", "home_pilar1_texto",
             "home_pilar2_titulo", "home_pilar2_texto",
-            "home_pilar3_titulo", "home_pilar3_texto",
+            "home_pilar3_titulo", "home_pilar3_texto", "logo_site",
             "endereco", "cidade", "telefone", "whatsapp", "email",
             "horario_atendimento", "mapa_url",
         ]
@@ -53,7 +54,25 @@ class ConfiguracaoSiteForm(StyledModelForm):
 class PaginaPublicaForm(StyledModelForm):
     class Meta:
         model = PaginaPublica
-        fields = ["ativa", "titulo", "subtitulo", "texto_principal", "imagem_capa"]
+        fields = ["ativa", "rotulo", "titulo", "subtitulo", "texto_principal", "imagem_capa"]
+        labels = {"rotulo": "Texto de destaque"}
+        help_texts = {"rotulo": "Texto pequeno exibido acima do título da página."}
+
+
+class SecaoPaginaForm(StyledModelForm):
+    class Meta:
+        model = SecaoPagina
+        fields = ["rotulo", "titulo", "texto", "imagem"]
+        labels = {
+            "rotulo": "Texto de destaque",
+            "titulo": "Título",
+            "texto": "Texto",
+            "imagem": "Imagem",
+        }
+        help_texts = {
+            "rotulo": "É o texto menor que aparece acima do título em alguns blocos.",
+            "imagem": "Opcional. Quando o layout do bloco aceitar imagem, ela será exibida sem alterar menus ou botões.",
+        }
 
 
 CONTENT_FORMS = {

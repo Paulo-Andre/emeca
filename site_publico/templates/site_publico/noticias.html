@@ -3,7 +3,7 @@
 {% block content %}
 <section class="page-hero">
   <div class="page-heading">
-    <span class="section-kicker">Acontece na escola</span>
+    <span class="section-kicker">{{ paginas_site.noticias.rotulo|default:"Acontece na escola" }}</span>
     <h1>{{ paginas_site.noticias.titulo|default:"Notícias" }}</h1>
     <p>{{ paginas_site.noticias.subtitulo|default:"Eventos, projetos, atividades e acontecimentos da nossa comunidade escolar." }}</p>
     {% if paginas_site.noticias.texto_principal %}<div class="page-heading__intro">{{ paginas_site.noticias.texto_principal|linebreaksbr }}</div>{% endif %}

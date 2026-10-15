@@ -3,7 +3,7 @@
 {% block content %}
 <section class="page-hero">
   <div class="page-heading">
-    <span class="section-kicker">Fale com a escola</span>
+    <span class="section-kicker">{{ paginas_site.contato.rotulo|default:"Fale com a escola" }}</span>
     <h1>{{ paginas_site.contato.titulo|default:"Contato" }}</h1>
     <p>{{ paginas_site.contato.subtitulo|default:"Envie uma mensagem ou consulte nossos canais de atendimento." }}</p>
     {% if paginas_site.contato.texto_principal %}<div class="page-heading__intro">{{ paginas_site.contato.texto_principal|linebreaksbr }}</div>{% endif %}
@@ -45,7 +45,9 @@
     </form>
 
     <aside class="contact-info">
-      <h2>Informações da escola</h2>
+      <h2>{{ secoes_site.contato_informacoes.titulo|default:"Informações da escola" }}</h2>
+      {% if secoes_site.contato_informacoes.texto %}<p>{{ secoes_site.contato_informacoes.texto|linebreaksbr }}</p>{% endif %}
+      {% if secoes_site.contato_informacoes.imagem %}<img class="editable-public-image" src="{{ secoes_site.contato_informacoes.imagem.url }}" alt="">{% endif %}
       {% if config_site.endereco or config_site.cidade %}
         <div class="contact-info__item"><i data-lucide="map-pin"></i><div><span>Endereço</span><strong>{{ config_site.endereco }}{% if config_site.endereco and config_site.cidade %}<br>{% endif %}{{ config_site.cidade }}</strong></div></div>
       {% endif %}

@@ -1,0 +1,55 @@
+{% extends 'site_publico/gestao/base.html' %}
+{% block title %}Textos e imagens{% endblock %}
+{% block header_icon %}file-pen-line{% endblock %}
+{% block header_title %}Textos e imagens{% endblock %}
+{% block header_subtitle %}Edite os conteúdos visuais das páginas públicas sem alterar menus, botões ou a estrutura do site.{% endblock %}
+
+{% block content %}
+<div class="manager-toolbar">
+  <a class="manager-back" href="{% url 'site_publico:gestao_site' %}"><i data-lucide="arrow-left"></i> Voltar</a>
+  <span>Os nomes dos menus e dos botões de navegação permanecem protegidos.</span>
+</div>
+
+{% for grupo in grupos %}
+<section class="manager-section">
+  <div class="manager-section__heading">
+    <div>
+      <span class="manager-kicker">Página</span>
+      <h2>{{ grupo.nome }}</h2>
+    </div>
+  </div>
+
+  <div class="editable-section-grid">
+    {% for secao in grupo.secoes %}
+      <article class="editable-section-card">
+        <div class="editable-section-card__media">
+          {% if secao.imagem %}
+            <img src="{{ secao.imagem.url }}" alt="">
+          {% else %}
+            <span><i data-lucide="image"></i></span>
+          {% endif %}
+        </div>
+        <div class="editable-section-card__body">
+          <div class="editable-section-card__top">
+            <strong>{{ secao.nome }}</strong>
+          </div>
+          {% if secao.titulo %}<p><strong>{{ secao.titulo }}</strong></p>{% endif %}
+          {% if secao.texto %}<p>{{ secao.texto|truncatechars:160 }}</p>{% endif %}
+          <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_secao_editar' secao.chave %}">
+            <i data-lucide="pencil"></i> Editar texto e imagem
+          </a>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+{% empty %}
+<section class="manager-table-card">
+  <div class="manager-empty">
+    <i data-lucide="file-pen-line"></i>
+    <strong>Nenhum bloco editável encontrado.</strong>
+    <span>Execute as migrações do sistema para criar os blocos iniciais.</span>
+  </div>
+</section>
+{% endfor %}
+{% endblock %}

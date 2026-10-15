@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Aviso, Noticia, PaginaPublica
+from .models import Aviso, Noticia, PaginaPublica, SecaoPagina
 
 
 class SitePublicoTests(TestCase):
@@ -125,6 +125,20 @@ class SitePublicoTests(TestCase):
         self.assertNotContains(home, 'href="/noticias/"')
         self.assertEqual(pagina_response.status_code, 404)
 
+    def test_matricula_desativada_bloqueia_landing_e_formulario(self):
+        pagina = PaginaPublica.objects.get(chave="matricula")
+        pagina.ativa = False
+        pagina.save(update_fields=["ativa", "atualizado_em"])
+
+        home = self.client.get(reverse("site_publico:home"))
+        landing = self.client.get(reverse("site_publico:matricula_landing"))
+        formulario = self.client.get(reverse("matricula_publica"))
+
+        self.assertNotContains(home, 'href="/matricula-escolar/"')
+        self.assertEqual(landing.status_code, 404)
+        self.assertEqual(formulario.status_code, 404)
+
+
     def test_configuracao_publica_reflete_pagina_desativada(self):
         pagina = PaginaPublica.objects.get(chave="boletim")
         pagina.ativa = False
@@ -134,3 +148,36 @@ class SitePublicoTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.json()["paginas"]["boletim"])
+
+
+    def test_editor_de_textos_e_imagens_exige_autenticacao(self):
+        response = self.client.get(reverse("site_publico:gestao_secoes"))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    def test_usuario_autenticado_edita_bloco_e_alteracao_aparece_no_site(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="editor_site",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+        secao = SecaoPagina.objects.get(chave="boletim_consulta")
+
+        response = self.client.post(
+            reverse("site_publico:gestao_secao_editar", args=[secao.chave]),
+            {
+                "ativa": "on",
+                "rotulo": "Boletim da escola",
+                "titulo": "Resultados e acompanhamento",
+                "texto": "Texto atualizado pela equipe autenticada.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        secao.refresh_from_db()
+        self.assertEqual(secao.titulo, "Resultados e acompanhamento")
+
+        pagina = self.client.get(reverse("site_publico:boletim"))
+        self.assertContains(pagina, "Resultados e acompanhamento")
+        self.assertContains(pagina, "Texto atualizado pela equipe autenticada.")

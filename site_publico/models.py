@@ -37,6 +37,11 @@ class ConfiguracaoSite(models.Model):
     home_pilar2_texto = models.TextField(blank=True)
     home_pilar3_titulo = models.CharField(max_length=120, blank=True, default="Família e comunidade")
     home_pilar3_texto = models.TextField(blank=True)
+    logo_site = models.FileField(
+        upload_to="site_publico/configuracao/",
+        validators=[IMAGEM_VALIDATOR],
+        blank=True,
+    )
     endereco = models.CharField(max_length=255, blank=True)
     cidade = models.CharField(max_length=120, default="Montes Claros/MG", blank=True)
     telefone = models.CharField(max_length=60, blank=True)
@@ -72,6 +77,7 @@ class PaginaPublica(models.Model):
     chave = models.CharField(max_length=40, choices=CHAVES, unique=True)
     nome = models.CharField(max_length=120)
     ativa = models.BooleanField(default=True)
+    rotulo = models.CharField(max_length=180, blank=True)
     titulo = models.CharField(max_length=180, blank=True)
     subtitulo = models.CharField(max_length=360, blank=True)
     texto_principal = models.TextField(blank=True)
@@ -87,6 +93,37 @@ class PaginaPublica(models.Model):
         ordering = ["ordem", "nome"]
         verbose_name = "Página pública"
         verbose_name_plural = "Páginas públicas"
+
+    def __str__(self):
+        return self.nome
+
+
+class SecaoPagina(models.Model):
+    PAGINAS = [("home", "Início")] + PaginaPublica.CHAVES
+
+    pagina = models.CharField(max_length=40, choices=PAGINAS)
+    chave = models.SlugField(max_length=90, unique=True)
+    nome = models.CharField(max_length=180)
+    rotulo = models.CharField(
+        max_length=180,
+        blank=True,
+        help_text="Texto pequeno exibido acima do título, quando o bloco usar esse elemento.",
+    )
+    titulo = models.CharField(max_length=220, blank=True)
+    texto = models.TextField(blank=True)
+    imagem = models.FileField(
+        upload_to="site_publico/secoes/",
+        validators=[IMAGEM_VALIDATOR],
+        blank=True,
+    )
+    ativa = models.BooleanField(default=True)
+    ordem = models.PositiveSmallIntegerField(default=0)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["pagina", "ordem", "nome"]
+        verbose_name = "Seção editável"
+        verbose_name_plural = "Seções editáveis"
 
     def __str__(self):
         return self.nome

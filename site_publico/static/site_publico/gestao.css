@@ -751,3 +751,58 @@
     display: none;
   }
 }
+
+
+/* Editor de textos e imagens */
+.editable-section-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+.editable-section-card {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  padding: 16px;
+  border: 1px solid var(--school-border, #dde4ea);
+  border-radius: 18px;
+  background: #fff;
+}
+.editable-section-card.is-off { opacity: .65; }
+.editable-section-card__media {
+  width: 88px;
+  aspect-ratio: 1;
+  border-radius: 14px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: #f3f6f8;
+}
+.editable-section-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.editable-section-card__media span {
+  display: grid;
+  place-items: center;
+  color: #6b7780;
+}
+.editable-section-card__body { min-width: 0; }
+.editable-section-card__body p {
+  margin: 8px 0 12px;
+  color: #5c6870;
+  line-height: 1.5;
+}
+.editable-section-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.editable-section-card__top > strong { line-height: 1.3; }
+@media (max-width: 620px) {
+  .editable-section-card { grid-template-columns: 1fr; }
+  .editable-section-card__media { width: 100%; max-height: 180px; aspect-ratio: 16/7; }
+}

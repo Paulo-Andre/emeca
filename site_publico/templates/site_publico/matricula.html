@@ -4,7 +4,7 @@
 {% block content %}
 <section class="page-hero enrollment-page-hero">
   <div class="page-heading">
-    <span class="section-kicker">Para pais e responsáveis</span>
+    <span class="section-kicker">{{ paginas_site.matricula.rotulo|default:"Para pais e responsáveis" }}</span>
     <h1>{{ paginas_site.matricula.titulo|default:"Matrícula Online" }}</h1>
     <p>{{ paginas_site.matricula.subtitulo|default:"Um caminho mais simples para organizar os dados antes do atendimento presencial na escola." }}</p>
     {% if paginas_site.matricula.texto_principal %}<div class="page-heading__intro">{{ paginas_site.matricula.texto_principal|linebreaksbr }}</div>{% endif %}
@@ -15,9 +15,10 @@
 <section class="section">
   <div class="enrollment-intro">
     <div>
-      <span class="section-kicker">Como funciona</span>
-      <h2>Preencha com calma, etapa por etapa</h2>
-      <p>O formulário foi dividido para facilitar o preenchimento pelo celular. Tenha em mãos os dados do estudante, responsáveis, endereço e contatos de emergência.</p>
+      <span class="section-kicker">{{ secoes_site.matricula_como_funciona.rotulo|default:"Como funciona" }}</span>
+      <h2>{{ secoes_site.matricula_como_funciona.titulo|default:"Preencha com calma, etapa por etapa" }}</h2>
+      <p>{{ secoes_site.matricula_como_funciona.texto|default:"O formulário foi dividido para facilitar o preenchimento pelo celular. Tenha em mãos os dados do estudante, responsáveis, endereço e contatos de emergência." }}</p>
+      {% if secoes_site.matricula_como_funciona.imagem %}<img class="editable-public-image" src="{{ secoes_site.matricula_como_funciona.imagem.url }}" alt="">{% endif %}
     </div>
     <a class="button button--primary enrollment-start" href="{% url 'matricula_publica' %}">
       Iniciar matrícula
@@ -29,22 +30,25 @@
     <article>
       <span class="enrollment-steps__number">01</span>
       <span class="enrollment-steps__icon"><i data-lucide="badge-check"></i></span>
-      <h3>Confirme a orientação</h3>
-      <p>Use o formulário após a orientação da escola ou o encaminhamento do Cadastro Escolar.</p>
+      {% if secoes_site.matricula_passo1.imagem %}<img class="editable-public-image" src="{{ secoes_site.matricula_passo1.imagem.url }}" alt="">{% endif %}
+      <h3>{{ secoes_site.matricula_passo1.titulo|default:"Confirme a orientação" }}</h3>
+      <p>{{ secoes_site.matricula_passo1.texto|default:"Use o formulário após a orientação da escola ou o encaminhamento do Cadastro Escolar." }}</p>
     </article>
 
     <article>
       <span class="enrollment-steps__number">02</span>
       <span class="enrollment-steps__icon enrollment-steps__icon--blue"><i data-lucide="clipboard-pen-line"></i></span>
-      <h3>Preencha os dados</h3>
-      <p>Informe os dados do aluno e responsáveis. Você verá o progresso durante todo o processo.</p>
+      {% if secoes_site.matricula_passo2.imagem %}<img class="editable-public-image" src="{{ secoes_site.matricula_passo2.imagem.url }}" alt="">{% endif %}
+      <h3>{{ secoes_site.matricula_passo2.titulo|default:"Preencha os dados" }}</h3>
+      <p>{{ secoes_site.matricula_passo2.texto|default:"Informe os dados do aluno e responsáveis. Você verá o progresso durante todo o processo." }}</p>
     </article>
 
     <article>
       <span class="enrollment-steps__number">03</span>
       <span class="enrollment-steps__icon enrollment-steps__icon--green"><i data-lucide="school"></i></span>
-      <h3>Conclua na escola</h3>
-      <p>A vaga é confirmada somente após a conferência dos documentos e a assinatura presencial.</p>
+      {% if secoes_site.matricula_passo3.imagem %}<img class="editable-public-image" src="{{ secoes_site.matricula_passo3.imagem.url }}" alt="">{% endif %}
+      <h3>{{ secoes_site.matricula_passo3.titulo|default:"Conclua na escola" }}</h3>
+      <p>{{ secoes_site.matricula_passo3.texto|default:"A vaga é confirmada somente após a conferência dos documentos e a assinatura presencial." }}</p>
     </article>
   </div>
 </section>
@@ -52,9 +56,10 @@
 <section class="section section--tinted">
   <div class="enrollment-help">
     <article class="prose-card">
-      <span class="section-kicker">Antes de começar</span>
-      <h2>Tenha as informações em mãos</h2>
-      <p>Separe documentos pessoais, comprovante de residência, contatos de emergência e informações de saúde ou acompanhamento do estudante quando aplicável.</p>
+      <span class="section-kicker">{{ secoes_site.matricula_antes.rotulo|default:"Antes de começar" }}</span>
+      <h2>{{ secoes_site.matricula_antes.titulo|default:"Tenha as informações em mãos" }}</h2>
+      <p>{{ secoes_site.matricula_antes.texto|default:"Separe documentos pessoais, comprovante de residência, contatos de emergência e informações de saúde ou acompanhamento do estudante quando aplicável." }}</p>
+      {% if secoes_site.matricula_antes.imagem %}<img class="editable-public-image" src="{{ secoes_site.matricula_antes.imagem.url }}" alt="">{% endif %}
       <div class="enrollment-callout">
         <i data-lucide="triangle-alert"></i>
         <span>O preenchimento online <strong>não garante a vaga automaticamente</strong>. A matrícula precisa ser concluída presencialmente.</span>
@@ -62,9 +67,10 @@
     </article>
 
     <article class="info-card enrollment-support">
-      <span class="section-kicker">Precisa de ajuda?</span>
-      <h2>Estamos disponíveis</h2>
-      <p>Se tiver dúvidas antes ou durante o preenchimento, consulte as perguntas frequentes ou entre em contato com a escola.</p>
+      <span class="section-kicker">{{ secoes_site.matricula_ajuda.rotulo|default:"Precisa de ajuda?" }}</span>
+      <h2>{{ secoes_site.matricula_ajuda.titulo|default:"Estamos disponíveis" }}</h2>
+      <p>{{ secoes_site.matricula_ajuda.texto|default:"Se tiver dúvidas antes ou durante o preenchimento, consulte as perguntas frequentes ou entre em contato com a escola." }}</p>
+      {% if secoes_site.matricula_ajuda.imagem %}<img class="editable-public-image" src="{{ secoes_site.matricula_ajuda.imagem.url }}" alt="">{% endif %}
       <div class="enrollment-support__links">
         {% if paginas_ativas.faq %}
           <a class="button button--soft" href="{% url 'site_publico:faq' %}">
@@ -85,9 +91,9 @@
 
 <section class="section enrollment-final-cta">
   <div>
-    <span class="section-kicker">Pronto para começar?</span>
-    <h2>O formulário salva os dados durante esta sessão</h2>
-    <p>Reserve alguns minutos e revise as informações antes de finalizar.</p>
+    <span class="section-kicker">{{ secoes_site.matricula_final.rotulo|default:"Pronto para começar?" }}</span>
+    <h2>{{ secoes_site.matricula_final.titulo|default:"O formulário salva os dados durante esta sessão" }}</h2>
+    <p>{{ secoes_site.matricula_final.texto|default:"Reserve alguns minutos e revise as informações antes de finalizar." }}</p>
   </div>
   <a class="button button--primary" href="{% url 'matricula_publica' %}">
     Abrir formulário
