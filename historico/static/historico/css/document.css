@@ -96,17 +96,18 @@
 
 .official-letterhead {
   height: 17.80mm;
-  padding: 2.8mm 1.5mm .25mm;
+  padding: .65mm 1mm .35mm;
   display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
+  align-items: center;
+  justify-content: center;
 }
 
 .official-letterhead img {
   display: block;
   width: 100%;
-  height: 14mm;
-  object-fit: fill;
+  height: auto;
+  max-height: 16.8mm;
+  object-fit: contain;
 }
 
 .certificate-section {
@@ -614,8 +615,9 @@
 
 .issue-date strong {
   display: block;
-  padding-top: .55mm;
-  border-top: .55pt solid var(--doc-black);
+  padding: 0 0 .55mm;
+  border-top: 0;
+  border-bottom: .55pt solid var(--doc-black);
   font-size: 8pt;
   line-height: 1.15;
 }
