@@ -47,9 +47,15 @@
     border-color: #111 !important;
   }
 
-  .signature-line,
-  .issue-date strong {
+  .signature-line {
     border-top-width: .65pt !important;
+  }
+
+  .issue-date strong {
+    padding-top: 0 !important;
+    padding-bottom: .55mm !important;
+    border-top: 0 !important;
+    border-bottom: .65pt solid #111 !important;
   }
 
   .missing-year-diagonal line {
@@ -58,13 +64,20 @@
     shape-rendering: crispEdges !important;
   }
 
+  .official-letterhead {
+    padding: .65mm 1mm .35mm !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
   .official-letterhead img {
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
     width: 100% !important;
-    height: 14mm !important;
-    object-fit: fill !important;
+    height: auto !important;
+    max-height: 16.8mm !important;
+    object-fit: contain !important;
   }
 
   .legal-column {
