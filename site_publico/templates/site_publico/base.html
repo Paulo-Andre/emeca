@@ -21,7 +21,11 @@
     <div class="site-header__frame">
       <div class="site-header__top">
         <a class="site-brand" href="{% url 'site_publico:home' %}" aria-label="Página inicial da escola">
-          <img src="{% static 'imagens/logo.svg' %}" alt="">
+          {% if config_site.logo_site %}
+            <img src="{{ config_site.logo_site.url }}" alt="">
+          {% else %}
+            <img src="{% static 'imagens/logo.svg' %}" alt="">
+          {% endif %}
           <span>
             <strong>{{ config_site.nome_escola|default:"E. M. Egídio Cordeiro Aquino" }}</strong>
             <small>{{ config_site.subtitulo|default:"Educação pública, acolhimento e aprendizagem" }}</small>
@@ -124,7 +128,11 @@
   <footer class="site-footer">
     <div class="site-footer__inner">
       <div class="site-footer__brand">
-        <img src="{% static 'imagens/logo.svg' %}" alt="">
+        {% if config_site.logo_site %}
+            <img src="{{ config_site.logo_site.url }}" alt="">
+          {% else %}
+            <img src="{% static 'imagens/logo.svg' %}" alt="">
+          {% endif %}
         <div>
           <strong>{{ config_site.nome_escola|default:"E. M. Egídio Cordeiro Aquino" }}</strong>
           <p>{{ config_site.subtitulo|default:"Educação, acolhimento e aprendizagem construídos juntos." }}</p>
