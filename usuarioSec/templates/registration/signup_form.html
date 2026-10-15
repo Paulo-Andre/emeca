@@ -7,63 +7,83 @@
   <title>Secretaria · Cadastrar usuário</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261015-02">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+  <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261015-03">
   <style>
-    .account-page {
-      min-height: 100vh;
-      padding: 28px;
-      display: grid;
-      place-items: center;
-      background:
-        radial-gradient(circle at 10% 10%, rgba(15,95,120,.08), transparent 30%),
-        var(--school-bg);
+    .account-main {
+      flex: 1;
+      padding: 38px clamp(22px, 4vw, 56px) 56px;
     }
-    .account-card {
-      width: min(470px, 100%);
-      padding: 34px;
-      border: 1px solid var(--school-border);
-      border-radius: 24px;
-      background: #fff;
-      box-shadow: var(--school-shadow);
+
+    .account-shell {
+      width: min(760px, 100%);
+      margin: 0 auto;
     }
-    .account-brand {
+
+    .account-toolbar {
+      margin-bottom: 18px;
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 12px;
-      margin-bottom: 26px;
     }
-    .account-brand img {
-      width: 52px;
-      height: 52px;
-      padding: 5px;
-      object-fit: contain;
-      border-radius: 14px;
-      background: #f0f7f9;
+
+    .account-back {
+      min-height: 40px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 13px;
+      border: 1px solid var(--school-border);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--school-primary);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 700;
     }
-    .account-brand strong {
-      display: block;
-      color: var(--school-primary-strong);
-      font-size: 14px;
+
+    .account-back:hover {
+      background: #eef6f8;
     }
-    .account-brand span {
-      color: var(--school-muted);
-      font-size: 11px;
+
+    .account-card {
+      padding: 30px;
+      border: 1px solid var(--school-border);
+      border-radius: var(--school-radius-lg);
+      background: #fff;
+      box-shadow: var(--school-shadow-soft);
     }
+
     .account-card h1 {
-      margin: 0 0 7px;
+      margin: 0 0 8px;
       color: var(--school-text);
-      font-size: 27px;
+      font-size: clamp(1.65rem, 3vw, 2rem);
       letter-spacing: -.03em;
     }
+
     .account-card > p {
-      margin: 0 0 24px;
+      margin: 0 0 25px;
       color: var(--school-muted);
       font-size: 13px;
       line-height: 1.55;
     }
-    .account-field {
-      margin-bottom: 16px;
+
+    .account-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 17px;
     }
+
+    .account-field {
+      min-width: 0;
+    }
+
+    .account-field.account-full {
+      grid-column: 1 / -1;
+    }
+
     .account-field label {
       display: block;
       margin-bottom: 7px;
@@ -71,10 +91,14 @@
       font-size: 12px;
       font-weight: 700;
     }
+
     .account-field input {
+      display: block;
       width: 100%;
+      height: 46px;
       min-height: 46px;
-      padding: 11px 13px;
+      margin: 0;
+      padding: 10px 12px;
       border: 1px solid var(--school-border);
       border-radius: 10px;
       background: #fbfcfd;
@@ -82,30 +106,42 @@
       font: inherit;
       outline: none;
     }
+
     .account-field input:focus {
       border-color: var(--school-primary);
       background: #fff;
       box-shadow: 0 0 0 4px rgba(15,95,120,.1);
     }
-    .account-password {
+
+    .account-password-wrap {
       position: relative;
     }
-    .account-password input {
-      padding-right: 74px;
+
+    .account-password-wrap input {
+      padding-right: 78px;
     }
+
     .account-toggle {
       position: absolute;
+      top: 50%;
       right: 11px;
-      bottom: 14px;
+      transform: translateY(-50%);
+      padding: 6px 7px;
       border: 0;
+      border-radius: 7px;
       background: transparent;
       color: var(--school-primary);
       font-size: 12px;
       font-weight: 700;
       cursor: pointer;
     }
+
+    .account-toggle:hover {
+      background: #eef6f8;
+    }
+
     .account-error {
-      margin-bottom: 18px;
+      margin-bottom: 20px;
       padding: 12px 14px;
       border: 1px solid #f0c8c4;
       border-radius: 10px;
@@ -114,88 +150,186 @@
       font-size: 12px;
       line-height: 1.5;
     }
+
+    .account-field .errorlist {
+      margin: 6px 0 0;
+      padding: 0;
+      list-style: none;
+      color: var(--school-danger);
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .account-actions {
+      margin-top: 24px;
+      padding-top: 20px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      border-top: 1px solid #e9eff2;
+    }
+
+    .account-cancel,
     .account-submit {
-      width: 100%;
-      min-height: 46px;
-      margin-top: 4px;
-      border: 0;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 18px;
       border-radius: 10px;
-      background: var(--school-primary);
-      color: #fff;
+      font-size: 13px;
       font-weight: 800;
+      text-decoration: none;
       cursor: pointer;
     }
+
+    .account-cancel {
+      border: 1px solid var(--school-border);
+      background: #fff;
+      color: #405b66;
+    }
+
+    .account-submit {
+      border: 0;
+      background: var(--school-primary);
+      color: #fff;
+      box-shadow: 0 7px 18px rgba(15,95,120,.16);
+    }
+
     .account-submit:hover {
       background: var(--school-primary-hover);
     }
-    .account-back {
-      margin-top: 18px;
-      text-align: center;
-      font-size: 12px;
+
+    @media (max-width: 980px) {
+      .account-main {
+        padding: 26px 18px 44px;
+      }
     }
-    .account-back a {
-      color: var(--school-primary);
-      font-weight: 700;
-      text-decoration: none;
-    }
-    @media (max-width: 520px) {
-      .account-page { padding: 12px; }
-      .account-card { padding: 26px 20px; border-radius: 20px; }
+
+    @media (max-width: 620px) {
+      .account-main {
+        padding: 20px 12px 36px;
+      }
+
+      .account-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .account-field.account-full {
+        grid-column: auto;
+      }
+
+      .account-card {
+        padding: 22px 18px;
+        border-radius: 18px;
+      }
+
+      .account-toolbar {
+        margin-bottom: 12px;
+      }
+
+      .account-actions {
+        flex-direction: column-reverse;
+      }
+
+      .account-cancel,
+      .account-submit {
+        width: 100%;
+      }
     }
   </style>
 </head>
 <body>
-  <main class="account-page">
-    <section class="account-card">
-      <div class="account-brand">
-        <img src="{% static 'imagens/logo.svg' %}" alt="">
-        <div>
-          <strong>E. M. Egídio Cordeiro Aquino</strong>
-          <span>Secretaria Digital</span>
-        </div>
+  <aside class="sidebar" aria-label="Navegação da secretaria">
+    <div class="logo">
+      <img class="logo__mark" src="{% static 'imagens/logo.svg' %}" alt="">
+      <span class="logo__copy">
+        <strong>E. M. Egídio Cordeiro Aquino</strong>
+        <span>Secretaria Digital</span>
+      </span>
+    </div>
+
+    <div class="nav-section-label">Atendimento</div>
+    <a class="nav-item" href="{% url 'dashboard' %}">
+      <i data-lucide="users-round"></i><span>Matrículas</span>
+    </a>
+    <a class="nav-item" href="{% url 'telaDeclaracao' %}">
+      <i data-lucide="file-text"></i><span>Declarações</span>
+    </a>
+    <a class="nav-item" href="{% url 'historico:inicio' %}">
+      <i data-lucide="graduation-cap"></i><span>Histórico Escolar</span>
+    </a>
+
+    <div class="nav-section-label">Administração</div>
+    <a class="nav-item active" href="{% url 'cadastro' %}">
+      <i data-lucide="user-plus"></i><span>Cadastrar usuário</span>
+    </a>
+    <a class="nav-item" href="{% url 'importar_alunos' %}">
+      <i data-lucide="file-up"></i><span>Importar declarações</span>
+    </a>
+
+    <a class="nav-item nav-logout" href="{% url 'sair' %}">
+      <i data-lucide="log-out"></i><span>Sair</span>
+    </a>
+  </aside>
+
+  <main class="account-main">
+    <div class="account-shell">
+      <div class="account-toolbar">
+        <a class="account-back" href="{% url 'dashboard' %}">
+          <i data-lucide="arrow-left" size="17"></i>
+          Voltar para a Secretaria
+        </a>
       </div>
 
-      <h1>Cadastrar usuário</h1>
-      <p>Crie um acesso para um servidor autorizado utilizar os serviços internos da secretaria.</p>
+      <section class="account-card">
+        <h1>Cadastrar usuário</h1>
+        <p>Crie um acesso para um servidor autorizado utilizar os serviços internos da secretaria.</p>
 
-      {% if form.errors %}
-        <div class="account-error" role="alert">
-          Confira os campos abaixo. A senha deve atender aos requisitos de segurança do sistema.
-        </div>
-      {% endif %}
+        {% if form.errors %}
+          <div class="account-error" role="alert">
+            Confira os campos abaixo. A senha deve atender aos requisitos de segurança do sistema.
+          </div>
+        {% endif %}
 
-      <form method="POST">
-        {% csrf_token %}
+        <form method="POST">
+          {% csrf_token %}
 
-        <div class="account-field">
-          <label for="id_username">Usuário</label>
-          {{ form.username }}
-          {{ form.username.errors }}
-        </div>
+          <div class="account-grid">
+            <div class="account-field">
+              <label for="id_username">Usuário</label>
+              {{ form.username }}
+              {{ form.username.errors }}
+            </div>
 
-        <div class="account-field">
-          <label for="id_email">E-mail</label>
-          {{ form.email }}
-          {{ form.email.errors }}
-        </div>
+            <div class="account-field">
+              <label for="id_email">E-mail</label>
+              {{ form.email }}
+              {{ form.email.errors }}
+            </div>
 
-        <div class="account-field account-password">
-          <label for="id_password">Senha</label>
-          {{ form.password }}
-          <button class="account-toggle" type="button" onclick="togglePassword()">Mostrar</button>
-          {{ form.password.errors }}
-        </div>
+            <div class="account-field account-full">
+              <label for="id_password">Senha</label>
+              <div class="account-password-wrap">
+                {{ form.password }}
+                <button class="account-toggle" type="button" onclick="togglePassword()" aria-label="Mostrar ou ocultar senha">Mostrar</button>
+              </div>
+              {{ form.password.errors }}
+            </div>
+          </div>
 
-        <button class="account-submit" type="submit">Cadastrar usuário</button>
-      </form>
-
-      <div class="account-back">
-        <a href="{% url 'dashboard' %}">Voltar para a Secretaria</a>
-      </div>
-    </section>
+          <div class="account-actions">
+            <a class="account-cancel" href="{% url 'dashboard' %}">Cancelar</a>
+            <button class="account-submit" type="submit">Cadastrar usuário</button>
+          </div>
+        </form>
+      </section>
+    </div>
   </main>
 
   <script>
+    lucide.createIcons();
+
     function togglePassword() {
       const campo = document.getElementById("id_password");
       const botao = document.querySelector(".account-toggle");
