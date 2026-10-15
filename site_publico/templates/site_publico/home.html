@@ -32,10 +32,12 @@
               <span class="hero-badge">Nossa escola</span>
               <h1>Aprendizagem, projetos e participação</h1>
               <p>Conheça as atividades, projetos e momentos que fazem parte da vida escolar.</p>
+              {% if paginas_ativas.projetos %}
               <a class="button button--light" href="{% url 'site_publico:projetos' %}">
                 Conhecer projetos
                 <i data-lucide="arrow-right"></i>
               </a>
+            {% endif %}
             </div>
           </article>
         {% endif %}
@@ -46,10 +48,12 @@
             <span class="hero-badge">Bem-vindos</span>
             <h1>{{ config_site.nome_escola|default:"E. M. Egídio Cordeiro Aquino" }}</h1>
             <p>{{ config_site.subtitulo|default:"Educação, acolhimento e aprendizagem construídos juntos." }}</p>
-            <a class="button button--light" href="{% url 'site_publico:escola' %}">
-              Conheça a escola
-              <i data-lucide="arrow-right"></i>
-            </a>
+            {% if paginas_ativas.escola %}
+              <a class="button button--light" href="{% url 'site_publico:escola' %}">
+                Conheça a escola
+                <i data-lucide="arrow-right"></i>
+              </a>
+            {% endif %}
           </div>
         </article>
 
@@ -59,10 +63,12 @@
             <span class="hero-badge">Aprender e participar</span>
             <h1>Atividades, projetos e notícias da escola</h1>
             <p>Quando fotos e notícias forem publicadas, elas passam a ocupar este carrossel automaticamente.</p>
-            <a class="button button--light" href="{% url 'site_publico:noticias' %}">
-              Ver notícias
-              <i data-lucide="arrow-right"></i>
-            </a>
+            {% if paginas_ativas.noticias %}
+              <a class="button button--light" href="{% url 'site_publico:noticias' %}">
+                Ver notícias
+                <i data-lucide="arrow-right"></i>
+              </a>
+            {% endif %}
           </div>
         </article>
       {% endif %}
@@ -134,33 +140,41 @@
   </div>
 
   <div class="quick-grid">
+    {% if paginas_ativas.matricula %}
     <a class="quick-card quick-card--red" href="{% url 'site_publico:matricula_landing' %}">
       <span class="quick-card__icon"><i data-lucide="clipboard-pen-line"></i></span>
       <strong>Matrícula Online</strong>
       <span>Orientações e acesso ao formulário.</span>
       <em>Começar <i data-lucide="arrow-up-right"></i></em>
     </a>
+    {% endif %}
 
+    {% if paginas_ativas.atividades %}
     <a class="quick-card quick-card--green" href="{% url 'site_publico:atividades' %}">
       <span class="quick-card__icon"><i data-lucide="gamepad-2"></i></span>
       <strong>Atividades e Jogos</strong>
       <span>Jogos, quizzes e desafios educativos.</span>
       <em>Explorar <i data-lucide="arrow-up-right"></i></em>
     </a>
+    {% endif %}
 
+    {% if paginas_ativas.documentos %}
     <a class="quick-card quick-card--green-alt" href="{% url 'site_publico:documentos' %}">
       <span class="quick-card__icon"><i data-lucide="folder-down"></i></span>
       <strong>Documentos</strong>
       <span>Arquivos, formulários e orientações.</span>
       <em>Acessar <i data-lucide="arrow-up-right"></i></em>
     </a>
+    {% endif %}
 
+    {% if paginas_ativas.contato %}
     <a class="quick-card quick-card--gold" href="{% url 'site_publico:contato' %}">
       <span class="quick-card__icon"><i data-lucide="messages-square"></i></span>
       <strong>Fale com a escola</strong>
       <span>Envie uma mensagem para nossa equipe.</span>
       <em>Contato <i data-lucide="arrow-up-right"></i></em>
     </a>
+    {% endif %}
   </div>
 </section>
 
@@ -174,10 +188,12 @@
       {% else %}
         <p>A escola é um espaço de aprendizagem, convivência e desenvolvimento. Nosso objetivo é aproximar estudantes, famílias e comunidade em torno de uma educação pública acolhedora, responsável e participativa.</p>
       {% endif %}
-      <a class="button button--soft" href="{% url 'site_publico:escola' %}">
-        Conheça mais sobre a escola
-        <i data-lucide="arrow-right"></i>
-      </a>
+      {% if paginas_ativas.escola %}
+        <a class="button button--soft" href="{% url 'site_publico:escola' %}">
+          Conheça mais sobre a escola
+          <i data-lucide="arrow-right"></i>
+        </a>
+      {% endif %}
     </div>
 
     <div class="school-model__mark" aria-hidden="true">
@@ -373,6 +389,7 @@
 </section>
 {% endif %}
 
+{% if paginas_ativas.contato %}
 <section class="section">
   <div class="home-contact-band">
     <div class="home-contact-band__icon"><i data-lucide="school"></i></div>
@@ -387,4 +404,5 @@
     </a>
   </div>
 </section>
+{% endif %}
 {% endblock %}
