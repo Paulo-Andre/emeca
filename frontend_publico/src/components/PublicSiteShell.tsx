@@ -4,6 +4,11 @@ import "./css/publicSiteShell.css";
 
 type PaginasAtivas = Record<string, boolean>;
 
+type SitePublico = {
+  nome_escola: string;
+  subtitulo: string;
+};
+
 const paginasPadrao: PaginasAtivas = {
   escola: true,
   vida_escolar: true,
@@ -21,6 +26,10 @@ const paginasPadrao: PaginasAtivas = {
 export default function PublicSiteShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [paginas, setPaginas] = useState<PaginasAtivas>(paginasPadrao);
+  const [site, setSite] = useState<SitePublico>({
+    nome_escola: "E. M. Egídio Cordeiro Aquino",
+    subtitulo: "Educação pública, acolhimento e aprendizagem",
+  });
   const logo = `${import.meta.env.BASE_URL}logo_escola.svg`;
 
   useEffect(() => {
@@ -31,6 +40,12 @@ export default function PublicSiteShell({ children }: { children: ReactNode }) {
       .then((data) => {
         if (ativo && data?.paginas) {
           setPaginas({ ...paginasPadrao, ...data.paginas });
+        }
+        if (ativo && data?.site) {
+          setSite({
+            nome_escola: data.site.nome_escola || "E. M. Egídio Cordeiro Aquino",
+            subtitulo: data.site.subtitulo || "Educação pública, acolhimento e aprendizagem",
+          });
         }
       })
       .catch(() => {
@@ -52,8 +67,8 @@ export default function PublicSiteShell({ children }: { children: ReactNode }) {
             <a className="school-public-brand" href="/" onClick={closeMenu}>
               <img src={logo} alt="" />
               <span>
-                <strong>E. M. Egídio Cordeiro Aquino</strong>
-                <small>Educação pública, acolhimento e aprendizagem</small>
+                <strong>{site.nome_escola}</strong>
+                <small>{site.subtitulo}</small>
               </span>
             </a>
 
