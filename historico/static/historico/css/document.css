@@ -778,114 +778,64 @@
     font-size: 6.75pt !important;
   }
 
-  /* Bordas de impressão reforçadas.
-     Microsoft Print to PDF e alguns drivers eliminam traços submilimétricos.
-     Mantemos a geometria original e reforçamos só a renderização das linhas. */
-  html,
-  body,
-  .document-sheet {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    forced-color-adjust: none !important;
-  }
-
-  .official-page-border {
-    border: .34mm solid #000 !important;
-  }
-
+  /* Bordas reforçadas em unidade física.
+     Evita que linhas finas desapareçam na rasterização do navegador/PDF. */
   .certificate-section {
-    border: .32mm solid #000 !important;
+    border: .25mm solid #000 !important;
   }
 
   .certificate-section h1 {
-    border-bottom: .30mm solid #000 !important;
-  }
-
-  .certificate-table {
-    border-collapse: collapse !important;
-    border-spacing: 0 !important;
+    border-bottom: .22mm solid #000 !important;
   }
 
   .certificate-table .value {
-    border-bottom: .30mm solid #000 !important;
-  }
-
-  .history-title {
-    border-bottom: .32mm solid #000 !important;
+    border-bottom: .22mm solid #000 !important;
   }
 
   .history-frame {
-    border: .34mm solid #000 !important;
+    border: .25mm solid #000 !important;
   }
 
   .history-left {
-    border-right: .34mm solid #000 !important;
+    border-right: .25mm solid #000 !important;
   }
 
   .official-history-table {
     border-collapse: collapse !important;
-    border-spacing: 0 !important;
-    border: .34mm solid #000 !important;
+    border: .25mm solid #000 !important;
   }
 
   .official-history-table th,
   .official-history-table td {
-    position: relative !important;
-    border: .30mm solid #000 !important;
-    box-shadow: none !important;
-  }
-
-  /* Segunda camada independente do algoritmo de bordas colapsadas.
-     Desenha os lados direito/inferior dentro de cada célula, evitando
-     segmentos ausentes em PDF/impressoras do Windows. */
-  .official-history-table th::after,
-  .official-history-table td::after {
-    content: "" !important;
-    position: absolute !important;
-    z-index: 4 !important;
-    inset: 0 !important;
-    border-right: .12mm solid #000 !important;
-    border-bottom: .12mm solid #000 !important;
-    pointer-events: none !important;
-    box-sizing: border-box !important;
+    border: .25mm solid #000 !important;
   }
 
   .official-history-table tbody tr.year-group-start:not(:first-child) > * {
-    border-top: .34mm solid #000 !important;
+    border-top: .25mm solid #000 !important;
   }
 
   .bottom-observation {
-    border-top: .30mm solid #000 !important;
-    border-bottom: .30mm solid #000 !important;
+    border-top: .25mm solid #000 !important;
+    border-bottom: .25mm solid #000 !important;
   }
 
   .signature-line,
   .issue-date strong {
-    border-top: .30mm solid #000 !important;
-  }
-
-  .missing-year-diagonal line {
-    stroke: #000 !important;
-    stroke-width: 1 !important;
-    shape-rendering: crispEdges !important;
+    border-top: .25mm solid #000 !important;
   }
 
   .official-page-border,
   .certificate-section,
   .certificate-table,
-  .history-title,
   .history-frame,
-  .history-left,
   .official-history-table,
   .official-history-table th,
   .official-history-table td,
   .bottom-observation,
   .signature-line,
-  .issue-date strong,
-  .missing-year-diagonal {
+  .issue-date strong {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
-    forced-color-adjust: none !important;
   }
 }
 
