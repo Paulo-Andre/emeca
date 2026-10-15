@@ -1,10 +1,46 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ChevronDown, ClipboardPenLine, Ellipsis, FileText, Gamepad2, GraduationCap, Home, LockKeyhole, Menu, Newspaper, School, UsersRound, X } from "lucide-react";
 import "./css/publicSiteShell.css";
 
+type PaginasAtivas = Record<string, boolean>;
+
+const paginasPadrao: PaginasAtivas = {
+  escola: true,
+  vida_escolar: true,
+  atividades: true,
+  projetos: true,
+  noticias: true,
+  galeria: true,
+  matricula: true,
+  boletim: true,
+  documentos: true,
+  faq: true,
+  contato: true,
+};
+
 export default function PublicSiteShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [paginas, setPaginas] = useState<PaginasAtivas>(paginasPadrao);
   const logo = `${import.meta.env.BASE_URL}logo_escola.svg`;
+
+  useEffect(() => {
+    let ativo = true;
+
+    fetch("/configuracao-site-publica/", { credentials: "same-origin" })
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((data) => {
+        if (ativo && data?.paginas) {
+          setPaginas({ ...paginasPadrao, ...data.paginas });
+        }
+      })
+      .catch(() => {
+        // Mantém a navegação padrão caso a configuração ainda não esteja disponível.
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, []);
 
   const closeMenu = () => setMenuOpen(false);
 
@@ -22,15 +58,19 @@ export default function PublicSiteShell({ children }: { children: ReactNode }) {
             </a>
 
             <div className="school-public-actions">
-              <a className="shell-report" href="/boletim/" onClick={closeMenu}>
-                <FileText size={20} />
-                <span>Boletim</span>
-              </a>
+              {paginas.boletim && (
+                <a className="shell-report" href="/boletim/" onClick={closeMenu}>
+                  <FileText size={20} />
+                  <span>Boletim</span>
+                </a>
+              )}
 
-              <a className="shell-enrollment active" href="/matricula-escolar/" onClick={closeMenu}>
-                <ClipboardPenLine size={20} />
-                <span>Matrícula</span>
-              </a>
+              {paginas.matricula && (
+                <a className="shell-enrollment active" href="/matricula-escolar/" onClick={closeMenu}>
+                  <ClipboardPenLine size={20} />
+                  <span>Matrícula</span>
+                </a>
+              )}
             </div>
           </div>
         </div>
@@ -54,11 +94,11 @@ export default function PublicSiteShell({ children }: { children: ReactNode }) {
           aria-label="Menu principal"
         >
           <a className="shell-nav-main" href="/" onClick={closeMenu}><Home /><span>Início</span></a>
-          <a className="shell-nav-main" href="/a-escola/" onClick={closeMenu}><School /><span>A Escola</span></a>
-          <a className="shell-nav-main" href="/vida-escolar/" onClick={closeMenu}><GraduationCap /><span>Vida Escolar</span></a>
-          <a className="shell-nav-main" href="/atividades-jogos/" onClick={closeMenu}><Gamepad2 /><span>Atividades e Jogos</span></a>
-          <a className="shell-nav-main" href="/projetos/" onClick={closeMenu}><UsersRound /><span>Projetos</span></a>
-          <a className="shell-nav-main" href="/noticias/" onClick={closeMenu}><Newspaper /><span>Notícias</span></a>
+          {paginas.escola && <a className="shell-nav-main" href="/a-escola/" onClick={closeMenu}><School /><span>A Escola</span></a>}
+          {paginas.vida_escolar && <a className="shell-nav-main" href="/vida-escolar/" onClick={closeMenu}><GraduationCap /><span>Vida Escolar</span></a>}
+          {paginas.atividades && <a className="shell-nav-main" href="/atividades-jogos/" onClick={closeMenu}><Gamepad2 /><span>Atividades e Jogos</span></a>}
+          {paginas.projetos && <a className="shell-nav-main" href="/projetos/" onClick={closeMenu}><UsersRound /><span>Projetos</span></a>}
+          {paginas.noticias && <a className="shell-nav-main" href="/noticias/" onClick={closeMenu}><Newspaper /><span>Notícias</span></a>}
 
           <details className="school-public-more">
             <summary>
@@ -67,11 +107,11 @@ export default function PublicSiteShell({ children }: { children: ReactNode }) {
               <ChevronDown size={16} />
             </summary>
             <div className="school-public-more__panel">
-              <a href="/galeria/" onClick={closeMenu}>Galeria</a>
-              <a href="/documentos/" onClick={closeMenu}>Documentos</a>
-              <a href="/perguntas-frequentes/" onClick={closeMenu}>Perguntas frequentes</a>
-              <a href="/contato/" onClick={closeMenu}>Contato</a>
-              <a href="/login/" onClick={closeMenu}>Área Interna</a>
+              {paginas.galeria && <a href="/galeria/" onClick={closeMenu}>Galeria</a>}
+              {paginas.documentos && <a href="/documentos/" onClick={closeMenu}>Documentos</a>}
+              {paginas.faq && <a href="/perguntas-frequentes/" onClick={closeMenu}>Perguntas frequentes</a>}
+              {paginas.contato && <a href="/contato/" onClick={closeMenu}>Contato</a>}
+              <a href="/login/" onClick={closeMenu}><LockKeyhole size={15} /> Área Interna</a>
             </div>
           </details>
         </nav>
@@ -96,7 +136,7 @@ export default function PublicSiteShell({ children }: { children: ReactNode }) {
 
           <div className="school-public-footer__links">
             <a href="/">Voltar ao site</a>
-            <a href="/contato/">Contato</a>
+            {paginas.contato && <a href="/contato/">Contato</a>}
             <a href="/login/">Área Interna</a>
           </div>
         </div>
