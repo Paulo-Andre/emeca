@@ -1,15 +1,15 @@
 :root {
-  --shell-wine: #800000;
-  --shell-wine-dark: #5b0000;
-  --shell-wine-soft: #f7ecec;
+  --shell-wine: #395723;
+  --shell-wine-dark: #243b17;
+  --shell-wine-soft: #eef4ea;
   --shell-gold: #d4aa00;
   --shell-gold-bright: #ffc200;
-  --shell-blue: #5c9ad7;
+  --shell-blue: #800000;
   --shell-green: #395723;
-  --shell-text: #3f3a3a;
-  --shell-muted: #706a68;
-  --shell-border: #e6dedb;
-  --shell-bg: #f7f4f1;
+  --shell-text: #374033;
+  --shell-muted: #697263;
+  --shell-border: #dde5d7;
+  --shell-bg: #f5f8f2;
 }
 
 .school-public-shell {
@@ -103,7 +103,7 @@
   border-radius: 15px;
   background: #fff;
   object-fit: contain;
-  box-shadow: 0 5px 16px rgba(73,34,31,.08);
+  box-shadow: 0 5px 16px rgba(42,67,29,.08);
 }
 
 .school-public-brand > span {
@@ -121,7 +121,7 @@
 }
 
 .school-public-brand small {
-  color: #847b78;
+  color: #737d6d;
   font-size: 10px;
   font-weight: 600;
 }
@@ -143,7 +143,7 @@
   justify-content: center;
   gap: 5px;
   border-radius: 9px;
-  color: #5c5350;
+  color: #56604f;
   font-size: 11.5px;
   font-weight: 750;
   text-decoration: none;
@@ -178,20 +178,20 @@
   border: 1px solid var(--shell-border);
   border-radius: 13px;
   background: #fff;
-  box-shadow: 0 18px 50px rgba(73,34,31,.16);
+  box-shadow: 0 18px 50px rgba(42,67,29,.16);
 }
 
 .school-public-more__panel a {
   padding: 9px 10px;
   border-radius: 8px;
-  color: #544b48;
+  color: #545d4e;
   font-size: 11px;
   font-weight: 700;
   text-decoration: none;
 }
 
 .school-public-more__panel a:hover {
-  background: #fbf8f5;
+  background: #f7faf4;
   color: var(--shell-wine);
 }
 
@@ -201,7 +201,7 @@
   padding: 0 13px;
   background: var(--shell-wine);
   color: #fff;
-  box-shadow: 0 7px 18px rgba(128,0,0,.17);
+  box-shadow: 0 7px 18px rgba(57,87,35,.18);
 }
 
 .school-public-nav .shell-enrollment:hover,
@@ -232,7 +232,7 @@
 
 .school-public-footer {
   margin-top: auto;
-  background: #2d1111;
+  background: #233718;
   color: #fff;
 }
 
@@ -271,7 +271,7 @@
 }
 
 .school-public-footer__brand span {
-  color: #cdb1af;
+  color: #c8d4c0;
   font-size: 9.5px;
 }
 
@@ -281,7 +281,7 @@
 }
 
 .school-public-footer__links a {
-  color: #ddc7c5;
+  color: #d7e2d0;
   font-size: 10.5px;
   font-weight: 700;
   text-decoration: none;
@@ -315,7 +315,7 @@
     border: 1px solid var(--shell-border);
     border-radius: 17px;
     background: #fff;
-    box-shadow: 0 20px 60px rgba(73,34,31,.18);
+    box-shadow: 0 20px 60px rgba(42,67,29,.18);
   }
 
   .school-public-nav.is-open {
@@ -336,7 +336,7 @@
     margin: 4px 0 6px;
     border: 0;
     box-shadow: none;
-    background: #fbf8f5;
+    background: #f7faf4;
   }
 
   .school-public-nav .shell-enrollment {
