@@ -17,8 +17,10 @@
   {% for pagina in paginas %}
     <div class="manager-table-row">
       <div class="manager-page-name">
-        {% if pagina.imagem_capa %}
+        {% if pagina.imagem_capa and not pagina.capa_e_pdf %}
           <img src="{{ pagina.imagem_capa.url }}" alt="">
+        {% elif pagina.capa_e_pdf %}
+          <span><i data-lucide="file-text"></i></span>
         {% else %}
           <span><i data-lucide="layout-template"></i></span>
         {% endif %}
