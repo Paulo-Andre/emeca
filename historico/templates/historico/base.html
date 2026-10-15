@@ -73,20 +73,17 @@
       <i data-lucide="log-out"></i><span>Sair</span>
     </a>
   </aside>
+{% else %}
+<body class="historico-publico">
+{% endif %}
 
-  <main class="historico-main">
+  <main class="{% if request.user.is_authenticated %}historico-main{% else %}historico-publico__main{% endif %}">
     {% block content %}{% endblock %}
   </main>
 
-  <script>lucide.createIcons();</script>
+  {% if request.user.is_authenticated %}
+    <script>lucide.createIcons();</script>
+  {% endif %}
   {% block extra_js %}{% endblock %}
 </body>
-{% else %}
-<body class="historico-publico">
-  <main class="historico-publico__main">
-    {% block content_public %}{% block content %}{% endblock %}{% endblock %}
-  </main>
-  {% block extra_js_public %}{% block extra_js %}{% endblock %}{% endblock %}
-</body>
-{% endif %}
 </html>
