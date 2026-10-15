@@ -11,62 +11,88 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
-  <link rel="stylesheet" href="{% static 'site_publico/site.css' %}?v=20261015-colors-05">
+  <link rel="stylesheet" href="{% static 'site_publico/site.css' %}?v=20261015-reference-06">
   {% block extra_head %}{% endblock %}
 </head>
 <body class="public-site">
   <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
 
   <header class="site-header">
-    <div class="site-header__colors" aria-hidden="true">
-      <span></span><span></span><span></span>
-    </div>
-
-    <div class="site-header__inner">
-      <a class="site-brand" href="{% url 'site_publico:home' %}" aria-label="Página inicial da escola">
-        <img src="{% static 'imagens/logo.svg' %}" alt="">
-        <span>
-          <strong>{{ config_site.nome_escola|default:"E. M. Egídio Cordeiro Aquino" }}</strong>
-          <small>Educação pública, acolhimento e aprendizagem</small>
-        </span>
-      </a>
-
-      <button class="mobile-menu-button" type="button" aria-expanded="false" aria-controls="menu-principal">
-        <i data-lucide="menu"></i>
-        <span>Menu</span>
-      </button>
-
-      <nav class="site-nav" id="menu-principal" aria-label="Menu principal">
-        <a class="nav-color nav-color--green{% if request.resolver_match.url_name == 'home' %} active{% endif %}" href="{% url 'site_publico:home' %}">Início</a>
-        <a class="nav-color nav-color--gold{% if request.resolver_match.url_name == 'escola' %} active{% endif %}" href="{% url 'site_publico:escola' %}">A Escola</a>
-        <a class="nav-color nav-color--green-soft{% if request.resolver_match.url_name == 'vida_escolar' %} active{% endif %}" href="{% url 'site_publico:vida_escolar' %}">Vida Escolar</a>
-        <a class="nav-color nav-color--gold{% if request.resolver_match.url_name == 'atividades' or request.resolver_match.url_name == 'atividade' %} active{% endif %}" href="{% url 'site_publico:atividades' %}">Atividades e Jogos</a>
-        <a class="nav-color nav-color--green{% if request.resolver_match.url_name == 'projetos' or request.resolver_match.url_name == 'projeto' %} active{% endif %}" href="{% url 'site_publico:projetos' %}">Projetos</a>
-        <a class="nav-color nav-color--red{% if request.resolver_match.url_name == 'noticias' or request.resolver_match.url_name == 'noticia' %} active{% endif %}" href="{% url 'site_publico:noticias' %}">Notícias</a>
-
-        <details class="site-nav-more{% if request.resolver_match.url_name == 'galeria' or request.resolver_match.url_name == 'album' or request.resolver_match.url_name == 'documentos' or request.resolver_match.url_name == 'faq' or request.resolver_match.url_name == 'contato' %} active{% endif %}">
-          <summary>
-            Mais
-            <i data-lucide="chevron-down"></i>
-          </summary>
-          <div class="site-nav-more__panel">
-            <a href="{% url 'site_publico:galeria' %}"><i data-lucide="images"></i><span><strong>Galeria</strong><small>Fotos e momentos da escola</small></span></a>
-            <a href="{% url 'site_publico:documentos' %}"><i data-lucide="folder-down"></i><span><strong>Documentos</strong><small>Arquivos e orientações</small></span></a>
-            <a href="{% url 'site_publico:faq' %}"><i data-lucide="circle-help"></i><span><strong>Perguntas frequentes</strong><small>Dúvidas de famílias e alunos</small></span></a>
-            <a href="{% url 'site_publico:contato' %}"><i data-lucide="messages-square"></i><span><strong>Contato</strong><small>Fale com a escola</small></span></a>
-          </div>
-        </details>
-
-        <a class="enrollment-access {% if request.resolver_match.url_name == 'matricula_landing' %}active{% endif %}" href="{% url 'site_publico:matricula_landing' %}">
-          <i data-lucide="clipboard-pen-line"></i>
-          Matrícula
+    <div class="site-header__frame">
+      <div class="site-header__top">
+        <a class="site-brand" href="{% url 'site_publico:home' %}" aria-label="Página inicial da escola">
+          <img src="{% static 'imagens/logo.svg' %}" alt="">
+          <span>
+            <strong>{{ config_site.nome_escola|default:"E. M. Egídio Cordeiro Aquino" }}</strong>
+            <small>Educação pública, acolhimento e aprendizagem</small>
+          </span>
         </a>
 
-        <a class="internal-access-main" href="{% url 'login' %}" title="Acessar Secretaria Digital">
-          <i data-lucide="lock-keyhole"></i>
-          <span>Área Interna</span>
-        </a>
-      </nav>
+        <div class="site-header__actions">
+          <a class="header-enrollment{% if request.resolver_match.url_name == 'matricula_landing' %} active{% endif %}" href="{% url 'site_publico:matricula_landing' %}">
+            <i data-lucide="clipboard-pen-line"></i>
+            <span>Matrícula</span>
+          </a>
+
+          <span class="header-action-divider" aria-hidden="true"></span>
+
+          <a class="header-internal" href="{% url 'login' %}">
+            <i data-lucide="lock-keyhole"></i>
+            <span>Área Interna</span>
+          </a>
+
+          <button class="mobile-menu-button" type="button" aria-expanded="false" aria-controls="menu-principal">
+            <i data-lucide="menu"></i>
+            <span>Menu</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="site-nav-band">
+        <nav class="site-nav" id="menu-principal" aria-label="Menu principal">
+          <a class="nav-main{% if request.resolver_match.url_name == 'home' %} active{% endif %}" href="{% url 'site_publico:home' %}">
+            <i data-lucide="house"></i><span>Início</span>
+          </a>
+
+          <a class="nav-main{% if request.resolver_match.url_name == 'escola' %} active{% endif %}" href="{% url 'site_publico:escola' %}">
+            <i data-lucide="school"></i><span>A Escola</span>
+          </a>
+
+          <a class="nav-main{% if request.resolver_match.url_name == 'vida_escolar' %} active{% endif %}" href="{% url 'site_publico:vida_escolar' %}">
+            <i data-lucide="graduation-cap"></i><span>Vida Escolar</span>
+          </a>
+
+          <a class="nav-main{% if request.resolver_match.url_name == 'atividades' or request.resolver_match.url_name == 'atividade' %} active{% endif %}" href="{% url 'site_publico:atividades' %}">
+            <i data-lucide="gamepad-2"></i><span>Atividades e Jogos</span>
+          </a>
+
+          <a class="nav-main{% if request.resolver_match.url_name == 'projetos' or request.resolver_match.url_name == 'projeto' %} active{% endif %}" href="{% url 'site_publico:projetos' %}">
+            <i data-lucide="users-round"></i><span>Projetos</span>
+          </a>
+
+          <a class="nav-main{% if request.resolver_match.url_name == 'noticias' or request.resolver_match.url_name == 'noticia' %} active{% endif %}" href="{% url 'site_publico:noticias' %}">
+            <i data-lucide="newspaper"></i><span>Notícias</span>
+          </a>
+
+          <details class="site-nav-more{% if request.resolver_match.url_name == 'galeria' or request.resolver_match.url_name == 'album' or request.resolver_match.url_name == 'documentos' or request.resolver_match.url_name == 'faq' or request.resolver_match.url_name == 'contato' %} active{% endif %}">
+            <summary>
+              <i data-lucide="ellipsis"></i>
+              <span>Mais</span>
+              <i data-lucide="chevron-down"></i>
+            </summary>
+            <div class="site-nav-more__panel">
+              <a href="{% url 'site_publico:galeria' %}"><i data-lucide="images"></i><span><strong>Galeria</strong><small>Fotos e momentos da escola</small></span></a>
+              <a href="{% url 'site_publico:documentos' %}"><i data-lucide="folder-down"></i><span><strong>Documentos</strong><small>Arquivos e orientações</small></span></a>
+              <a href="{% url 'site_publico:faq' %}"><i data-lucide="circle-help"></i><span><strong>Perguntas frequentes</strong><small>Dúvidas de famílias e alunos</small></span></a>
+              <a href="{% url 'site_publico:contato' %}"><i data-lucide="messages-square"></i><span><strong>Contato</strong><small>Fale com a escola</small></span></a>
+            </div>
+          </details>
+        </nav>
+
+        <div class="site-nav-accent" aria-hidden="true">
+          <span></span><span></span>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -125,7 +151,7 @@
     </div>
   </footer>
 
-  <script src="{% static 'site_publico/site.js' %}?v=20261015-menu-04" defer></script>
+  <script src="{% static 'site_publico/site.js' %}?v=20261015-reference-06" defer></script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>
