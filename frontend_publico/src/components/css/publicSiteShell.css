@@ -1065,3 +1065,11 @@
     height: 5px;
   }
 }
+
+
+/* Header scroll behavior: stay at page top, do not follow scrolling */
+.site-header,
+.school-public-header {
+  position: static !important;
+  top: auto !important;
+}
