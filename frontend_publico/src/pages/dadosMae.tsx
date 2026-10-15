@@ -277,20 +277,22 @@ export default function DadosMae({ dado, setDados }: Props) {
               <div className="field">
                 <label>CPF *</label>
                 <input
-                  name="cpfMae"
-                  required
-                 value={cpf}
-                  onChange={handleCPF}
-  style={{
-      border: cpfErro ? "2px solid red" : "1px solid #ccc",
-    }}
-  />
+                    name="cpfMae"
+                    required
+                    inputMode="numeric"
+                    autoComplete="off"
+                    value={cpf}
+                    onChange={handleCPF}
+                    className={cpfErro ? "field-invalid" : ""}
+                    aria-invalid={cpfErro}
+                    aria-describedby={cpfErro ? "cpf-mae-erro" : undefined}
+                  />
 
-  {cpfErro && (
-    <small style={{ color: "red" }}>
-      CPF inválido
-    </small>
-  )}
+                  {cpfErro && (
+                    <small id="cpf-mae-erro" className="field-error">
+                      Confira o CPF informado.
+                    </small>
+                  )}
 </div>
 
               <div className="field">
