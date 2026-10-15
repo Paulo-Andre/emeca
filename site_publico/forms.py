@@ -52,6 +52,10 @@ class ConfiguracaoSiteForm(StyledModelForm):
 
 
 class PaginaPublicaForm(StyledModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["imagem_capa"].widget.attrs["accept"] = "image/jpeg,image/png,image/webp,application/pdf"
+
     class Meta:
         model = PaginaPublica
         fields = ["ativa", "rotulo", "titulo", "subtitulo", "texto_principal", "imagem_capa"]
