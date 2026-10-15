@@ -16,6 +16,7 @@ urlpatterns = [
     path("galeria/", views.galeria, name="galeria"),
     path("galeria/<slug:slug>/", views.album, name="album"),
     path("matricula-escolar/", views.matricula_landing, name="matricula_landing"),
+    path("boletim/", views.boletim, name="boletim"),
     path("documentos/", views.documentos, name="documentos"),
     path("perguntas-frequentes/", views.faq, name="faq"),
     path("contato/", views.contato, name="contato"),
