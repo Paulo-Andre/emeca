@@ -38,6 +38,11 @@
       <i data-lucide="graduation-cap"></i><span>Histórico Escolar</span>
     </a>
 
+    <div class="nav-section-label">Site público</div>
+    <a class="nav-item" href="{% url 'site_publico:gestao_site' %}">
+      <i data-lucide="panel-top"></i><span>Gestão do Site</span>
+    </a>
+
     <div class="nav-section-label">Histórico</div>
     <a class="nav-item historico-subitem {% if request.resolver_match.url_name == 'inicio' %}historico-subitem-active{% endif %}"
        href="{% url 'historico:inicio' %}">
