@@ -26,62 +26,56 @@ export default function PublicSiteShell({ children }: { children: ReactNode }) {
                 <ClipboardPenLine size={20} />
                 <span>Matrícula</span>
               </a>
-
-              <span className="shell-action-divider" aria-hidden="true" />
-
-              <a className="shell-internal-access" href="/login/" onClick={closeMenu}>
-                <LockKeyhole size={20} />
-                <span>Área Interna</span>
-              </a>
-
-              <button
-                type="button"
-                className="shell-menu-button"
-                aria-expanded={menuOpen}
-                aria-controls="matricula-menu-principal"
-                onClick={() => setMenuOpen((value) => !value)}
-              >
-                {menuOpen ? <X size={19} /> : <Menu size={19} />}
-                <span>Menu</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="school-public-nav-band">
-            <nav
-              id="matricula-menu-principal"
-              className={`school-public-nav ${menuOpen ? "is-open" : ""}`}
-              aria-label="Menu principal"
-            >
-              <a className="shell-nav-main" href="/" onClick={closeMenu}><Home /><span>Início</span></a>
-              <a className="shell-nav-main" href="/a-escola/" onClick={closeMenu}><School /><span>A Escola</span></a>
-              <a className="shell-nav-main" href="/vida-escolar/" onClick={closeMenu}><GraduationCap /><span>Vida Escolar</span></a>
-              <a className="shell-nav-main" href="/atividades-jogos/" onClick={closeMenu}><Gamepad2 /><span>Atividades e Jogos</span></a>
-              <a className="shell-nav-main" href="/projetos/" onClick={closeMenu}><UsersRound /><span>Projetos</span></a>
-              <a className="shell-nav-main" href="/noticias/" onClick={closeMenu}><Newspaper /><span>Notícias</span></a>
-
-              <details className="school-public-more">
-                <summary>
-                  <Ellipsis />
-                  <span>Mais</span>
-                  <ChevronDown size={16} />
-                </summary>
-                <div className="school-public-more__panel">
-                  <a href="/galeria/" onClick={closeMenu}>Galeria</a>
-                  <a href="/documentos/" onClick={closeMenu}>Documentos</a>
-                  <a href="/perguntas-frequentes/" onClick={closeMenu}>Perguntas frequentes</a>
-                  <a href="/contato/" onClick={closeMenu}>Contato</a>
-                </div>
-              </details>
-            </nav>
-
-            <div className="school-public-nav-accent" aria-hidden="true">
-              <span />
-              <span />
             </div>
           </div>
         </div>
       </header>
+
+      <div className="school-public-nav-band">
+        <button
+          type="button"
+          className="shell-menu-button"
+          aria-expanded={menuOpen}
+          aria-controls="matricula-menu-principal"
+          onClick={() => setMenuOpen((value) => !value)}
+        >
+          {menuOpen ? <X size={19} /> : <Menu size={19} />}
+          <span>Menu</span>
+        </button>
+
+        <nav
+          id="matricula-menu-principal"
+          className={`school-public-nav ${menuOpen ? "is-open" : ""}`}
+          aria-label="Menu principal"
+        >
+          <a className="shell-nav-main" href="/" onClick={closeMenu}><Home /><span>Início</span></a>
+          <a className="shell-nav-main" href="/a-escola/" onClick={closeMenu}><School /><span>A Escola</span></a>
+          <a className="shell-nav-main" href="/vida-escolar/" onClick={closeMenu}><GraduationCap /><span>Vida Escolar</span></a>
+          <a className="shell-nav-main" href="/atividades-jogos/" onClick={closeMenu}><Gamepad2 /><span>Atividades e Jogos</span></a>
+          <a className="shell-nav-main" href="/projetos/" onClick={closeMenu}><UsersRound /><span>Projetos</span></a>
+          <a className="shell-nav-main" href="/noticias/" onClick={closeMenu}><Newspaper /><span>Notícias</span></a>
+
+          <details className="school-public-more">
+            <summary>
+              <Ellipsis />
+              <span>Mais</span>
+              <ChevronDown size={16} />
+            </summary>
+            <div className="school-public-more__panel">
+              <a href="/galeria/" onClick={closeMenu}>Galeria</a>
+              <a href="/documentos/" onClick={closeMenu}>Documentos</a>
+              <a href="/perguntas-frequentes/" onClick={closeMenu}>Perguntas frequentes</a>
+              <a href="/contato/" onClick={closeMenu}>Contato</a>
+              <a href="/login/" onClick={closeMenu}>Área Interna</a>
+            </div>
+          </details>
+        </nav>
+
+        <div className="school-public-nav-accent" aria-hidden="true">
+          <span />
+          <span />
+        </div>
+      </div>
 
       <main className="school-public-content">{children}</main>
 
