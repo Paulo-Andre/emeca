@@ -1,0 +1,58 @@
+{% extends 'site_publico/gestao/base.html' %}
+{% block title %}Gestão do Site{% endblock %}
+{% block header_title %}Gestão do Site{% endblock %}
+{% block header_subtitle %}Controle o que aparece no site da escola sem alterar menus ou botões fixos.{% endblock %}
+
+{% block content %}
+<section class="manager-hero">
+  <div>
+    <span class="manager-kicker">Conteúdo público</span>
+    <h2>Edite textos, imagens e páginas em um só lugar</h2>
+    <p>As alterações salvas aqui aparecem no site público. Páginas desativadas deixam de aparecer na navegação e não podem ser abertas diretamente.</p>
+  </div>
+  <div class="manager-hero__actions">
+    <a class="manager-btn manager-btn--primary" href="{% url 'site_publico:gestao_paginas' %}">
+      <i data-lucide="toggle-right"></i> Páginas do Site
+    </a>
+    <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_configuracao' %}">
+      <i data-lucide="school"></i> Informações institucionais
+    </a>
+  </div>
+</section>
+
+<section class="manager-section">
+  <div class="manager-section__heading">
+    <div><span class="manager-kicker">Visibilidade</span><h2>Páginas públicas</h2></div>
+    <a href="{% url 'site_publico:gestao_paginas' %}">Gerenciar todas <i data-lucide="arrow-right"></i></a>
+  </div>
+
+  <div class="page-status-grid">
+    {% for pagina in paginas %}
+      <article class="page-status-card{% if not pagina.ativa %} is-off{% endif %}">
+        <span class="page-status-dot"></span>
+        <div>
+          <strong>{{ pagina.nome }}</strong>
+          <small>{% if pagina.ativa %}Visível no site{% else %}Desativada{% endif %}</small>
+        </div>
+        <a href="{% url 'site_publico:gestao_pagina_editar' pagina.chave %}" title="Editar {{ pagina.nome }}"><i data-lucide="pencil"></i></a>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="manager-section">
+  <div class="manager-section__heading">
+    <div><span class="manager-kicker">Conteúdos</span><h2>Editar informações do site</h2></div>
+  </div>
+
+  <div class="content-manager-grid">
+    {% for item in conteudos %}
+      <a class="content-manager-card" href="{% url 'site_publico:gestao_conteudo_lista' item.chave %}">
+        <span><i data-lucide="{{ item.icon }}"></i></span>
+        <div><strong>{{ item.label }}</strong><small>{{ item.total }} item{{ item.total|pluralize }}</small></div>
+        <i data-lucide="chevron-right"></i>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
