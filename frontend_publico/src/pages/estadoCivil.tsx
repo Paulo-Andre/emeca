@@ -158,9 +158,8 @@ export default function EstadoCivil({ dado, setDados }: Props) {
 
               <button
                 type="button"
-                className="btn-next"
+                className="btn-next btn-back"
                 onClick={() => navigate(-1)}
-                style={{ background: "#64748b" }}
               >
                 Voltar
               </button>
