@@ -1,0 +1,46 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}Histórico Escolar{% endblock %}</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background: #eef2f6;
+      color: #111;
+      font-family: Inter, Arial, sans-serif;
+    }
+
+    .app-main {
+      width: 100%;
+      margin: 0;
+      padding: 20px 0 0;
+    }
+
+    @media print {
+      html,
+      body,
+      .app-main {
+        background: #fff;
+      }
+    }
+  </style>
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="historico-document-page">
+  <main class="app-main">
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>
