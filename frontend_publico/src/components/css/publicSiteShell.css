@@ -970,3 +970,98 @@
     padding: 0 !important;
   }
 }
+
+/* Compact reference header */
+@media (min-width: 1021px) {
+  .school-public-header {
+    padding: 7px 12px 0;
+  }
+
+  .school-public-frame {
+    border-radius: 18px 18px 15px 15px;
+  }
+
+  .school-public-header__top {
+    min-height: 82px;
+    padding: 10px 22px;
+    gap: 22px;
+  }
+
+  .school-public-header__top .school-public-brand {
+    gap: 12px;
+  }
+
+  .school-public-header__top .school-public-brand img {
+    width: 56px;
+    height: 56px;
+    border-radius: 13px;
+  }
+
+  .school-public-header__top .school-public-brand strong {
+    font-size: clamp(17px, 1.55vw, 23px);
+    line-height: 1.04;
+  }
+
+  .school-public-header__top .school-public-brand small {
+    margin-top: 1px;
+    font-size: clamp(9px, .8vw, 11.5px);
+  }
+
+  .school-public-actions {
+    gap: 15px;
+  }
+
+  .school-public-actions .shell-enrollment,
+  .school-public-actions .shell-internal-access {
+    min-height: 44px;
+    padding: 0 17px !important;
+    gap: 8px;
+    border-radius: 11px !important;
+    font-size: 12.5px !important;
+  }
+
+  .school-public-actions .shell-enrollment svg,
+  .school-public-actions .shell-internal-access svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  .shell-action-divider {
+    height: 34px;
+  }
+
+  .school-public-nav-band .school-public-nav {
+    min-height: 56px;
+    padding: 0 14px;
+  }
+
+  .school-public-nav-band .shell-nav-main,
+  .school-public-nav-band .school-public-more > summary {
+    min-height: 56px;
+    padding: 0 13px;
+    gap: 8px;
+    font-size: 12px;
+  }
+
+  .school-public-nav-band .shell-nav-main + .shell-nav-main::before,
+  .school-public-nav-band .school-public-more::before {
+    top: 14px;
+    bottom: 14px;
+  }
+
+  .school-public-nav-band .shell-nav-main svg,
+  .school-public-nav-band .school-public-more > summary svg:first-child {
+    width: 21px;
+    height: 21px;
+    flex-basis: 21px;
+  }
+
+  .school-public-nav-band .school-public-more > summary svg:last-child {
+    width: 15px;
+    height: 15px;
+  }
+
+  .school-public-nav-accent {
+    height: 5px;
+  }
+}
