@@ -514,9 +514,20 @@ textarea {
   position: relative;
   min-height: clamp(410px, 52vw, 570px);
   overflow: hidden;
+  border: 1px solid rgba(57,87,35,.18);
   border-radius: 30px;
   box-shadow: var(--shadow);
   background: var(--brand-wine-dark);
+}
+
+.hero-carousel::after {
+  content: "";
+  position: absolute;
+  z-index: 7;
+  inset: auto 0 0;
+  height: 5px;
+  background: linear-gradient(90deg, #395723 0 62%, #800000 62% 84%, #d4aa00 84% 100%);
+  pointer-events: none;
 }
 
 .hero-carousel__viewport {
@@ -873,19 +884,33 @@ textarea {
   font-weight: 800;
 }
 
-.quick-card--wine { color: var(--brand-wine); }
-.quick-card--blue { color: var(--brand-blue-dark); }
-.quick-card--green { color: var(--brand-green); }
-.quick-card--gold { color: #947400; }
-
-.quick-card--blue .quick-card__icon {
-  background: var(--brand-blue-soft);
-  color: var(--brand-blue-dark);
+.quick-card--green,
+.quick-card--green-alt {
+  color: var(--brand-green);
 }
 
-.quick-card--green .quick-card__icon {
+.quick-card--red {
+  color: #800000;
+}
+
+.quick-card--gold {
+  color: #947400;
+}
+
+.quick-card--green .quick-card__icon,
+.quick-card--green-alt .quick-card__icon {
   background: var(--brand-green-soft);
   color: var(--brand-green);
+}
+
+.quick-card--green-alt .quick-card__icon {
+  background: #f4f8f1;
+  border: 1px solid #dce6d6;
+}
+
+.quick-card--red .quick-card__icon {
+  background: #f7ecec;
+  color: #800000;
 }
 
 .quick-card--gold .quick-card__icon {
@@ -974,7 +999,7 @@ textarea {
 .content-card__meta {
   display: inline-block;
   margin-bottom: 8px;
-  color: var(--brand-wine);
+  color: #800000;
   font-size: 9.5px;
   font-weight: 850;
   letter-spacing: .09em;
@@ -1859,7 +1884,7 @@ textarea {
 }
 
 .validation-card__content .eyebrow {
-  color: var(--brand-wine);
+  color: #800000;
   font-size: 9.5px;
   font-weight: 850;
   letter-spacing: .12em;
