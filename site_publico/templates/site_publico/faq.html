@@ -7,7 +7,7 @@
     <h1>{{ paginas_site.faq.titulo|default:"Perguntas Frequentes" }}</h1>
     <p>{{ paginas_site.faq.subtitulo|default:"Respostas rápidas para as dúvidas mais comuns de estudantes e famílias." }}</p>
     {% if paginas_site.faq.texto_principal %}<div class="page-heading__intro">{{ paginas_site.faq.texto_principal|linebreaksbr }}</div>{% endif %}
-    {% if paginas_site.faq.imagem_capa %}<img class="page-hero__image" src="{{ paginas_site.faq.imagem_capa.url }}" alt="">{% endif %}
+    {% include 'site_publico/includes/capa_pagina.html' with pagina=paginas_site.faq %}
   </div>
 </section>
 <section class="section">
