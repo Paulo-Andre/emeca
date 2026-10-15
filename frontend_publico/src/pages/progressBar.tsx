@@ -15,38 +15,19 @@ const etapas = [
 
 export default function ProgressBar({ etapaAtual }: Props) {
   return (
-    <div style={{ marginTop: "15px" }}>
-      
-      {/* BARRA */}
-      <div style={{
-        display: "flex",
-        gap: "6px"
-      }}>
+    <div className="progress-wrap" aria-label="Progresso do preenchimento">
+      <div className="progress-bar" aria-hidden="true">
         {etapas.map((_, index) => (
           <div
             key={index}
-            style={{
-              flex: 1,
-              height: "6px",
-              borderRadius: "4px",
-              background:
-                index <= etapaAtual ? "#59d400" : "#64748b",
-              transition: "0.3s"
-            }}
+            className={`progress-step ${index <= etapaAtual ? "active" : ""}`}
           />
         ))}
       </div>
 
-      {/* TEXTO */}
-      <span style={{
-        display: "block",
-        marginTop: "8px",
-        fontSize: "12px",
-        color: "#e5e7eb"
-      }}>
+      <span className="progress-label">
         Etapa {etapaAtual + 1} de {etapas.length} — {etapas[etapaAtual]}
       </span>
-
     </div>
   );
 }
