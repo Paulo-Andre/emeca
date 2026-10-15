@@ -399,3 +399,139 @@
     display: none;
   }
 }
+
+/* Unified single-bar school header */
+.school-public-header {
+  border-bottom: 1px solid #dfe7da;
+  box-shadow: 0 6px 24px rgba(42,67,29,.07);
+}
+
+.school-public-colors {
+  height: 5px;
+  display: grid;
+  grid-template-columns: 64fr 23fr 13fr;
+}
+
+.school-public-colors span:nth-child(1) { background: #395723; }
+.school-public-colors span:nth-child(2) { background: #800000; }
+.school-public-colors span:nth-child(3) { background: #d4aa00; }
+
+.school-public-header__inner {
+  min-height: 92px;
+  gap: 28px;
+}
+
+.school-public-brand {
+  min-width: 330px;
+}
+
+.school-public-brand img {
+  width: 62px;
+  height: 62px;
+  border-color: #dfe7da;
+}
+
+.school-public-brand strong {
+  color: #29451d;
+  font-size: 16px;
+}
+
+.school-public-nav {
+  gap: 4px;
+}
+
+.school-public-nav > a:not(.shell-enrollment):not(.shell-internal-access),
+.school-public-more > summary {
+  min-height: 46px;
+  padding: 0 10px;
+  color: #4f5a4a;
+}
+
+.school-public-nav > a:not(.shell-enrollment):not(.shell-internal-access):hover,
+.school-public-more > summary:hover,
+.school-public-more[open] > summary {
+  background: #f2f7ef;
+  color: #395723;
+}
+
+.school-public-nav .shell-enrollment {
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: 12px;
+  background: #800000;
+}
+
+.school-public-nav .shell-enrollment:hover,
+.school-public-nav .shell-enrollment.active {
+  background: #690000;
+}
+
+.shell-internal-access {
+  min-height: 48px;
+  padding: 0 13px !important;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #d4aa00;
+  border-radius: 12px !important;
+  background: #fff9dd;
+  color: #395723 !important;
+  font-size: 10.5px !important;
+  font-weight: 800 !important;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.shell-internal-access svg {
+  color: #8b6d00;
+}
+
+.shell-internal-access:hover {
+  background: #fff3b8 !important;
+}
+
+@media (max-width: 1220px) {
+  .school-public-brand {
+    min-width: 285px;
+  }
+
+  .school-public-brand img {
+    width: 56px;
+    height: 56px;
+  }
+
+  .school-public-brand strong {
+    font-size: 14px;
+  }
+
+  .shell-internal-access {
+    padding: 0 11px !important;
+  }
+}
+
+@media (max-width: 1160px) {
+  .school-public-header__inner {
+    min-height: 78px;
+  }
+
+  .school-public-nav {
+    top: 87px;
+  }
+
+  .school-public-nav > a,
+  .school-public-more > summary {
+    width: 100%;
+    min-height: 44px;
+    justify-content: flex-start;
+  }
+
+  .shell-internal-access {
+    margin-top: 3px;
+  }
+}
+
+@media (max-width: 700px) {
+  .school-public-nav {
+    top: 83px;
+  }
+}
