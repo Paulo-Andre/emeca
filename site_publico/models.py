@@ -46,6 +46,44 @@ class ConfiguracaoSite(models.Model):
         return self.nome_escola
 
 
+class PaginaPublica(models.Model):
+    CHAVES = [
+        ("escola", "A Escola"),
+        ("vida_escolar", "Vida Escolar"),
+        ("atividades", "Atividades e Jogos"),
+        ("projetos", "Projetos"),
+        ("noticias", "Notícias"),
+        ("galeria", "Galeria"),
+        ("matricula", "Matrícula"),
+        ("boletim", "Boletim"),
+        ("documentos", "Documentos"),
+        ("faq", "Perguntas Frequentes"),
+        ("contato", "Contato"),
+    ]
+
+    chave = models.CharField(max_length=40, choices=CHAVES, unique=True)
+    nome = models.CharField(max_length=120)
+    ativa = models.BooleanField(default=True)
+    titulo = models.CharField(max_length=180, blank=True)
+    subtitulo = models.CharField(max_length=360, blank=True)
+    texto_principal = models.TextField(blank=True)
+    imagem_capa = models.FileField(
+        upload_to="site_publico/paginas/",
+        validators=[IMAGEM_VALIDATOR],
+        blank=True,
+    )
+    ordem = models.PositiveSmallIntegerField(default=0)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["ordem", "nome"]
+        verbose_name = "Página pública"
+        verbose_name_plural = "Páginas públicas"
+
+    def __str__(self):
+        return self.nome
+
+
 class DestaqueHome(models.Model):
     CATEGORIAS = [
         ("NOTICIA", "Notícia"),
