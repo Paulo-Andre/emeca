@@ -1,0 +1,36 @@
+{% extends 'site_publico/base.html' %}
+{% block title %}Vida Escolar · E. M. Egídio Cordeiro Aquino{% endblock %}
+{% block content %}
+<section class="page-hero">
+  <div class="page-heading">
+    <span class="section-kicker">Informações para famílias e estudantes</span>
+    <h1>Vida Escolar</h1>
+    <p>Orientações importantes sobre a rotina, o acompanhamento e os serviços escolares.</p>
+  </div>
+</section>
+
+<section class="section">
+  {% if config_site.vida_escolar %}
+    <article class="prose-card">{{ config_site.vida_escolar|linebreaks }}</article>
+  {% else %}
+    <div class="two-column">
+      <article class="info-card">
+        <h2>Rotina escolar</h2>
+        <p>Informações sobre horários, entrada e saída, organização do dia e orientações gerais poderão ser publicadas pela escola.</p>
+      </article>
+      <article class="info-card">
+        <h2>Acompanhamento da aprendizagem</h2>
+        <p>Espaço para orientações sobre avaliações, recuperação, frequência, reuniões e acompanhamento das famílias.</p>
+      </article>
+      <article class="info-card">
+        <h2>Reuniões e comunicados</h2>
+        <p>Os principais avisos aparecem automaticamente na página inicial enquanto estiverem ativos.</p>
+      </article>
+      <article class="info-card">
+        <h2>Documentos</h2>
+        <p>Formulários, orientações e arquivos públicos podem ser encontrados na área de Documentos e Downloads.</p>
+      </article>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
