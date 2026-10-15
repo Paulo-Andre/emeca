@@ -2,6 +2,27 @@ from django.core.validators import FileExtensionValidator
 from django.db import migrations, models
 
 
+ROTULOS_PAGINAS = {
+    "escola": "Nossa história",
+    "vida_escolar": "Informações para famílias e estudantes",
+    "atividades": "Aprender também pode ser divertido",
+    "projetos": "Nossa escola em movimento",
+    "noticias": "Acontece na escola",
+    "galeria": "Memórias da escola",
+    "matricula": "Para pais e responsáveis",
+    "boletim": "Acompanhamento escolar",
+    "documentos": "Arquivos públicos",
+    "faq": "Dúvidas comuns",
+    "contato": "Fale com a escola",
+}
+
+
+def preencher_rotulos(apps, schema_editor):
+    PaginaPublica = apps.get_model("site_publico", "PaginaPublica")
+    for chave, rotulo in ROTULOS_PAGINAS.items():
+        PaginaPublica.objects.filter(chave=chave, rotulo="").update(rotulo=rotulo)
+
+
 SECOES_INICIAIS = [
     ("home", "home_fallback_slide", "Início — carrossel alternativo", "Aprender e participar", "Atividades, projetos e notícias da escola", "Quando fotos e notícias forem publicadas, elas passam a ocupar este carrossel automaticamente.", 10),
     ("home", "home_avisos", "Início — avisos", "Comunicados", "Avisos importantes", "Informações ativas da escola", 20),
@@ -59,6 +80,12 @@ class Migration(migrations.Migration):
     dependencies = [("site_publico", "0005_configuracaosite_home")]
 
     operations = [
+        migrations.AddField(
+            model_name="paginapublica",
+            name="rotulo",
+            field=models.CharField(blank=True, max_length=180),
+        ),
+        migrations.RunPython(preencher_rotulos, migrations.RunPython.noop),
         migrations.AddField(
             model_name="configuracaosite",
             name="logo_site",
