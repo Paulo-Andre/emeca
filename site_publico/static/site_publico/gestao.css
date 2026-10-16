@@ -1006,3 +1006,36 @@
     width: 100%;
   }
 }
+
+
+/* Editor dedicado da página inicial */
+.manager-home-editor-card {
+  margin-top: 4px;
+  padding: 22px;
+  border: 1px solid var(--mgr-border);
+  border-radius: 17px;
+  background: #fff;
+  box-shadow: var(--mgr-shadow);
+}
+
+.manager-form-card--embedded {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.manager-table-row--home {
+  background: #f7fbf5;
+}
+
+.manager-table-row--home .manager-page-name > span {
+  background: #e8f3e4;
+  color: var(--mgr-green);
+}
+
+@media (max-width: 700px) {
+  .manager-home-editor-card {
+    padding: 16px;
+  }
+}
