@@ -2,6 +2,7 @@ import re
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
@@ -103,6 +104,7 @@ def _resolver_destinatarios(modo, turma="", contato_id=None, tipos=None):
     return destinatarios, invalidos, amostra
 
 
+@login_required
 def whatsapp(request):
     turmas = list(
         declaracao.objects.exclude(turmaDoAluno__isnull=True)
@@ -138,6 +140,7 @@ def whatsapp(request):
     )
 
 
+@login_required
 @require_GET
 def whatsapp_buscar_contatos(request):
     termo = (request.GET.get("q") or "").strip()
@@ -168,6 +171,7 @@ def whatsapp_buscar_contatos(request):
     return JsonResponse({"results": results})
 
 
+@login_required
 @require_GET
 def whatsapp_destinatarios(request):
     try:
@@ -190,6 +194,7 @@ def whatsapp_destinatarios(request):
     )
 
 
+@login_required
 @require_POST
 def whatsapp_conectar(request):
     if not gateway_configurado():
@@ -207,6 +212,7 @@ def whatsapp_conectar(request):
     return redirect("whatsapp")
 
 
+@login_required
 @require_GET
 def whatsapp_qr(request):
     try:
@@ -218,6 +224,7 @@ def whatsapp_qr(request):
         return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
 
 
+@login_required
 @require_POST
 def whatsapp_enviar(request):
     mensagem = (request.POST.get("mensagem") or "").strip()
