@@ -189,7 +189,7 @@
             </strong>
             {% if secao.titulo %}<small>{{ secao.titulo }}</small>{% else %}<small>Editar texto e imagem deste bloco</small>{% endif %}
           </div>
-          <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_secao_editar' secao.chave %}">
+          <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_secao_editar' secao.chave %}?origem=home">
             <i data-lucide="pencil"></i> Editar
           </a>
         </article>
