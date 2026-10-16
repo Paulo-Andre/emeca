@@ -353,6 +353,145 @@
         cursor: pointer;
       }
 
+      .modal-content--student {
+        width: min(980px, 100%);
+        max-height: 92vh;
+        overflow-y: auto;
+      }
+
+      .student-modal-heading {
+        margin: 0 42px 20px 0;
+      }
+
+      .student-modal-heading h3 {
+        margin: 0 0 5px;
+        color: var(--school-text);
+        font-size: 20px;
+      }
+
+      .student-modal-heading p {
+        margin: 0;
+        color: var(--school-muted);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .student-modal-section {
+        padding: 18px 0;
+        border-top: 1px solid var(--school-border);
+      }
+
+      .student-modal-section__title {
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .student-modal-section__title > span {
+        width: 30px;
+        height: 30px;
+        flex: 0 0 30px;
+        display: grid;
+        place-items: center;
+        border-radius: 9px;
+        background: #e8f3f6;
+        color: var(--school-primary);
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .student-modal-section__title > div {
+        display: grid;
+        gap: 2px;
+      }
+
+      .student-modal-section__title strong {
+        color: var(--school-text);
+        font-size: 13px;
+      }
+
+      .student-modal-section__title small {
+        color: var(--school-muted);
+        font-size: 10px;
+      }
+
+      .student-phone-groups {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .student-phone-group {
+        padding: 14px;
+        border: 1px solid var(--school-border);
+        border-radius: 13px;
+        background: #f9fbfc;
+      }
+
+      .student-phone-group__heading {
+        min-height: 46px;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+      }
+
+      .student-phone-group__heading > svg {
+        width: 18px;
+        height: 18px;
+        margin-top: 1px;
+        color: var(--school-primary);
+      }
+
+      .student-phone-group__heading > div {
+        display: grid;
+        gap: 2px;
+      }
+
+      .student-phone-group__heading strong {
+        color: var(--school-text);
+        font-size: 12px;
+      }
+
+      .student-phone-group__heading small {
+        color: var(--school-muted);
+        font-size: 9px;
+        line-height: 1.35;
+      }
+
+      .student-phone-inputs {
+        display: grid;
+        gap: 10px;
+      }
+
+      .student-modal-actions {
+        position: sticky;
+        bottom: -26px;
+        margin: 6px -26px -26px;
+        padding: 16px 26px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 9px;
+        border-top: 1px solid var(--school-border);
+        background: rgba(255,255,255,.97);
+        backdrop-filter: blur(8px);
+      }
+
+      .student-modal-actions .btn-primary {
+        min-height: 42px;
+        margin: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+      }
+
+      .student-modal-actions .btn-primary svg {
+        width: 16px;
+        height: 16px;
+      }
+
       @media (max-width: 1280px) {
         .declaration-search-form {
           grid-template-columns: minmax(180px, 230px) minmax(0, 1fr) !important;
@@ -400,6 +539,12 @@
         .full-width,
         .half-width {
           grid-column: 1 / -1;
+        }
+      }
+
+      @media (max-width: 860px) {
+        .student-phone-groups {
+          grid-template-columns: 1fr;
         }
       }
 
@@ -506,89 +651,186 @@
         
       </div>
       <div id="modalAluno" class="modal">
-  <div class="modal-content">
+  <div class="modal-content modal-content--student">
 
     <span class="fechar" onclick="fecharModalAluno()">&times;</span>
 
-    <h3>Cadastrar Aluno</h3>
+    <div class="student-modal-heading">
+      <div>
+        <h3>Cadastrar Aluno</h3>
+        <p>Preencha os mesmos dados usados na planilha de declarações. Apenas o nome do aluno é obrigatório.</p>
+      </div>
+    </div>
 
     <form method="POST" action="{% url 'cadastrar_aluno' %}">
-  {% csrf_token %}
+      {% csrf_token %}
 
-  <div class="form-grid">
+      <section class="student-modal-section">
+        <div class="student-modal-section__title">
+          <span>1</span>
+          <div>
+            <strong>Dados do aluno</strong>
+            <small>Informações acadêmicas e pessoais presentes na planilha.</small>
+          </div>
+        </div>
 
-    <div class="input-group full-width">
-      <label>Nome do Aluno</label>
-      <input name="nomeDoAluno" required>
-    </div>
+        <div class="form-grid">
+          <div class="input-group full-width">
+            <label>Nome do Aluno *</label>
+            <input name="nomeDoAluno" required autocomplete="name">
+          </div>
 
-    <div class="input-group">
-      <label>Nacionalidade</label>
-      <input name="nacionaliadeAluno" required>
-    </div>
+          <div class="input-group">
+            <label>Data de Nascimento</label>
+            <input type="date" name="dataNascimentoAluno">
+          </div>
 
-    <div class="input-group">
-      <label>Naturalidade</label>
-      <input name="natularidadeAluno" required>
-    </div>
+          <div class="input-group">
+            <label>Naturalidade</label>
+            <input name="natularidadeAluno" placeholder="Ex.: Montes Claros">
+          </div>
 
-    <div class="input-group">
-      <label>UF</label>
-      <input name="ufAluno" required>
-    </div>
+          <div class="input-group">
+            <label>Nacionalidade</label>
+            <input name="nacionaliadeAluno" placeholder="Ex.: Brasileira">
+          </div>
 
-    <div class="input-group">
-      <label>Data de Nascimento</label>
-      <input type="date" name="dataNascimentoAluno" required>
-    </div>
+          <div class="input-group">
+            <label>UF</label>
+            <input name="ufAluno" maxlength="2" placeholder="MG">
+          </div>
 
-    <div class="input-group">
-      <label>Sexo</label>
-      
-      <select name="sexoDoAluno" id="" required>
-        <option value="MASCULINO">Masculino</option>
-        <option value="FEMININO">Feminino</option>
-        <option value="OUTRO">Outro</option>
-        <option value="NÃO DECLARADO">Não Declarado</option>
-      </select>
-    </div>
+          <div class="input-group">
+            <label>Sexo</label>
+            <select name="sexoDoAluno">
+              <option value="">Selecione</option>
+              <option value="MASCULINO">Masculino</option>
+              <option value="FEMININO">Feminino</option>
+              <option value="OUTRO">Outro</option>
+              <option value="NÃO DECLARADO">Não Declarado</option>
+            </select>
+          </div>
 
-    <div class="input-group">
-      <label>Turma</label>
-      
-      <select name="turmaDoAluno" id="" required >
-        <option value="1º ANO"> 1º ANO</option>
-        <option value="2º ANO"> 2º ANO</option>
-        <option value="3º ANO"> 3º ANO</option>
-        <option value="4º ANO"> 4º ANO</option>
-        <option value="5º ANO"> 5º ANO</option>
-      </select>
-    </div>
+          <div class="input-group">
+            <label>Turma</label>
+            <input name="turmaDoAluno" placeholder="Ex.: 3º ANO LAVANDA">
+          </div>
 
-    <div class="input-group">
-      <label>Cartão SUS</label>
-      <input name="cartaoSusDoAluno" required>
-    </div>
+          <div class="input-group">
+            <label>Cartão SUS</label>
+            <input name="cartaoSusDoAluno" inputmode="numeric">
+          </div>
 
-    <div class="input-group">
-      <label>CPF</label>
-      <input name="cpfDoAluno" required>
-    </div>
+          <div class="input-group">
+            <label>CPF</label>
+            <input name="cpfDoAluno" inputmode="numeric" placeholder="000.000.000-00">
+          </div>
+        </div>
+      </section>
 
-    <div class="input-group half-width">
-      <label>Nome do Pai</label>
-      <input name="nomePai" required>
-    </div>
+      <section class="student-modal-section">
+        <div class="student-modal-section__title">
+          <span>2</span>
+          <div>
+            <strong>Filiação</strong>
+            <small>Os nomes de Mãe e Pai correspondem às colunas da planilha.</small>
+          </div>
+        </div>
 
-    <div class="input-group half-width">
-      <label>Nome da Mãe</label>
-      <input name="nomeMae" required>
-    </div>
+        <div class="form-grid">
+          <div class="input-group half-width">
+            <label>Nome da Mãe</label>
+            <input name="nomeMae">
+          </div>
 
-  </div>
+          <div class="input-group half-width">
+            <label>Nome do Pai</label>
+            <input name="nomePai">
+          </div>
+        </div>
+      </section>
 
-  <button type="submit" class="btn-primary">Salvar</button>
-</form>
+      <section class="student-modal-section student-modal-section--phones">
+        <div class="student-modal-section__title">
+          <span>3</span>
+          <div>
+            <strong>Telefones da planilha</strong>
+            <small>Se o mesmo número for informado mais de uma vez para a mesma pessoa, o sistema manterá somente um.</small>
+          </div>
+        </div>
+
+        <div class="student-phone-groups">
+          <article class="student-phone-group">
+            <div class="student-phone-group__heading">
+              <i data-lucide="user-round"></i>
+              <div>
+                <strong>Pai</strong>
+                <small>CELULAR PAI / Telefone do Pai / Telefone 2 do Pai</small>
+              </div>
+            </div>
+            <div class="student-phone-inputs">
+              <div class="input-group">
+                <label>Celular Pai</label>
+                <input name="telefonePai" type="tel" inputmode="tel">
+              </div>
+              <div class="input-group">
+                <label>Telefone do Pai</label>
+                <input name="telefonePai" type="tel" inputmode="tel">
+              </div>
+              <div class="input-group">
+                <label>Telefone 2 do Pai</label>
+                <input name="telefonePai" type="tel" inputmode="tel">
+              </div>
+            </div>
+          </article>
+
+          <article class="student-phone-group">
+            <div class="student-phone-group__heading">
+              <i data-lucide="user-round"></i>
+              <div>
+                <strong>Mãe</strong>
+                <small>Telefone da Mãe / Telefone 2 da Mãe</small>
+              </div>
+            </div>
+            <div class="student-phone-inputs">
+              <div class="input-group">
+                <label>Telefone da Mãe</label>
+                <input name="telefoneMae" type="tel" inputmode="tel">
+              </div>
+              <div class="input-group">
+                <label>Telefone 2 da Mãe</label>
+                <input name="telefoneMae" type="tel" inputmode="tel">
+              </div>
+            </div>
+          </article>
+
+          <article class="student-phone-group">
+            <div class="student-phone-group__heading">
+              <i data-lucide="contact-round"></i>
+              <div>
+                <strong>Responsável</strong>
+                <small>TELEFONE / TEL. RESPONS.</small>
+              </div>
+            </div>
+            <div class="student-phone-inputs">
+              <div class="input-group">
+                <label>Telefone</label>
+                <input name="telefoneResponsavel" type="tel" inputmode="tel">
+              </div>
+              <div class="input-group">
+                <label>Tel. Responsável</label>
+                <input name="telefoneResponsavel" type="tel" inputmode="tel">
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <div class="student-modal-actions">
+        <button type="button" class="btn-cancelar" onclick="fecharModalAluno()">Cancelar</button>
+        <button type="submit" class="btn-primary"><i data-lucide="save"></i> Salvar aluno</button>
+      </div>
+    </form>
 
   </div>
 </div>
