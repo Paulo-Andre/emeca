@@ -45,6 +45,17 @@ jobs:
           cache: "npm"
           cache-dependency-path: frontend_publico/package-lock.json
 
+      - name: Atualizar lockfile para auditoria
+        working-directory: frontend_publico
+        run: npm install --package-lock-only
+
+      - name: Exportar lockfile atualizado
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-lock-atualizado
+          path: frontend_publico/package-lock.json
+          retention-days: 1
+
       - name: Compilar e auditar área pública
         working-directory: frontend_publico
         run: |
