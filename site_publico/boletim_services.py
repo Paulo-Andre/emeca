@@ -473,15 +473,32 @@ def localizar_alunos_por_credenciais(
     return encontrados
 
 
-def criar_token_acesso(alunos):
-    ids = sorted({aluno.pk for aluno in alunos})
-    return signing.dumps({"alunos": ids}, salt=TOKEN_SALT, compress=True)
+def conceder_acesso_boletim(request, alunos):
+    """Guarda a autorização no servidor sem colocar credenciais na URL/log."""
+    ids = sorted({int(aluno.pk) for aluno in alunos})
+    request.session.cycle_key()
+    request.session["boletim_acesso_ids"] = ids
+    request.session["boletim_acesso_expira"] = int(time.time()) + TOKEN_MAX_AGE
+    request.session.modified = True
+    return ids
 
 
-def ler_token_acesso(token):
-    dados = signing.loads(token, salt=TOKEN_SALT, max_age=TOKEN_MAX_AGE)
-    ids = dados.get("alunos") or []
-    return [int(pk) for pk in ids]
+def ler_acesso_boletim(request):
+    expira = int(request.session.get("boletim_acesso_expira") or 0)
+    if not expira or int(time.time()) > expira:
+        request.session.pop("boletim_acesso_ids", None)
+        request.session.pop("boletim_acesso_expira", None)
+        request.session.modified = True
+        return []
+
+    ids = request.session.get("boletim_acesso_ids") or []
+    try:
+        return [int(pk) for pk in ids]
+    except (TypeError, ValueError):
+        request.session.pop("boletim_acesso_ids", None)
+        request.session.pop("boletim_acesso_expira", None)
+        request.session.modified = True
+        return []
 
 
 def aplicar_headers_privacidade(response):
