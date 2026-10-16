@@ -9,6 +9,7 @@ from django.core import signing
 from django.db import transaction
 
 from cadastro.models import matricula
+from usuarioSec.models import declaracao
 
 from .boletim_importacao import normalizar_nome
 from .models import (
@@ -70,6 +71,42 @@ def _mapa_matriculas_por_nome():
     ):
         mapa[normalizar_nome(aluno.nomeDoAluno)].append(aluno)
     return mapa
+
+
+def _mapa_declaracoes_por_nome(queryset=None):
+    mapa = defaultdict(list)
+    registros = queryset if queryset is not None else declaracao.objects.all()
+    for aluno in registros.only(
+        "id",
+        "nomeDoAluno",
+        "dataNascimentoAluno",
+        "cpfMae",
+        "cpfResponsavel",
+    ):
+        mapa[normalizar_nome(aluno.nomeDoAluno)].append(aluno)
+    return mapa
+
+
+def sincronizar_perfil_declaracao(perfil, aluno_declaracao):
+    """Preenche dados de acesso do boletim a partir de Declarações.
+
+    O nome do boletim é preservado porque pode ter sido corrigido manualmente.
+    Campos vazios na declaração não apagam dados já existentes no boletim.
+    """
+    dados = {
+        "data_nascimento": aluno_declaracao.dataNascimentoAluno,
+        "cpf_mae": aluno_declaracao.cpfMae or "",
+        "cpf_responsavel": aluno_declaracao.cpfResponsavel or "",
+    }
+    alterados = []
+    for campo, valor in dados.items():
+        if valor and getattr(perfil, campo) != valor:
+            setattr(perfil, campo, valor)
+            alterados.append(campo)
+
+    if alterados:
+        perfil.save(update_fields=alterados + ["atualizado_em"])
+    return perfil
 
 
 @transaction.atomic
@@ -147,6 +184,7 @@ def importar_dados_boletim(dados_planilha, dados_periodo=None):
         raise ValueError("Nenhuma disciplina foi identificada na planilha.")
 
     mapa_alunos = _mapa_matriculas_por_nome()
+    mapa_declaracoes = _mapa_declaracoes_por_nome()
 
     # Perfis sem vínculo com Matrículas são válidos no módulo de Boletins.
     # Eles permitem importar todos os nomes do arquivo e revisar depois.
@@ -163,9 +201,19 @@ def importar_dados_boletim(dados_planilha, dados_periodo=None):
         candidatos = mapa_alunos.get(linha["nome_normalizado"], [])
         cadastro = None
 
+        declaracoes_mesmo_nome = mapa_declaracoes.get(linha["nome_normalizado"], [])
+
         if len(candidatos) == 1:
             cadastro = candidatos[0]
             perfil = sincronizar_perfil_matricula(cadastro)
+
+            # Se Matrículas estiver incompleto, aproveita também os dados
+            # existentes em Declarações para CPF/data de nascimento.
+            if len(declaracoes_mesmo_nome) == 1:
+                perfil = sincronizar_perfil_declaracao(
+                    perfil,
+                    declaracoes_mesmo_nome[0],
+                )
 
             # O boletim deve refletir o nome existente no arquivo importado.
             # Isso não altera o cadastro mestre de Matrículas.
@@ -187,6 +235,14 @@ def importar_dados_boletim(dados_planilha, dados_periodo=None):
             else:
                 perfil = AlunoBoletim.objects.create(nome=linha["nome"])
                 perfis_avulsos[linha["nome_normalizado"]].append(perfil)
+
+            # Mesmo sem matrícula, um registro único em Declarações fornece
+            # automaticamente data de nascimento e CPF da mãe/responsável.
+            if len(declaracoes_mesmo_nome) == 1:
+                perfil = sincronizar_perfil_declaracao(
+                    perfil,
+                    declaracoes_mesmo_nome[0],
+                )
 
         boletim = BoletimAluno.objects.create(
             periodo=periodo,
@@ -258,39 +314,90 @@ def consulta_bloqueada(request):
     return len(recentes) >= TENTATIVAS_LIMITE
 
 
-def localizar_alunos_por_credenciais(cpf, data_nascimento):
-    from django.db.models import Q
-
+def localizar_alunos_por_credenciais(
+    cpf,
+    data_nascimento,
+    somente_publicados=True,
+):
     cpf_normalizado = somente_digitos(cpf)
     if len(cpf_normalizado) != 11:
         return []
 
-    candidatos = (
-        AlunoBoletim.objects
-        .filter(boletins__periodo__publicado=True)
-        .filter(
-            Q(data_nascimento=data_nascimento)
-            | Q(matricula__dataNascimentoAluno=data_nascimento)
-        )
-        .select_related("matricula")
-        .distinct()
+    candidatos = AlunoBoletim.objects.select_related("matricula").distinct()
+    if somente_publicados:
+        candidatos = candidatos.filter(boletins__periodo__publicado=True)
+    else:
+        candidatos = candidatos.filter(boletins__isnull=False)
+
+    # Consulta Declarações pela mesma data informada para reduzir o conjunto
+    # e permitir que boletins importados sem vínculo com Matrículas tenham
+    # acesso público sem recadastro manual dos dados.
+    declaracoes_data = declaracao.objects.filter(
+        dataNascimentoAluno=data_nascimento,
     )
+    declaracoes_por_nome = _mapa_declaracoes_por_nome(declaracoes_data)
+
     encontrados = []
     for aluno in candidatos:
-        cpfs = {
-            somente_digitos(aluno.cpf_mae),
-            somente_digitos(aluno.cpf_responsavel),
-        }
-        if aluno.matricula_id:
-            cpfs.update({
-                somente_digitos(aluno.matricula.cpfMae),
-                somente_digitos(aluno.matricula.cpfResponsavel),
-            })
+        fontes = []
 
-        if cpf_normalizado in cpfs:
-            if aluno.matricula_id:
-                aluno = sincronizar_perfil_matricula(aluno.matricula)
-            encontrados.append(aluno)
+        fontes.append(
+            (
+                aluno.data_nascimento,
+                {
+                    somente_digitos(aluno.cpf_mae),
+                    somente_digitos(aluno.cpf_responsavel),
+                },
+                None,
+            )
+        )
+
+        if aluno.matricula_id:
+            fontes.append(
+                (
+                    aluno.matricula.dataNascimentoAluno,
+                    {
+                        somente_digitos(aluno.matricula.cpfMae),
+                        somente_digitos(aluno.matricula.cpfResponsavel),
+                    },
+                    "matricula",
+                )
+            )
+
+        for registro in declaracoes_por_nome.get(normalizar_nome(aluno.nome), []):
+            fontes.append(
+                (
+                    registro.dataNascimentoAluno,
+                    {
+                        somente_digitos(registro.cpfMae),
+                        somente_digitos(registro.cpfResponsavel),
+                    },
+                    registro,
+                )
+            )
+
+        fonte_correspondente = None
+        for nascimento, cpfs, fonte in fontes:
+            if nascimento == data_nascimento and cpf_normalizado in cpfs:
+                fonte_correspondente = fonte
+                break
+
+        if fonte_correspondente is None and not any(
+            nascimento == data_nascimento and cpf_normalizado in cpfs
+            for nascimento, cpfs, _ in fontes
+        ):
+            continue
+
+        if fonte_correspondente == "matricula" and aluno.matricula_id:
+            aluno = sincronizar_perfil_matricula(aluno.matricula)
+        elif fonte_correspondente not in {None, "matricula"}:
+            aluno = sincronizar_perfil_declaracao(
+                aluno,
+                fonte_correspondente,
+            )
+
+        encontrados.append(aluno)
+
     return encontrados
 
 

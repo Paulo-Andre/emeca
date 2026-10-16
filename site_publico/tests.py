@@ -11,6 +11,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from cadastro.models import matricula
+from usuarioSec.models import declaracao
 
 from .boletim_importacao import ler_planilha_boletim
 from .boletim_services import importar_dados_boletim, sincronizar_perfil_matricula
@@ -961,6 +962,127 @@ class SitePublicoTests(TestCase):
         boletim = BoletimAluno.objects.select_related("aluno").get()
         self.assertIsNone(boletim.aluno.matricula_id)
         self.assertEqual(boletim.aluno.nome, "João da Silva")
+
+    def test_importacao_usa_cpf_e_nascimento_de_declaracoes_sem_matricula(self):
+        declaracao.objects.create(
+            nomeDoAluno="Aluno Somente da Declaração",
+            dataNascimentoAluno=date(2019, 8, 18),
+            nomeMae="Mãe Teste",
+            cpfMae="138.090.846-97",
+            nomeResponsavel="Responsável Teste",
+            cpfResponsavel="",
+        )
+        dados = {
+            "metadados": {
+                "tipo": "TRIMESTRE",
+                "numero": 2,
+                "ano": 2026,
+                "turma": "1º Tulipa",
+                "regente": "Helena Freitas Oliveira",
+                "titulo_original": "",
+            },
+            "disciplinas": [
+                {"nome": "Matemática", "ordem": 0, "nota_col": 2, "faltas_col": 3},
+            ],
+            "alunos": [
+                {
+                    "numero_chamada": 9,
+                    "nome": "Aluno Somente da Declaração",
+                    "nome_normalizado": "ALUNO SOMENTE DA DECLARACAO",
+                    "resultados": [
+                        {"disciplina": "Matemática", "ordem": 0, "nota": Decimal("29.00"), "faltas": 0},
+                    ],
+                }
+            ],
+        }
+
+        resultado = importar_dados_boletim(dados)
+
+        perfil = AlunoBoletim.objects.get(nome="Aluno Somente da Declaração")
+        self.assertIsNone(perfil.matricula_id)
+        self.assertEqual(perfil.data_nascimento, date(2019, 8, 18))
+        self.assertEqual(perfil.cpf_mae, "138.090.846-97")
+        self.assertNotIn(perfil.nome, resultado["sem_acesso"])
+
+    def test_consulta_publica_usa_dados_existentes_em_declaracoes(self):
+        periodo = PeriodoBoletim.objects.create(
+            tipo="TRIMESTRE",
+            numero=2,
+            ano=2026,
+            turma="1º Tulipa",
+            publicado=True,
+        )
+        disciplina = DisciplinaBoletim.objects.create(
+            periodo=periodo,
+            nome="Matemática",
+            ordem=0,
+        )
+        perfil = AlunoBoletim.objects.create(nome="Criança Teste")
+        boletim = BoletimAluno.objects.create(
+            periodo=periodo,
+            aluno=perfil,
+            numero_chamada=5,
+        )
+        NotaBoletim.objects.create(
+            boletim=boletim,
+            disciplina=disciplina,
+            nota=Decimal("28.00"),
+            faltas=1,
+        )
+        declaracao.objects.create(
+            nomeDoAluno="Criança Teste",
+            dataNascimentoAluno=date(2019, 8, 18),
+            cpfMae="138.090.846-97",
+        )
+
+        response = self.client.post(
+            reverse("site_publico:boletim"),
+            {
+                "cpf": "13809084697",
+                "data_nascimento": "2019-08-18",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/boletim/acesso/", response.url)
+
+        perfil.refresh_from_db()
+        self.assertEqual(perfil.data_nascimento, date(2019, 8, 18))
+        self.assertEqual(perfil.cpf_mae, "138.090.846-97")
+
+    def test_consulta_avisa_quando_dados_estao_corretos_mas_boletim_nao_publicado(self):
+        periodo = PeriodoBoletim.objects.create(
+            tipo="TRIMESTRE",
+            numero=2,
+            ano=2026,
+            turma="1º Tulipa",
+            publicado=False,
+        )
+        perfil = AlunoBoletim.objects.create(nome="Criança em Rascunho")
+        BoletimAluno.objects.create(
+            periodo=periodo,
+            aluno=perfil,
+            numero_chamada=6,
+        )
+        declaracao.objects.create(
+            nomeDoAluno="Criança em Rascunho",
+            dataNascimentoAluno=date(2019, 8, 18),
+            cpfResponsavel="138.090.846-97",
+        )
+
+        response = self.client.post(
+            reverse("site_publico:boletim"),
+            {
+                "cpf": "13809084697",
+                "data_nascimento": "2019-08-18",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "Os dados do estudante foram reconhecidos, mas o boletim ainda não foi publicado pela escola.",
+        )
 
     def test_gestao_de_boletins_exige_login(self):
         response = self.client.get(reverse("site_publico:gestao_boletins"))
