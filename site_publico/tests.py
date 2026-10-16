@@ -1,4 +1,8 @@
-from datetime import timedelta
+from datetime import date, timedelta
+from decimal import Decimal
+from unittest.mock import patch
+
+import pandas as pd
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -6,14 +10,29 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .forms import FotoGaleriaLoteForm, PaginaPublicaForm, get_content_form
+from cadastro.models import matricula
+
+from .boletim_importacao import ler_planilha_boletim
+from .boletim_services import importar_dados_boletim, sincronizar_perfil_matricula
+from .forms import (
+    BoletimImportacaoForm,
+    FotoGaleriaLoteForm,
+    PaginaPublicaForm,
+    PeriodoBoletimForm,
+    get_content_form,
+)
 from .models import (
     AlbumGaleria,
+    AlunoBoletim,
+    BoletimAluno,
     ArquivoPaginaPublica,
     Aviso,
     FotoGaleria,
     Noticia,
+    DisciplinaBoletim,
+    NotaBoletim,
     PaginaPublica,
+    PeriodoBoletim,
     SecaoPagina,
 )
 
@@ -592,3 +611,296 @@ class SitePublicoTests(TestCase):
         self.assertEqual(response.status_code, 404)
         album1.refresh_from_db()
         self.assertIsNone(album1.foto_capa_id)
+
+
+    @staticmethod
+    def _matricula_para_boletim(nome="Alice Vitória Soares Veloso", cpf_mae="123.456.789-09", cpf_responsavel=""):
+        return matricula.objects.create(
+            nomeDoAluno=nome,
+            dataNascimentoAluno=date(2017, 8, 13),
+            cpfMae=cpf_mae,
+            cpfResponsavel=cpf_responsavel,
+            temIrmaosEscola="NAO",
+            problemaSaude="NAO",
+            tratamentoSaude="NAO",
+            necessidadeEspecial="NAO",
+            medicamento="NAO",
+            internado="NAO",
+            atendimentoEspecializado="NAO",
+            salaRecurso="NAO",
+            gestacao="NAO",
+            cras="NAO",
+            visitaSocial="NAO",
+            conselhoTutelar="NAO",
+            atendimentoDomiciliar="NAO",
+            trasporteEscolar="NAO",
+        )
+
+    @staticmethod
+    def _periodo_publicado(tipo="TRIMESTRE", numero=2, ano=2026, turma="1º Tulipa"):
+        return PeriodoBoletim.objects.create(
+            tipo=tipo,
+            numero=numero,
+            ano=ano,
+            turma=turma,
+            regente="Helena Freitas Oliveira",
+            publicado=True,
+        )
+
+    def _criar_boletim_publicado(self):
+        cadastro = self._matricula_para_boletim()
+        perfil = sincronizar_perfil_matricula(cadastro)
+        periodo = self._periodo_publicado()
+        portugues = DisciplinaBoletim.objects.create(
+            periodo=periodo,
+            nome="Língua Portuguesa",
+            ordem=0,
+        )
+        matematica = DisciplinaBoletim.objects.create(
+            periodo=periodo,
+            nome="Matemática",
+            ordem=1,
+        )
+        boletim = BoletimAluno.objects.create(
+            periodo=periodo,
+            aluno=perfil,
+            numero_chamada=1,
+        )
+        NotaBoletim.objects.create(
+            boletim=boletim,
+            disciplina=portugues,
+            nota=Decimal("21.00"),
+            faltas=1,
+        )
+        NotaBoletim.objects.create(
+            boletim=boletim,
+            disciplina=matematica,
+            nota=Decimal("30.00"),
+            faltas=0,
+        )
+        return cadastro, perfil, periodo, boletim
+
+    def test_formulario_publico_do_boletim_pede_cpf_e_nascimento(self):
+        response = self.client.get(reverse("site_publico:boletim"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "CPF da mãe ou do responsável")
+        self.assertContains(response, "Data de nascimento da criança")
+        self.assertContains(response, "Consultar boletim")
+        self.assertEqual(response["Cache-Control"], "no-store, private, max-age=0")
+
+    def test_responsavel_acessa_boletim_com_cpf_da_mae_e_nascimento(self):
+        self._criar_boletim_publicado()
+
+        response = self.client.post(
+            reverse("site_publico:boletim"),
+            {
+                "cpf": "12345678909",
+                "data_nascimento": "2017-08-13",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/boletim/acesso/", response.url)
+
+        resultado = self.client.get(response.url)
+        self.assertEqual(resultado.status_code, 200)
+        self.assertContains(resultado, "Alice Vitória Soares Veloso")
+        self.assertContains(resultado, "Língua Portuguesa")
+        self.assertContains(resultado, "21")
+        self.assertContains(resultado, "Baixar boletim em PDF")
+        self.assertEqual(resultado["X-Robots-Tag"], "noindex, nofollow, noarchive")
+
+    def test_cpf_errado_nao_expoe_boletim(self):
+        self._criar_boletim_publicado()
+
+        response = self.client.post(
+            reverse("site_publico:boletim"),
+            {
+                "cpf": "99999999999",
+                "data_nascimento": "2017-08-13",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Não foi possível localizar um boletim")
+        self.assertNotContains(response, "Língua Portuguesa")
+
+    def test_cpf_do_responsavel_tambem_da_acesso(self):
+        cadastro = self._matricula_para_boletim(
+            cpf_mae="",
+            cpf_responsavel="987.654.321-00",
+        )
+        perfil = sincronizar_perfil_matricula(cadastro)
+        periodo = self._periodo_publicado()
+        disciplina = DisciplinaBoletim.objects.create(
+            periodo=periodo,
+            nome="Artes",
+            ordem=0,
+        )
+        boletim = BoletimAluno.objects.create(periodo=periodo, aluno=perfil)
+        NotaBoletim.objects.create(
+            boletim=boletim,
+            disciplina=disciplina,
+            nota=Decimal("28.00"),
+            faltas=0,
+        )
+
+        response = self.client.post(
+            reverse("site_publico:boletim"),
+            {"cpf": "98765432100", "data_nascimento": "2017-08-13"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+    def test_pdf_do_boletim_e_baixavel_e_protegido_pelo_token(self):
+        _, perfil, _, boletim = self._criar_boletim_publicado()
+        acesso = self.client.post(
+            reverse("site_publico:boletim"),
+            {"cpf": "12345678909", "data_nascimento": "2017-08-13"},
+        )
+        token = acesso.url.rstrip("/").split("/")[-1]
+
+        response = self.client.get(
+            reverse("site_publico:boletim_pdf", args=[token, boletim.pk])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertIn("attachment", response["Content-Disposition"])
+        conteudo = b"".join(response.streaming_content)
+        self.assertTrue(conteudo.startswith(b"%PDF"))
+
+        negado = self.client.get(
+            reverse("site_publico:boletim_pdf", args=["token-invalido", boletim.pk])
+        )
+        self.assertEqual(negado.status_code, 404)
+
+    def test_trimestre_nao_aceita_periodo_quatro(self):
+        form = PeriodoBoletimForm(
+            data={
+                "tipo": "TRIMESTRE",
+                "numero": 4,
+                "ano": 2026,
+                "turma": "1º Tulipa",
+                "regente": "",
+                "publicado": "on",
+            }
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("numero", form.errors)
+
+    def test_bimestre_aceita_periodo_quatro(self):
+        form = PeriodoBoletimForm(
+            data={
+                "tipo": "BIMESTRE",
+                "numero": 4,
+                "ano": 2026,
+                "turma": "1º Tulipa",
+                "regente": "",
+                "publicado": "on",
+            }
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+
+    @patch("site_publico.boletim_importacao.pd.read_excel")
+    def test_leitor_reconhece_planilha_de_notas_e_faltas_enviada(self, read_excel):
+        read_excel.return_value = pd.DataFrame([
+            ["E.M EGIDIO CORDEIRO AQUINO", None, None, None, None, None],
+            ["Notas e Faltas do 2º Trimestre - Turma 1º Tulipa - 2026", None, None, None, None, None],
+            ["Regente", "Helena Freitas Oliveira", "LÍNG. PORT.", None, "MATEMÁTICA", None],
+            ["Num.", "Nome", "N.", "F.", "N.", "F."],
+            [1, "Alice Vitória Soares Veloso", 21.0, 1, 30.0, 0],
+            [2, "Arthur Gabriel Alves Lopes", 18.0, 2, 27.0, 1],
+        ])
+        arquivo = SimpleUploadedFile(
+            "NotaseFaltasdo2TrimestreTurma1Tulipa2026.xls",
+            b"xls-simulado",
+            content_type="application/vnd.ms-excel",
+        )
+
+        dados = ler_planilha_boletim(arquivo)
+
+        self.assertEqual(dados["metadados"]["tipo"], "TRIMESTRE")
+        self.assertEqual(dados["metadados"]["numero"], 2)
+        self.assertEqual(dados["metadados"]["ano"], 2026)
+        self.assertIn("Tulipa", dados["metadados"]["turma"])
+        self.assertEqual(len(dados["disciplinas"]), 2)
+        self.assertEqual(dados["alunos"][0]["nome"], "Alice Vitória Soares Veloso")
+        self.assertEqual(dados["alunos"][0]["resultados"][0]["nota"], Decimal("21.00"))
+        self.assertEqual(dados["alunos"][0]["resultados"][0]["faltas"], 1)
+
+    def test_importacao_vincula_notas_ao_aluno_da_matricula(self):
+        self._matricula_para_boletim()
+        dados = {
+            "metadados": {
+                "tipo": "TRIMESTRE",
+                "numero": 2,
+                "ano": 2026,
+                "turma": "1º Tulipa",
+                "regente": "Helena Freitas Oliveira",
+                "titulo_original": "",
+            },
+            "disciplinas": [
+                {"nome": "Língua Portuguesa", "ordem": 0, "nota_col": 2, "faltas_col": 3},
+                {"nome": "Matemática", "ordem": 1, "nota_col": 4, "faltas_col": 5},
+            ],
+            "alunos": [
+                {
+                    "numero_chamada": 1,
+                    "nome": "Alice Vitória Soares Veloso",
+                    "nome_normalizado": "ALICE VITORIA SOARES VELOSO",
+                    "resultados": [
+                        {"disciplina": "Língua Portuguesa", "ordem": 0, "nota": Decimal("21.00"), "faltas": 1},
+                        {"disciplina": "Matemática", "ordem": 1, "nota": Decimal("30.00"), "faltas": 0},
+                    ],
+                }
+            ],
+        }
+
+        resultado = importar_dados_boletim(
+            dados,
+            {
+                "tipo": "TRIMESTRE",
+                "numero": 2,
+                "ano": 2026,
+                "turma": "",
+                "regente": "",
+                "publicar": True,
+            },
+        )
+
+        self.assertEqual(resultado["importados"], 1)
+        self.assertEqual(PeriodoBoletim.objects.count(), 1)
+        self.assertEqual(BoletimAluno.objects.count(), 1)
+        self.assertEqual(NotaBoletim.objects.count(), 2)
+        self.assertTrue(resultado["periodo"].publicado)
+
+    def test_gestao_de_boletins_exige_login(self):
+        response = self.client.get(reverse("site_publico:gestao_boletins"))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response.url)
+
+    def test_usuario_autenticado_ve_opcao_de_boletins_na_gestao(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="gestor_boletim",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+
+        response = self.client.get(reverse("site_publico:gestao_site"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Gerenciar boletins")
+
+        lista = self.client.get(reverse("site_publico:gestao_boletins"))
+        self.assertEqual(lista.status_code, 200)
+        self.assertContains(lista, "Bimestre ou trimestre")
+        self.assertContains(lista, "Importar planilha")
+
+    def test_formulario_importacao_permite_escolher_bimestre_ou_trimestre(self):
+        form = BoletimImportacaoForm()
+        self.assertEqual(
+            list(form.fields["tipo"].choices),
+            [("BIMESTRE", "Bimestre"), ("TRIMESTRE", "Trimestre")],
+        )
