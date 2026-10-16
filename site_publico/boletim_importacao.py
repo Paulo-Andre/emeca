@@ -206,7 +206,7 @@ def _disciplinas(df, cabecalho_idx, nome_col):
             if col + 1 < len(headers) and headers[col + 1] in {"F", "FALTA", "FALTAS"}:
                 faltas_col = col + 1
             nome = _rotulo_disciplina(df, cabecalho_idx, col)
-            if nome:
+            if nome and _nome_disciplina_valido(nome):
                 itens.append(
                     {
                         "nome": nome,
