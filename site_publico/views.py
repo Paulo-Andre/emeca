@@ -102,6 +102,7 @@ def _slides_home(agora, paginas_ativas):
         albuns = (
             AlbumGaleria.objects
             .filter(ativo=True)
+            .select_related("foto_capa")
             .prefetch_related("fotos")
             .order_by("-data_evento", "-id")
         )
@@ -109,7 +110,11 @@ def _slides_home(agora, paginas_ativas):
             if len(slides) >= 8:
                 break
             fotos = list(item.fotos.all())
-            imagem = item.capa.url if item.capa else (fotos[0].imagem.url if fotos else "")
+            imagem = (
+                item.foto_capa.imagem.url
+                if item.foto_capa_id
+                else (item.capa.url if item.capa else (fotos[0].imagem.url if fotos else ""))
+            )
             if not imagem:
                 continue
             slides.append({
@@ -156,7 +161,7 @@ def home(request):
         ),
         "eventos": Evento.objects.filter(ativo=True, inicio__gte=agora)[:4],
         "albuns": (
-            AlbumGaleria.objects.filter(ativo=True).prefetch_related("fotos")[:4]
+            AlbumGaleria.objects.filter(ativo=True).select_related("foto_capa").prefetch_related("fotos")[:4]
             if paginas_ativas.get("galeria", True) else []
         ),
         "paginas_ativas_home": paginas_ativas,
@@ -227,14 +232,14 @@ def noticia(request, slug):
 @pagina_publica_required("galeria")
 def galeria(request):
     contexto = _base_context()
-    contexto["itens"] = AlbumGaleria.objects.filter(ativo=True).prefetch_related("fotos")
+    contexto["itens"] = AlbumGaleria.objects.filter(ativo=True).select_related("foto_capa").prefetch_related("fotos")
     return render(request, "site_publico/galeria.html", contexto)
 
 
 @pagina_publica_required("galeria")
 def album(request, slug):
     item = get_object_or_404(
-        AlbumGaleria.objects.prefetch_related("fotos"),
+        AlbumGaleria.objects.select_related("foto_capa").prefetch_related("fotos"),
         slug=slug,
         ativo=True,
     )

@@ -53,6 +53,52 @@
   </div>
 </form>
 
+{% if mostrar_seletor_capa_album %}
+<section class="manager-album-cover-card">
+  <div class="manager-documents-card__heading">
+    <div>
+      <span class="manager-kicker">Capa do álbum</span>
+      <h2>Escolher uma foto como capa</h2>
+      <p>Selecione uma das fotos do próprio álbum. A capa escolhida será usada na Galeria e também nos destaques da página inicial.</p>
+    </div>
+    <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_conteudo_novo' 'fotos' %}?album={{ objeto.pk }}">
+      <i data-lucide="images"></i> Adicionar fotos
+    </a>
+  </div>
+
+  {% if album_fotos %}
+    <div class="manager-album-cover-grid">
+      {% for foto in album_fotos %}
+        <article class="manager-album-cover-item{% if objeto.foto_capa_id == foto.pk %} is-selected{% endif %}">
+          <div class="manager-album-cover-item__image">
+            <img src="{{ foto.imagem.url }}" alt="{{ foto.legenda|default:'Foto do álbum' }}">
+            {% if objeto.foto_capa_id == foto.pk %}
+              <span class="manager-album-cover-badge"><i data-lucide="check"></i> Capa atual</span>
+            {% endif %}
+          </div>
+          <div class="manager-album-cover-item__footer">
+            <small>{% if foto.legenda %}{{ foto.legenda }}{% else %}Foto {{ forloop.counter }}{% endif %}</small>
+            {% if objeto.foto_capa_id != foto.pk %}
+              <form method="post" action="{% url 'site_publico:gestao_album_definir_capa' objeto.pk foto.pk %}">
+                {% csrf_token %}
+                <button class="manager-btn manager-btn--secondary" type="submit">
+                  <i data-lucide="image"></i> Definir como capa
+                </button>
+              </form>
+            {% endif %}
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="manager-documents-empty">
+      <i data-lucide="images"></i>
+      <span>Este álbum ainda não tem fotos. Adicione fotos para poder escolher a capa.</span>
+    </div>
+  {% endif %}
+</section>
+{% endif %}
+
 {% if permitir_documentos %}
 <section class="manager-documents-card">
   <div class="manager-documents-card__heading">

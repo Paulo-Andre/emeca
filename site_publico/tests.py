@@ -443,6 +443,7 @@ class SitePublicoTests(TestCase):
         self.assertEqual(response.status_code, 302)
         album = AlbumGaleria.objects.get(titulo="Festa Junina 2026")
         self.assertEqual(album.fotos.count(), 3)
+        self.assertEqual(album.foto_capa_id, album.fotos.first().pk)
 
         publica = self.client.get(reverse("site_publico:galeria"))
         self.assertContains(publica, "Festa Junina 2026")
@@ -517,3 +518,77 @@ class SitePublicoTests(TestCase):
 
         self.assertFalse(form.is_valid())
         self.assertIn("data_evento", form.errors)
+
+
+    def test_editor_do_album_permite_escolher_foto_como_capa(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="gestor_capa_album",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+
+        album = AlbumGaleria.objects.create(titulo="Semana da Criança", ativo=True)
+        foto1 = FotoGaleria.objects.create(
+            album=album,
+            imagem="site_publico/galeria/fotos/semana-1.jpg",
+            ordem=1,
+        )
+        foto2 = FotoGaleria.objects.create(
+            album=album,
+            imagem="site_publico/galeria/fotos/semana-2.jpg",
+            ordem=2,
+        )
+
+        pagina = self.client.get(
+            reverse("site_publico:gestao_conteudo_editar", args=["albuns", album.pk])
+        )
+        self.assertEqual(pagina.status_code, 200)
+        self.assertContains(pagina, "Escolher uma foto como capa")
+        self.assertContains(
+            pagina,
+            reverse(
+                "site_publico:gestao_album_definir_capa",
+                args=[album.pk, foto2.pk],
+            ),
+        )
+
+        response = self.client.post(
+            reverse(
+                "site_publico:gestao_album_definir_capa",
+                args=[album.pk, foto2.pk],
+            )
+        )
+        self.assertEqual(response.status_code, 302)
+
+        album.refresh_from_db()
+        self.assertEqual(album.foto_capa_id, foto2.pk)
+
+        publica = self.client.get(reverse("site_publico:galeria"))
+        self.assertContains(publica, foto2.imagem.url)
+
+    def test_nao_permite_definir_como_capa_foto_de_outro_album(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="gestor_capa_segura",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+
+        album1 = AlbumGaleria.objects.create(titulo="Álbum 1", ativo=True)
+        album2 = AlbumGaleria.objects.create(titulo="Álbum 2", ativo=True)
+        foto_outro = FotoGaleria.objects.create(
+            album=album2,
+            imagem="site_publico/galeria/fotos/outra.jpg",
+        )
+
+        response = self.client.post(
+            reverse(
+                "site_publico:gestao_album_definir_capa",
+                args=[album1.pk, foto_outro.pk],
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+        album1.refresh_from_db()
+        self.assertIsNone(album1.foto_capa_id)

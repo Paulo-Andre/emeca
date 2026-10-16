@@ -17,6 +17,7 @@ urlpatterns = [
     path("gestao-site/conteudo/<str:tipo>/", management_views.gestao_conteudo_lista, name="gestao_conteudo_lista"),
     path("gestao-site/conteudo/<str:tipo>/novo/", management_views.gestao_conteudo_novo, name="gestao_conteudo_novo"),
     path("gestao-site/conteudo/<str:tipo>/<int:pk>/editar/", management_views.gestao_conteudo_editar, name="gestao_conteudo_editar"),
+    path("gestao-site/albuns/<int:album_pk>/capa/<int:foto_pk>/", management_views.gestao_album_definir_capa, name="gestao_album_definir_capa"),
     path("gestao-site/conteudo/<str:tipo>/<int:pk>/excluir/", management_views.gestao_conteudo_excluir, name="gestao_conteudo_excluir"),
     path("", views.home, name="home"),
     path("configuracao-site-publica/", views.configuracao_publica, name="configuracao_publica"),

@@ -264,7 +264,14 @@ def gestao_conteudo_novo(request, tipo):
     config = _tipo_config(tipo)
 
     if tipo == "fotos":
-        form = FotoGaleriaLoteForm(request.POST or None, request.FILES or None)
+        initial = {}
+        if request.method == "GET" and request.GET.get("album"):
+            initial["album_existente"] = request.GET.get("album")
+        form = FotoGaleriaLoteForm(
+            request.POST or None,
+            request.FILES or None,
+            initial=initial,
+        )
         if request.method == "POST" and form.is_valid():
             with transaction.atomic():
                 album = form.cleaned_data["album_existente"]
@@ -287,6 +294,12 @@ def gestao_conteudo_novo(request, tipo):
                         imagem=imagem,
                         ordem=ultima_ordem + indice,
                     )
+
+                if not album.foto_capa_id:
+                    primeira_foto = album.fotos.first()
+                    if primeira_foto:
+                        album.foto_capa = primeira_foto
+                        album.save(update_fields=["foto_capa"])
 
             total = len(form.cleaned_data["fotos"])
             messages.success(
@@ -326,15 +339,34 @@ def gestao_conteudo_editar(request, tipo, pk):
         messages.success(request, f'{config["singular"].capitalize()} atualizado com sucesso.')
         return redirect("site_publico:gestao_conteudo_lista", tipo=tipo)
     imagem = getattr(obj, "imagem", None) or getattr(obj, "capa", None)
+    album_fotos = None
+    if tipo == "albuns":
+        album_fotos = obj.fotos.all()
+        if obj.foto_capa_id:
+            imagem = obj.foto_capa.imagem
+
     return render(request, "site_publico/gestao/form.html", {
         "form": form,
         "titulo": f'Editar {config["singular"]}',
         "descricao": str(obj),
         "objeto": obj,
         "imagem_atual": imagem,
+        "album_fotos": album_fotos,
+        "mostrar_seletor_capa_album": tipo == "albuns",
         "voltar_url": "site_publico:gestao_conteudo_lista",
         "voltar_tipo": tipo,
     })
+
+
+@require_POST
+@login_required
+def gestao_album_definir_capa(request, album_pk, foto_pk):
+    album = get_object_or_404(AlbumGaleria, pk=album_pk)
+    foto = get_object_or_404(FotoGaleria, pk=foto_pk, album=album)
+    album.foto_capa = foto
+    album.save(update_fields=["foto_capa"])
+    messages.success(request, "Foto definida como capa do álbum.")
+    return redirect("site_publico:gestao_conteudo_editar", tipo="albuns", pk=album.pk)
 
 
 @require_POST

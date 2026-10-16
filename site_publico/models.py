@@ -357,6 +357,13 @@ class AlbumGaleria(models.Model):
         blank=True,
     )
     data_evento = models.DateField(blank=True, null=True)
+    foto_capa = models.ForeignKey(
+        "FotoGaleria",
+        on_delete=models.SET_NULL,
+        related_name="+",
+        blank=True,
+        null=True,
+    )
     ativo = models.BooleanField(default=True)
 
     class Meta:

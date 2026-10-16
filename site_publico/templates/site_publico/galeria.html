@@ -15,7 +15,7 @@
     <div class="gallery-grid">
       {% for item in itens %}
         <a class="gallery-card" href="{{ item.get_absolute_url }}">
-          {% if item.capa %}<img src="{{ item.capa.url }}" alt="">{% elif item.fotos.first %}<img src="{{ item.fotos.first.imagem.url }}" alt="">{% endif %}
+          {% if item.foto_capa %}<img src="{{ item.foto_capa.imagem.url }}" alt="">{% elif item.capa %}<img src="{{ item.capa.url }}" alt="">{% elif item.fotos.first %}<img src="{{ item.fotos.first.imagem.url }}" alt="">{% endif %}
           <span class="gallery-card__overlay"><span><strong>{{ item.titulo }}</strong>{% if item.data_evento %}<span>{{ item.data_evento|date:"d/m/Y" }}</span>{% endif %}</span></span>
         </a>
       {% endfor %}
