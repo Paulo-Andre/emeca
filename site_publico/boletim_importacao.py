@@ -177,9 +177,6 @@ def _metadados(df):
                     if candidato:
                         regente = candidato
                         break
-                if not regente and linha + 1 < len(df.index):
-                    abaixo = [texto(v) for v in df.iloc[linha + 1].tolist()]
-                    regente = next((v for v in abaixo if v), "")
                 break
         if regente:
             break
