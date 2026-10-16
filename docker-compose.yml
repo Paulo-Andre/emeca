@@ -10,6 +10,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - emeca_data:/data
+      - /srv/backups/emeca:/backups
     networks:
       - default
       - emeca_private
