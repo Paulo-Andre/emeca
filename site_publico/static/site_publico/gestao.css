@@ -2737,3 +2737,23 @@
   color: #fff;
   opacity: 1;
 }
+
+
+/* Editor unificado de aluno + notas */
+.bulletin-grade-editor__student--details {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.bulletin-grade-editor__student--details .manager-field--full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 760px) {
+  .bulletin-grade-editor__student--details {
+    grid-template-columns: 1fr;
+  }
+
+  .bulletin-grade-editor__student--details .manager-field--full {
+    grid-column: auto;
+  }
+}
