@@ -150,7 +150,9 @@ def _metadados(df):
     tipo = "TRIMESTRE" if "TRIMESTRE" in norm else ("BIMESTRE" if "BIMESTRE" in norm else "")
     numero = None
     if tipo:
-        match = re.search(rf"(\d+)\s+{tipo}", norm)
+        # Aceita títulos como "2º Trimestre", que após normalização
+        # podem aparecer como "2O TRIMESTRE".
+        match = re.search(rf"(\d+)\s*(?:O\s*)?{tipo}", norm)
         if match:
             numero = int(match.group(1))
 
