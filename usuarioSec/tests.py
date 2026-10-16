@@ -1,3 +1,154 @@
-from django.test import TestCase
+from unittest.mock import patch
 
-# Create your tests here.
+import pandas as pd
+from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase
+from django.urls import reverse
+
+from .importacao_declaracoes import deduplicar_telefones, ler_planilha
+from .models import TelefoneDeclaracao, declaracao
+
+
+class ImportacaoDeclaracoesTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.usuario = User.objects.create_superuser(
+            username="admin_importacao",
+            email="admin@example.com",
+            password="senha-segura-123",
+        )
+        self.client.force_login(self.usuario)
+
+    @staticmethod
+    def _planilha_modelo_antigo():
+        return pd.DataFrame(
+            [
+                ["E.M EGIDIO CORDEIRO AQUINO"] + [None] * 14,
+                ["declara"] + [None] * 14,
+                [
+                    "NOME",
+                    "",
+                    "",
+                    "NASCIMENTO",
+                    "NATURALIDADE",
+                    "NACIONALIDAD",
+                    "SEXO",
+                    "TURMA",
+                    "TELEFONE",
+                    "CELULAR PAI",
+                    "Telefone da Mãe",
+                    "TEL. RESPONS.",
+                    "Telefone do Pai*",
+                    "Telefone2 da Mãe",
+                    "Telefone2 do Pai",
+                ],
+                [
+                    "Aluno Teste",
+                    "Maria Teste",
+                    "João Teste",
+                    "13/08/2017",
+                    "Montes Claros",
+                    "Brasileira",
+                    "MASCULINO",
+                    "3º Ano Lavanda",
+                    "998552563",
+                    "998215463",
+                    "999598271",
+                    "(38) 99855-2563",
+                    "(38) 99821-5463",
+                    "(38) 99959-8271",
+                    "998215463",
+                ],
+            ]
+        )
+
+    def test_deduplica_mesmo_telefone_com_e_sem_ddd(self):
+        numeros, duplicados = deduplicar_telefones(
+            ["99855-2563", "(38) 99855-2563", "998552563"]
+        )
+
+        self.assertEqual(numeros, ["(38) 99855-2563"])
+        self.assertEqual(duplicados, 2)
+
+    @patch("usuarioSec.importacao_declaracoes.pd.read_excel")
+    def test_leitor_aceita_xls_e_detecta_modelo_antigo(self, read_excel):
+        read_excel.return_value = self._planilha_modelo_antigo()
+        arquivo = SimpleUploadedFile(
+            "declaracao.xls",
+            b"conteudo-xls-simulado",
+            content_type="application/vnd.ms-excel",
+        )
+
+        resultado = ler_planilha(arquivo)
+
+        read_excel.assert_called_once()
+        self.assertEqual(read_excel.call_args.kwargs["engine"], "xlrd")
+        self.assertEqual(len(resultado["registros"]), 1)
+
+        aluno = resultado["registros"][0]
+        self.assertEqual(aluno["nomeDoAluno"], "Aluno Teste")
+        self.assertEqual(aluno["nomeMae"], "Maria Teste")
+        self.assertEqual(aluno["nomePai"], "João Teste")
+        self.assertEqual(str(aluno["dataNascimentoAluno"]), "2017-08-13")
+        self.assertEqual(aluno["nacionaliadeAluno"], "Brasileira")
+        self.assertEqual(aluno["turmaDoAluno"], "3º Ano Lavanda")
+
+        self.assertEqual(
+            aluno["telefones"]["RESPONSAVEL"],
+            ["(38) 99855-2563"],
+        )
+        self.assertEqual(
+            aluno["telefones"]["PAI"],
+            ["(38) 99821-5463"],
+        )
+        self.assertEqual(
+            aluno["telefones"]["MAE"],
+            ["(38) 99959-8271"],
+        )
+        self.assertEqual(resultado["telefones_duplicados"], 4)
+
+    @patch("usuarioSec.importacao_declaracoes.pd.read_excel")
+    def test_importacao_salva_um_telefone_por_responsavel_sem_duplicar(self, read_excel):
+        read_excel.return_value = self._planilha_modelo_antigo()
+        arquivo = SimpleUploadedFile(
+            "declarao (1).xls",
+            b"conteudo-xls-simulado",
+            content_type="application/vnd.ms-excel",
+        )
+
+        response = self.client.post(
+            reverse("importar_alunos"),
+            {"arquivo": arquivo},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(declaracao.objects.count(), 1)
+
+        aluno = declaracao.objects.get()
+        self.assertEqual(aluno.nomeDoAluno, "Aluno Teste")
+        self.assertEqual(aluno.nomeMae, "Maria Teste")
+        self.assertEqual(aluno.nomePai, "João Teste")
+
+        responsavel = list(
+            aluno.telefones.filter(tipo="RESPONSAVEL").values_list("telefone", flat=True)
+        )
+        pai = list(
+            aluno.telefones.filter(tipo="PAI").values_list("telefone", flat=True)
+        )
+        mae = list(
+            aluno.telefones.filter(tipo="MAE").values_list("telefone", flat=True)
+        )
+
+        self.assertEqual(responsavel, ["(38) 99855-2563"])
+        self.assertEqual(pai, ["(38) 99821-5463"])
+        self.assertEqual(mae, ["(38) 99959-8271"])
+        self.assertEqual(TelefoneDeclaracao.objects.count(), 3)
+
+    def test_tela_de_importacao_informa_suporte_a_xls(self):
+        response = self.client.get(reverse("importar_alunos"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, ".xls")
+        self.assertContains(response, 'accept=".xls,.xlsx,.csv"')
+        self.assertContains(response, "Telefones repetidos")
