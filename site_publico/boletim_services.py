@@ -1,6 +1,7 @@
 import re
 import time
 import unicodedata
+from xml.sax.saxutils import escape
 from collections import defaultdict
 from io import BytesIO
 
@@ -339,10 +340,10 @@ def gerar_pdf_boletim(boletim, config_site=None):
     )
 
     story = [
-        Paragraph(escola, escola_style),
+        Paragraph(escape(escola), escola_style),
         Paragraph("BOLETIM ESCOLAR", titulo_style),
         Paragraph(
-            f"{boletim.periodo.nome_periodo} · Ano letivo {boletim.periodo.ano}",
+            escape(f"{boletim.periodo.nome_periodo} · Ano letivo {boletim.periodo.ano}"),
             subtitulo_style,
         ),
     ]
@@ -350,9 +351,9 @@ def gerar_pdf_boletim(boletim, config_site=None):
     dados = [
         [
             Paragraph("<b>Aluno(a)</b>", normal),
-            Paragraph(boletim.aluno.nome, normal),
+            Paragraph(escape(boletim.aluno.nome), normal),
             Paragraph("<b>Turma</b>", normal),
-            Paragraph(boletim.periodo.turma, normal),
+            Paragraph(escape(boletim.periodo.turma), normal),
         ],
         [
             Paragraph("<b>Nascimento</b>", normal),
@@ -367,9 +368,9 @@ def gerar_pdf_boletim(boletim, config_site=None):
         ],
         [
             Paragraph("<b>Regente</b>", normal),
-            Paragraph(boletim.periodo.regente or "—", normal),
+            Paragraph(escape(boletim.periodo.regente or "—"), normal),
             Paragraph("<b>Município</b>", normal),
-            Paragraph(cidade, normal),
+            Paragraph(escape(cidade), normal),
         ],
     ]
     info = Table(dados, colWidths=[27 * mm, 72 * mm, 24 * mm, 55 * mm])
