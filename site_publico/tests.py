@@ -312,8 +312,12 @@ class SitePublicoTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Editar página inicial")
-        self.assertContains(response, "Título, texto e pilares")
-        self.assertContains(response, "Carrossel, avisos e destaques")
+        self.assertContains(response, "O que você quer alterar?")
+        self.assertContains(response, "Apresentação")
+        self.assertContains(response, "Blocos da página")
+        self.assertContains(response, "Carrossel e avisos")
+        self.assertContains(response, "Conteúdos em destaque")
+        self.assertContains(response, 'data-home-tab-target="apresentacao"')
 
     def test_editor_da_pagina_inicial_salva_conteudo(self):
         User = get_user_model()
@@ -355,3 +359,23 @@ class SitePublicoTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Página inicial")
         self.assertContains(response, reverse("site_publico:gestao_inicio"))
+
+
+    def test_editor_home_retorna_para_aba_de_blocos(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="editor_home_retorno",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+        secao = SecaoPagina.objects.get(chave="home_avisos")
+
+        response = self.client.get(
+            reverse("site_publico:gestao_secao_editar", args=[secao.chave]) + "?origem=home"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            reverse("site_publico:gestao_inicio") + "#blocos",
+        )

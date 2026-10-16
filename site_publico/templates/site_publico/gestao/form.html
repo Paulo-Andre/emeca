@@ -6,7 +6,9 @@
 
 {% block content %}
 <div class="manager-toolbar">
-  {% if voltar_tipo %}
+  {% if voltar_href %}
+    <a class="manager-back" href="{{ voltar_href }}"><i data-lucide="arrow-left"></i> Voltar</a>
+  {% elif voltar_tipo %}
     <a class="manager-back" href="{% url voltar_url voltar_tipo %}"><i data-lucide="arrow-left"></i> Voltar</a>
   {% else %}
     <a class="manager-back" href="{% url voltar %}"><i data-lucide="arrow-left"></i> Voltar</a>
