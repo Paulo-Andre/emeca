@@ -19,7 +19,7 @@ from .importacao_declaracoes import (
 from django.http import JsonResponse
 import json
 from django.utils import timezone
-from django.db import connection, transaction
+from django.db import transaction
 from django.http import HttpResponseForbidden
 from functools import wraps
 from django.utils.decorators import method_decorator
