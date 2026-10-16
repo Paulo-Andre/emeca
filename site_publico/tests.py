@@ -14,7 +14,7 @@ from cadastro.models import matricula
 from usuarioSec.models import declaracao
 
 from .boletim_importacao import ler_planilha_boletim
-from .boletim_services import importar_dados_boletim, sincronizar_perfil_matricula
+from .boletim_services import importar_dados_boletim, localizar_alunos_por_credenciais, sincronizar_perfil_matricula
 from .forms import (
     BoletimImportacaoForm,
     FotoGaleriaLoteForm,
@@ -715,6 +715,35 @@ class SitePublicoTests(TestCase):
         self.assertNotContains(resultado, "<th>Faltas</th>", html=True)
         self.assertContains(resultado, "Baixar boletim em PDF")
         self.assertEqual(resultado["X-Robots-Tag"], "noindex, nofollow, noarchive")
+
+    def test_homonimos_nao_compartilham_credenciais_de_boletim(self):
+        nome = "ESTUDANTE HOMONIMO SINTETICO"
+        cadastro_a = self._matricula_para_boletim(
+            nome=nome,
+            cpf_mae="123.456.789-09",
+        )
+        cadastro_b = self._matricula_para_boletim(
+            nome=nome,
+            cpf_mae="987.654.321-00",
+        )
+        perfil_a = sincronizar_perfil_matricula(cadastro_a)
+        perfil_b = sincronizar_perfil_matricula(cadastro_b)
+        periodo = self._periodo_publicado(
+            tipo="TRIMESTRE",
+            numero=1,
+            ano=2026,
+            turma="TURMA HOMONIMOS",
+        )
+        BoletimAluno.objects.create(periodo=periodo, aluno=perfil_a)
+        BoletimAluno.objects.create(periodo=periodo, aluno=perfil_b)
+
+        encontrados = localizar_alunos_por_credenciais(
+            "12345678909",
+            date(2017, 8, 13),
+        )
+
+        self.assertEqual([aluno.pk for aluno in encontrados], [perfil_a.pk])
+        self.assertNotIn(perfil_b.pk, [aluno.pk for aluno in encontrados])
 
     def test_cpf_errado_nao_expoe_boletim(self):
         self._criar_boletim_publicado()
