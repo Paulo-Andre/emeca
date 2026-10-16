@@ -758,16 +758,19 @@ class SitePublicoTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
 
-    def test_pdf_do_boletim_e_baixavel_e_protegido_pelo_token(self):
-        _, perfil, _, boletim = self._criar_boletim_publicado()
+    def test_pdf_do_boletim_e_baixavel_e_protegido_pela_sessao(self):
+        _, _, periodo, boletim = self._criar_boletim_publicado()
         acesso = self.client.post(
             reverse("site_publico:boletim"),
             {"cpf": "12345678909", "data_nascimento": "2017-08-13"},
         )
-        token = acesso.url.rstrip("/").split("/")[-1]
+
+        self.assertEqual(acesso.url, reverse("site_publico:boletim_acesso"))
+        self.assertNotIn("12345678909", acesso.url)
+        self.assertNotIn("2017-08-13", acesso.url)
 
         response = self.client.get(
-            reverse("site_publico:boletim_pdf", args=[token, boletim.pk])
+            reverse("site_publico:boletim_pdf", args=[boletim.pk])
         )
 
         self.assertEqual(response.status_code, 200)
@@ -776,10 +779,23 @@ class SitePublicoTests(TestCase):
         conteudo = b"".join(response.streaming_content)
         self.assertTrue(conteudo.startswith(b"%PDF"))
 
-        negado = self.client.get(
-            reverse("site_publico:boletim_pdf", args=["token-invalido", boletim.pk])
+        # Outra sessão, sem as credenciais validadas, não pode reutilizar o ID.
+        outro_cliente = self.client_class()
+        negado = outro_cliente.get(
+            reverse("site_publico:boletim_pdf", args=[boletim.pk])
         )
         self.assertEqual(negado.status_code, 404)
+
+        # Mesmo dentro da sessão válida, um boletim não autorizado é bloqueado.
+        outro_aluno = AlunoBoletim.objects.create(nome="Estudante Sintético B")
+        outro_boletim = BoletimAluno.objects.create(
+            periodo=periodo,
+            aluno=outro_aluno,
+        )
+        idor = self.client.get(
+            reverse("site_publico:boletim_pdf", args=[outro_boletim.pk])
+        )
+        self.assertEqual(idor.status_code, 404)
 
     def test_trimestre_nao_aceita_periodo_quatro(self):
         form = PeriodoBoletimForm(
