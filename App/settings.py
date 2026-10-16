@@ -62,6 +62,7 @@ TEMPLATES = [{
         "django.contrib.auth.context_processors.auth",
         "django.contrib.messages.context_processors.messages",
         "site_publico.context_processors.site_publico",
+        "usuarioSec.context_processors.acessos_emeca",
     ]},
 }]
 WSGI_APPLICATION = "App.wsgi.application"
