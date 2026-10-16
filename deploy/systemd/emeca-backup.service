@@ -1,0 +1,11 @@
+[Unit]
+Description=Backup criptografado do EMECA
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/projetos/emeca
+EnvironmentFile=/srv/projetos/emeca/.env
+EnvironmentFile=/etc/emeca/backup.env
+ExecStart=/usr/bin/docker compose exec -T web python /app/scripts/backup_criptografado.py
