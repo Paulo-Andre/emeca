@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.urls import reverse
@@ -458,3 +459,157 @@ class MensagemContato(models.Model):
 
     def __str__(self):
         return f"{self.nome} — {self.assunto}"
+
+
+
+class PeriodoBoletim(models.Model):
+    TIPOS = [
+        ("BIMESTRE", "Bimestre"),
+        ("TRIMESTRE", "Trimestre"),
+    ]
+
+    tipo = models.CharField(max_length=12, choices=TIPOS)
+    numero = models.PositiveSmallIntegerField()
+    ano = models.PositiveSmallIntegerField()
+    turma = models.CharField(max_length=160)
+    regente = models.CharField(max_length=180, blank=True)
+    publicado = models.BooleanField(default=False)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-ano", "tipo", "numero", "turma"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tipo", "numero", "ano", "turma"],
+                name="uniq_periodo_boletim_turma",
+            )
+        ]
+        verbose_name = "Período de boletim"
+        verbose_name_plural = "Períodos de boletim"
+
+    def clean(self):
+        limite = 4 if self.tipo == "BIMESTRE" else 3
+        if self.numero < 1 or self.numero > limite:
+            raise ValidationError(
+                {"numero": f"Para {self.get_tipo_display().lower()}, informe um período entre 1 e {limite}."}
+            )
+        if self.ano < 2000 or self.ano > 2100:
+            raise ValidationError({"ano": "Informe um ano letivo válido."})
+
+    @property
+    def nome_periodo(self):
+        ordinal = f"{self.numero}º"
+        return f"{ordinal} {self.get_tipo_display()}"
+
+    @property
+    def titulo(self):
+        return f"{self.nome_periodo} · {self.turma} · {self.ano}"
+
+    def __str__(self):
+        return self.titulo
+
+
+class AlunoBoletim(models.Model):
+    matricula = models.OneToOneField(
+        "cadastro.matricula",
+        on_delete=models.SET_NULL,
+        related_name="perfil_boletim",
+        blank=True,
+        null=True,
+    )
+    nome = models.CharField(max_length=255)
+    data_nascimento = models.DateField(blank=True, null=True)
+    cpf_mae = models.CharField(max_length=20, blank=True)
+    cpf_responsavel = models.CharField(max_length=20, blank=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["nome"]
+        verbose_name = "Aluno de boletim"
+        verbose_name_plural = "Alunos de boletim"
+
+    def __str__(self):
+        return self.nome
+
+
+class DisciplinaBoletim(models.Model):
+    periodo = models.ForeignKey(
+        PeriodoBoletim,
+        on_delete=models.CASCADE,
+        related_name="disciplinas",
+    )
+    nome = models.CharField(max_length=160)
+    ordem = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["ordem", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["periodo", "nome"],
+                name="uniq_disciplina_periodo_boletim",
+            )
+        ]
+        verbose_name = "Disciplina do boletim"
+        verbose_name_plural = "Disciplinas do boletim"
+
+    def __str__(self):
+        return self.nome
+
+
+class BoletimAluno(models.Model):
+    periodo = models.ForeignKey(
+        PeriodoBoletim,
+        on_delete=models.CASCADE,
+        related_name="boletins",
+    )
+    aluno = models.ForeignKey(
+        AlunoBoletim,
+        on_delete=models.CASCADE,
+        related_name="boletins",
+    )
+    numero_chamada = models.PositiveSmallIntegerField(blank=True, null=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["numero_chamada", "aluno__nome"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["periodo", "aluno"],
+                name="uniq_boletim_aluno_periodo",
+            )
+        ]
+        verbose_name = "Boletim do aluno"
+        verbose_name_plural = "Boletins dos alunos"
+
+    def __str__(self):
+        return f"{self.aluno.nome} · {self.periodo.titulo}"
+
+
+class NotaBoletim(models.Model):
+    boletim = models.ForeignKey(
+        BoletimAluno,
+        on_delete=models.CASCADE,
+        related_name="resultados",
+    )
+    disciplina = models.ForeignKey(
+        DisciplinaBoletim,
+        on_delete=models.CASCADE,
+        related_name="resultados",
+    )
+    nota = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)
+    faltas = models.PositiveSmallIntegerField(blank=True, null=True)
+
+    class Meta:
+        ordering = ["disciplina__ordem", "disciplina__id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["boletim", "disciplina"],
+                name="uniq_nota_disciplina_boletim",
+            )
+        ]
+        verbose_name = "Nota do boletim"
+        verbose_name_plural = "Notas do boletim"
+
+    def __str__(self):
+        return f"{self.boletim.aluno.nome} · {self.disciplina.nome}"
