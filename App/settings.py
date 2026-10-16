@@ -103,7 +103,7 @@ STORAGES = {
 }
 
 LOGIN_URL = "/login/"
-LOGIN_REDIRECT_URL = "/dashboard/"
+LOGIN_REDIRECT_URL = "/entrada/"
 LOGOUT_REDIRECT_URL = "/login/"
 
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
