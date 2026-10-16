@@ -336,6 +336,13 @@ def boletim_acesso(request, token):
     boletins_por_aluno = {aluno.pk: [] for aluno in alunos}
     for item in boletins:
         boletins_por_aluno.setdefault(item.aluno_id, []).append(item)
+    alunos_contexto = [
+        {
+            "aluno": aluno,
+            "boletins": boletins_por_aluno.get(aluno.pk, []),
+        }
+        for aluno in alunos
+    ]
 
     solicitado = request.GET.get("boletim")
     selecionado = None
@@ -351,7 +358,7 @@ def boletim_acesso(request, token):
     contexto.update({
         "token_boletim": token,
         "alunos_boletim": alunos,
-        "boletins_por_aluno": boletins_por_aluno,
+        "alunos_contexto": alunos_contexto,
         "boletins_disponiveis": boletins,
         "boletim_selecionado": selecionado,
     })
