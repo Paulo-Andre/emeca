@@ -119,6 +119,22 @@ def gerenciar_acessos(request):
         },
     )
 
+def entrada(request):
+    strict = getattr(settings, "EMECA_RBAC_STRICT", True)
+    destinos = [
+        ("secretaria", "dashboard"),
+        ("historico", "historico:inicio"),
+        ("boletins", "site_publico:gestao_boletins"),
+        ("site", "site_publico:gestao_site"),
+        ("whatsapp", "whatsapp"),
+        ("administracao", "gerenciar_acessos"),
+    ]
+    for modulo, destino in destinos:
+        if usuario_tem_modulo(request.user, modulo, strict=strict):
+            return redirect(destino)
+    return HttpResponseForbidden("Seu usuário não possui módulos liberados. Procure um administrador.")
+
+
 def dashboard(request):
     return render(request, "dashboard.html", {
         "alunos": None,
