@@ -711,7 +711,7 @@ class SitePublicoTests(TestCase):
         self.assertContains(resultado, "Língua Portuguesa")
         self.assertContains(resultado, "21")
         self.assertContains(resultado, "Faltas totais")
-        self.assertContains(resultado, ">3<", html=True)
+        self.assertContains(resultado, "<strong>3</strong>", html=True)
         self.assertNotContains(resultado, "<th>Faltas</th>", html=True)
         self.assertContains(resultado, "Baixar boletim em PDF")
         self.assertEqual(resultado["X-Robots-Tag"], "noindex, nofollow, noarchive")
