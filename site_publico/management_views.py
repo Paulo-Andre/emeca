@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from .forms import (
@@ -93,12 +94,17 @@ def gestao_secao_editar(request, chave):
         form.save()
         messages.success(request, f'Bloco "{secao.nome}" atualizado.')
         return redirect("site_publico:gestao_secoes")
+    voltar_href = ""
+    if secao.pagina == "home" and request.GET.get("origem") == "home":
+        voltar_href = reverse("site_publico:gestao_inicio") + "#blocos"
+
     return render(request, "site_publico/gestao/form.html", {
         "form": form,
         "titulo": secao.nome,
         "descricao": "Edite o conteúdo visual deste bloco. Menus e textos de botões permanecem protegidos.",
         "objeto": secao,
         "imagem_atual": secao.imagem,
+        "voltar_href": voltar_href,
         "voltar": "site_publico:gestao_inicio" if secao.pagina == "home" else "site_publico:gestao_secoes",
     })
 
