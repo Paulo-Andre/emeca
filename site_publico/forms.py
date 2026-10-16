@@ -280,8 +280,18 @@ CONTENT_FORMS = {
 
 def get_content_form(tipo):
     config = CONTENT_FORMS[tipo]
+    extras = {}
+    if tipo == "albuns":
+        extras["labels"] = {
+            "capa": "Capa enviada manualmente (opcional)",
+        }
+        extras["help_texts"] = {
+            "capa": "Opcional. Depois de adicionar fotos ao álbum, você também pode escolher qualquer uma delas como capa.",
+        }
+
     return modelform_factory(
         config["model"],
         form=StyledModelForm,
         fields=config["fields"],
+        **extras,
     )
