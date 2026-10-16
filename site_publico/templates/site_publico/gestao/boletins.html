@@ -1,18 +1,15 @@
 {% extends 'site_publico/gestao/base.html' %}
-{% block title %}Gestão de boletins{% endblock %}
+{% block title %}Editar dados dos boletins{% endblock %}
 {% block header_icon %}notebook-tabs{% endblock %}
-{% block header_title %}Gestão de boletins{% endblock %}
-{% block header_subtitle %}Importe notas e faltas por turma, lance dados manualmente e controle o que os responsáveis podem consultar.{% endblock %}
+{% block header_title %}Editar dados dos boletins{% endblock %}
+{% block header_subtitle %}Acesse os períodos importados para corrigir nomes, alunos, disciplinas, notas e faltas.{% endblock %}
 
 {% block content %}
 <div class="manager-toolbar">
   <a class="manager-back" href="{% url 'site_publico:gestao_site' %}"><i data-lucide="arrow-left"></i> Voltar</a>
   <div class="bulletin-manager-actions">
-    <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_boletim_periodo_novo' %}">
-      <i data-lucide="plus"></i> Cadastrar sem planilha (opcional)
-    </a>
     <a class="manager-btn manager-btn--primary" href="{% url 'site_publico:gestao_boletim_importar' %}">
-      <i data-lucide="file-spreadsheet"></i> Importar planilha
+      <i data-lucide="file-spreadsheet"></i> Importar boletim
     </a>
   </div>
 </div>
@@ -20,8 +17,8 @@
 <section class="bulletin-manager-intro">
   <div>
     <span class="manager-kicker">Notas e faltas</span>
-    <h2>Bimestre ou trimestre</h2>
-    <p>Ao importar a planilha, período, ano, turma, regente, disciplinas, alunos, notas e faltas são extraídos automaticamente. Depois você pode revisar e alterar tudo nesta área.</p>
+    <h2>Editar alunos e notas</h2>
+    <p>Abra um período importado para alterar nomes de alunos, adicionar aluno manualmente, corrigir notas e faltas ou ajustar os demais dados do boletim.</p>
   </div>
   <div class="bulletin-manager-intro__legend">
     <span><i data-lucide="file-spreadsheet"></i> .xls / .xlsx</span>
@@ -67,8 +64,8 @@
   {% else %}
     <div class="manager-empty">
       <i data-lucide="notebook-tabs"></i>
-      <strong>Nenhum boletim cadastrado</strong>
-      <p>Importe a planilha de notas ou crie um período manualmente.</p>
+      <strong>Nenhum boletim importado</strong>
+      <p>Use a aba Importar boletim para carregar a planilha de notas e faltas.</p>
       <a class="manager-btn manager-btn--primary" href="{% url 'site_publico:gestao_boletim_importar' %}">
         <i data-lucide="file-spreadsheet"></i> Importar primeira planilha
       </a>
