@@ -508,7 +508,10 @@
     }
 
     modos.forEach(el => el.addEventListener("change", atualizarCampos));
-    turma.addEventListener("change", atualizarPreview);
+    turma.addEventListener("change", () => {
+      atualizarPreview();
+      atualizarPreviewBoletim();
+    });
     document.querySelectorAll('input[name="tipos"]').forEach(el => el.addEventListener("change", () => {
       atualizarPreview();
       atualizarPreviewBoletim();
@@ -530,6 +533,7 @@
       if (q.length < 2) {
         resultados.hidden = true;
         atualizarPreview();
+        atualizarPreviewBoletim();
         return;
       }
       searchTimer = setTimeout(async () => {
