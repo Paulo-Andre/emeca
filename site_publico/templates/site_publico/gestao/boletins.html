@@ -9,7 +9,7 @@
   <a class="manager-back" href="{% url 'site_publico:gestao_site' %}"><i data-lucide="arrow-left"></i> Voltar</a>
   <div class="bulletin-manager-actions">
     <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_boletim_periodo_novo' %}">
-      <i data-lucide="plus"></i> Novo período manual
+      <i data-lucide="plus"></i> Cadastrar sem planilha
     </a>
     <a class="manager-btn manager-btn--primary" href="{% url 'site_publico:gestao_boletim_importar' %}">
       <i data-lucide="file-spreadsheet"></i> Importar planilha
@@ -21,7 +21,7 @@
   <div>
     <span class="manager-kicker">Notas e faltas</span>
     <h2>Bimestre ou trimestre</h2>
-    <p>Cada turma pode ter seus períodos separados. A publicação só aparece para os responsáveis quando o período estiver marcado como disponível.</p>
+    <p>Ao importar a planilha, período, ano, turma, regente, disciplinas, alunos, notas e faltas são extraídos automaticamente. Depois você pode revisar e alterar tudo nesta área.</p>
   </div>
   <div class="bulletin-manager-intro__legend">
     <span><i data-lucide="file-spreadsheet"></i> .xls / .xlsx</span>
