@@ -1053,6 +1053,31 @@ class SitePublicoTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn("/boletim/acesso/", response.url)
 
+    @patch("site_publico.boletim_importacao.pd.read_excel")
+    def test_leitor_prefere_soma_das_faltas_das_disciplinas_ao_f_geral(self, read_excel):
+        # O XLS real pode trazer um F. geral com valor diferente do total
+        # correto. Para Alice, as faltas por componente somam 3.
+        read_excel.return_value = pd.DataFrame([
+            ["E.M EGIDIO CORDEIRO AQUINO", None, None, None, None, None, None, None],
+            ["Notas e Faltas do 2º Trimestre - Turma 1º Tulipa - 2026", None, None, None, None, None, None, None],
+            [None, None, None, None, "LÍNG. PORT.", None, "MATEMÁTICA", None],
+            ["Num.", "Nome", "N.", "F.", "N.", "F.", "N.", "F."],
+            [1, "Alice Vitória Soares Veloso", None, 1, 21.0, 1, 30.0, 2],
+        ])
+        arquivo = SimpleUploadedFile(
+            "NotaseFaltasdo2TrimestreTurma1Tulipa2026.xls",
+            b"xls-simulado",
+            content_type="application/vnd.ms-excel",
+        )
+
+        dados = ler_planilha_boletim(arquivo)
+
+        self.assertEqual(dados["alunos"][0]["faltas_totais"], 3)
+        self.assertEqual(
+            [r["faltas"] for r in dados["alunos"][0]["resultados"]],
+            [1, 2],
+        )
+
     def test_importacao_soma_as_faltas_e_salva_somente_o_total(self):
         dados = {
             "metadados": {
