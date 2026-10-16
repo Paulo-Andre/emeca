@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -7,11 +8,12 @@ from django.views.decorators.http import require_POST
 from .forms import (
     CONTENT_FORMS,
     ConfiguracaoSiteForm,
+    HomePageForm,
     PaginaPublicaForm,
     SecaoPaginaForm,
     get_content_form,
 )
-from .models import ConfiguracaoSite, PaginaPublica, SecaoPagina
+from .models import ArquivoPaginaPublica, ConfiguracaoSite, PaginaPublica, SecaoPagina
 
 
 def _tipo_config(tipo):
@@ -36,6 +38,34 @@ def gestao_site(request):
         "paginas": paginas,
         "conteudos": conteudos,
         "total_secoes": SecaoPagina.objects.count(),
+    })
+
+
+@login_required
+def gestao_inicio(request):
+    config, _ = ConfiguracaoSite.objects.get_or_create(pk=1)
+    form = HomePageForm(request.POST or None, instance=config)
+
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Página inicial atualizada.")
+        return redirect("site_publico:gestao_inicio")
+
+    secoes = list(SecaoPagina.objects.filter(pagina="home"))
+    tipos_home = []
+    for chave in ("carrossel", "avisos", "noticias", "atividades", "projetos", "eventos", "albuns"):
+        item = CONTENT_FORMS[chave]
+        tipos_home.append({
+            "chave": chave,
+            "label": item["label"],
+            "icon": item["icon"],
+            "total": item["model"].objects.count(),
+        })
+
+    return render(request, "site_publico/gestao/inicio.html", {
+        "form": form,
+        "secoes": secoes,
+        "conteudos_home": tipos_home,
     })
 
 
@@ -69,7 +99,7 @@ def gestao_secao_editar(request, chave):
         "descricao": "Edite o conteúdo visual deste bloco. Menus e textos de botões permanecem protegidos.",
         "objeto": secao,
         "imagem_atual": secao.imagem,
-        "voltar": "site_publico:gestao_secoes",
+        "voltar": "site_publico:gestao_inicio" if secao.pagina == "home" else "site_publico:gestao_secoes",
     })
 
 
@@ -129,8 +159,59 @@ def gestao_pagina_editar(request, chave):
         "objeto": pagina,
         "imagem_atual": pagina.imagem_capa,
         "imagem_atual_e_pdf": pagina.capa_e_pdf,
+        "pagina_arquivos": pagina.arquivos.all(),
+        "permitir_documentos": True,
         "voltar": "site_publico:gestao_paginas",
     })
+
+
+@require_POST
+@login_required
+def gestao_pagina_documentos_adicionar(request, chave):
+    pagina = get_object_or_404(PaginaPublica, chave=chave)
+    arquivos = request.FILES.getlist("documentos")
+
+    if not arquivos:
+        messages.error(request, "Selecione pelo menos um documento.")
+        return redirect("site_publico:gestao_pagina_editar", chave=pagina.chave)
+
+    candidatos = []
+    try:
+        for enviado in arquivos:
+            candidato = ArquivoPaginaPublica(
+                pagina=pagina,
+                titulo=enviado.name.rsplit("/", 1)[-1][:180],
+                arquivo=enviado,
+            )
+            candidato.full_clean()
+            candidatos.append(candidato)
+    except ValidationError as exc:
+        mensagens = []
+        for erros in exc.message_dict.values():
+            mensagens.extend(erros)
+        messages.error(request, " ".join(mensagens) or "Um dos arquivos não é permitido.")
+        return redirect("site_publico:gestao_pagina_editar", chave=pagina.chave)
+
+    for candidato in candidatos:
+        candidato.save()
+
+    total = len(candidatos)
+    messages.success(
+        request,
+        f"{total} documento{'s' if total != 1 else ''} adicionado{'s' if total != 1 else ''} à página.",
+    )
+    return redirect("site_publico:gestao_pagina_editar", chave=pagina.chave)
+
+
+@require_POST
+@login_required
+def gestao_pagina_documento_excluir(request, chave, pk):
+    pagina = get_object_or_404(PaginaPublica, chave=chave)
+    documento = get_object_or_404(ArquivoPaginaPublica, pk=pk, pagina=pagina)
+    documento.arquivo.delete(save=False)
+    documento.delete()
+    messages.success(request, "Documento removido da página.")
+    return redirect("site_publico:gestao_pagina_editar", chave=pagina.chave)
 
 
 @require_POST

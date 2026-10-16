@@ -14,6 +14,19 @@
   <div class="manager-table-head">
     <span>Página</span><span>Estado</span><span>Última alteração</span><span>Ações</span>
   </div>
+
+  <div class="manager-table-row manager-table-row--home">
+    <div class="manager-page-name">
+      <span><i data-lucide="house"></i></span>
+      <div><strong>Página inicial</strong><small>/</small></div>
+    </div>
+    <div><span class="manager-badge is-on">Sempre ativa</span></div>
+    <div class="manager-muted">Página principal do site</div>
+    <div class="manager-row-actions">
+      <a class="manager-icon-btn" href="{% url 'site_publico:gestao_inicio' %}" title="Editar página inicial"><i data-lucide="pencil"></i></a>
+    </div>
+  </div>
+
   {% for pagina in paginas %}
     <div class="manager-table-row">
       <div class="manager-page-name">

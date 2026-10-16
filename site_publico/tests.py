@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .forms import PaginaPublicaForm
-from .models import Aviso, Noticia, PaginaPublica, SecaoPagina
+from .models import ArquivoPaginaPublica, Aviso, Noticia, PaginaPublica, SecaoPagina
 
 
 class SitePublicoTests(TestCase):
@@ -238,3 +238,120 @@ class SitePublicoTests(TestCase):
 
         home = self.client.get(reverse("site_publico:home"))
         self.assertNotContains(home, 'href="/contato/"')
+
+
+    def test_usuario_pode_adicionar_varios_documentos_na_mesma_pagina(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="gestor_documentos",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+        pagina = PaginaPublica.objects.get(chave="documentos")
+        arquivo1 = SimpleUploadedFile(
+            "regimento.pdf",
+            b"%PDF-1.4\nregimento\n",
+            content_type="application/pdf",
+        )
+        arquivo2 = SimpleUploadedFile(
+            "calendario.xlsx",
+            b"planilha-teste",
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+
+        response = self.client.post(
+            reverse("site_publico:gestao_pagina_documentos_adicionar", args=[pagina.chave]),
+            {"documentos": [arquivo1, arquivo2]},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(ArquivoPaginaPublica.objects.filter(pagina=pagina).count(), 2)
+
+        publica = self.client.get(reverse("site_publico:documentos"))
+        self.assertContains(publica, "regimento.pdf")
+        self.assertContains(publica, "calendario.xlsx")
+
+    def test_documento_anexo_pode_ser_excluido_individualmente(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="gestor_exclusao_documentos",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+        pagina = PaginaPublica.objects.get(chave="documentos")
+        documento = ArquivoPaginaPublica.objects.create(
+            pagina=pagina,
+            titulo="arquivo.pdf",
+            arquivo=SimpleUploadedFile(
+                "arquivo.pdf",
+                b"%PDF-1.4\n",
+                content_type="application/pdf",
+            ),
+        )
+
+        response = self.client.post(
+            reverse(
+                "site_publico:gestao_pagina_documento_excluir",
+                args=[pagina.chave, documento.pk],
+            ),
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(ArquivoPaginaPublica.objects.filter(pk=documento.pk).exists())
+
+
+    def test_pagina_inicial_tem_editor_dedicado(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="gestor_home",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+
+        response = self.client.get(reverse("site_publico:gestao_inicio"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Editar página inicial")
+        self.assertContains(response, "Título, texto e pilares")
+        self.assertContains(response, "Carrossel, avisos e destaques")
+
+    def test_editor_da_pagina_inicial_salva_conteudo(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="editor_home",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+
+        response = self.client.post(
+            reverse("site_publico:gestao_inicio"),
+            {
+                "home_titulo": "Nossa escola, nosso futuro",
+                "home_texto": "Texto atualizado da página inicial.",
+                "home_pilar1_titulo": "Aprender",
+                "home_pilar1_texto": "Aprender todos os dias.",
+                "home_pilar2_titulo": "Conviver",
+                "home_pilar2_texto": "Conviver com respeito.",
+                "home_pilar3_titulo": "Participar",
+                "home_pilar3_texto": "Família e comunidade presentes.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        pagina = self.client.get(reverse("site_publico:home"))
+        self.assertContains(pagina, "Nossa escola, nosso futuro")
+        self.assertContains(pagina, "Texto atualizado da página inicial.")
+
+    def test_lista_de_paginas_mostra_pagina_inicial(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="gestor_lista_home",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+
+        response = self.client.get(reverse("site_publico:gestao_paginas"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Página inicial")
+        self.assertContains(response, reverse("site_publico:gestao_inicio"))
