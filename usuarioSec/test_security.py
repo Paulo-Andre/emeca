@@ -3,7 +3,7 @@ from datetime import date
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
+from django.test import Client, RequestFactory, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
@@ -155,10 +155,8 @@ class SecurityValidationTests(TestCase):
 
     def test_auditoria_nao_grava_nome_em_texto_claro(self):
         self.client.force_login(self.user)
-        request = self.client.request().wsgi_request
+        request = RequestFactory().post("/historico/aluno/999/")
         request.user = self.user
-        request.method = "POST"
-        request.path = "/historico/aluno/999/"
 
         evento = registrar_auditoria(
             request,
