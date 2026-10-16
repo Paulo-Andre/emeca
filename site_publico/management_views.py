@@ -264,7 +264,14 @@ def gestao_conteudo_novo(request, tipo):
     config = _tipo_config(tipo)
 
     if tipo == "fotos":
-        form = FotoGaleriaLoteForm(request.POST or None, request.FILES or None)
+        initial = {}
+        if request.method == "GET" and request.GET.get("album"):
+            initial["album_existente"] = request.GET.get("album")
+        form = FotoGaleriaLoteForm(
+            request.POST or None,
+            request.FILES or None,
+            initial=initial,
+        )
         if request.method == "POST" and form.is_valid():
             with transaction.atomic():
                 album = form.cleaned_data["album_existente"]
