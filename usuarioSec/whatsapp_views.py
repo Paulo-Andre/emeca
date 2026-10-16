@@ -31,7 +31,9 @@ def _normalizar_jid(telefone):
     if digitos.startswith("00"):
         digitos = digitos[2:]
 
-    if digitos.startswith("55"):
+    # Só trata 55 como código do Brasil quando o comprimento confirma isso.
+    # Assim, números do DDD 55 não são cortados por engano.
+    if digitos.startswith("55") and len(digitos) in (12, 13):
         nacional = digitos[2:]
     else:
         nacional = digitos
@@ -48,13 +50,20 @@ def _normalizar_jid(telefone):
 
 def _tipos_selecionados(request):
     tipos = request.GET.getlist("tipos") if request.method == "GET" else request.POST.getlist("tipos")
-    validos = [tipo for tipo in tipos if tipo in TIPOS_CONTATO]
-    return validos or ["PAI", "MAE", "RESPONSAVEL"]
+    return [tipo for tipo in tipos if tipo in TIPOS_CONTATO]
 
 
 def _resolver_destinatarios(modo, turma="", contato_id=None, tipos=None):
-    tipos = tipos or ["PAI", "MAE", "RESPONSAVEL"]
-    queryset = TelefoneDeclaracao.objects.select_related("declaracao").filter(tipo__in=tipos)
+    queryset = TelefoneDeclaracao.objects.select_related("declaracao")
+
+    if modo == "individual":
+        if not contato_id:
+            raise ValueError("Selecione um responsável.")
+        queryset = queryset.filter(pk=contato_id)
+    else:
+        if tipos is None:
+            tipos = ["PAI", "MAE", "RESPONSAVEL"]
+        queryset = queryset.filter(tipo__in=tipos)
 
     if modo == "turma":
         turma = (turma or "").strip()
@@ -62,9 +71,7 @@ def _resolver_destinatarios(modo, turma="", contato_id=None, tipos=None):
             raise ValueError("Selecione uma turma.")
         queryset = queryset.filter(declaracao__turmaDoAluno__iexact=turma)
     elif modo == "individual":
-        if not contato_id:
-            raise ValueError("Selecione um responsável.")
-        queryset = queryset.filter(pk=contato_id)
+        pass
     elif modo != "todos":
         raise ValueError("Tipo de envio inválido.")
 
