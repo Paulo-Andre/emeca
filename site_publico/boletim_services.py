@@ -42,8 +42,10 @@ def sincronizar_perfil_matricula(aluno_matricula):
     )
 
     alterados = []
+    # O nome do boletim pode ser corrigido manualmente sem alterar a
+    # matrícula. Por isso, depois que o perfil existe, sincronizamos apenas
+    # os dados usados para acesso público, preservando o nome editado.
     dados = {
-        "nome": aluno_matricula.nomeDoAluno,
         "data_nascimento": aluno_matricula.dataNascimentoAluno,
         "cpf_mae": aluno_matricula.cpfMae or "",
         "cpf_responsavel": aluno_matricula.cpfResponsavel or "",
