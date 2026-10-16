@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -11,7 +12,7 @@ from .forms import (
     SecaoPaginaForm,
     get_content_form,
 )
-from .models import ConfiguracaoSite, PaginaPublica, SecaoPagina
+from .models import ArquivoPaginaPublica, ConfiguracaoSite, PaginaPublica, SecaoPagina
 
 
 def _tipo_config(tipo):
@@ -129,8 +130,59 @@ def gestao_pagina_editar(request, chave):
         "objeto": pagina,
         "imagem_atual": pagina.imagem_capa,
         "imagem_atual_e_pdf": pagina.capa_e_pdf,
+        "pagina_arquivos": pagina.arquivos.all(),
+        "permitir_documentos": True,
         "voltar": "site_publico:gestao_paginas",
     })
+
+
+@require_POST
+@login_required
+def gestao_pagina_documentos_adicionar(request, chave):
+    pagina = get_object_or_404(PaginaPublica, chave=chave)
+    arquivos = request.FILES.getlist("documentos")
+
+    if not arquivos:
+        messages.error(request, "Selecione pelo menos um documento.")
+        return redirect("site_publico:gestao_pagina_editar", chave=pagina.chave)
+
+    candidatos = []
+    try:
+        for enviado in arquivos:
+            candidato = ArquivoPaginaPublica(
+                pagina=pagina,
+                titulo=enviado.name.rsplit("/", 1)[-1][:180],
+                arquivo=enviado,
+            )
+            candidato.full_clean()
+            candidatos.append(candidato)
+    except ValidationError as exc:
+        mensagens = []
+        for erros in exc.message_dict.values():
+            mensagens.extend(erros)
+        messages.error(request, " ".join(mensagens) or "Um dos arquivos não é permitido.")
+        return redirect("site_publico:gestao_pagina_editar", chave=pagina.chave)
+
+    for candidato in candidatos:
+        candidato.save()
+
+    total = len(candidatos)
+    messages.success(
+        request,
+        f"{total} documento{'s' if total != 1 else ''} adicionado{'s' if total != 1 else ''} à página.",
+    )
+    return redirect("site_publico:gestao_pagina_editar", chave=pagina.chave)
+
+
+@require_POST
+@login_required
+def gestao_pagina_documento_excluir(request, chave, pk):
+    pagina = get_object_or_404(PaginaPublica, chave=chave)
+    documento = get_object_or_404(ArquivoPaginaPublica, pk=pk, pagina=pagina)
+    documento.arquivo.delete(save=False)
+    documento.delete()
+    messages.success(request, "Documento removido da página.")
+    return redirect("site_publico:gestao_pagina_editar", chave=pagina.chave)
 
 
 @require_POST
