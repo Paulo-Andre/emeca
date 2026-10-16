@@ -76,4 +76,6 @@ jobs:
           DJANGO_SECURE_COOKIES: "1"
           DJANGO_SECURE_SSL_REDIRECT: "1"
           DJANGO_HSTS_SECONDS: "31536000"
+          DJANGO_CSRF_TRUSTED_ORIGINS: "https://testserver"
+          DJANGO_REQUIRE_SECURE_PRODUCTION: "1"
         run: python manage.py check --deploy
