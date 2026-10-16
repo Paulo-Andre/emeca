@@ -1,7 +1,7 @@
 import json
 import logging
 from django.http import JsonResponse, FileResponse, HttpResponseNotFound
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import ensure_csrf_cookie
 from .models import matricula  
 
 logger = logging.getLogger(__name__)
@@ -10,7 +10,6 @@ from pathlib import Path
 from site_publico.services import pagina_publica_required
 
 
-@csrf_exempt
 @pagina_publica_required("matricula")
 def cadastrar(request):
     if request.method == 'POST':
@@ -180,6 +179,7 @@ def cadastrar(request):
 
 
 
+@ensure_csrf_cookie
 @pagina_publica_required("matricula")
 def matricula_publica(request):
     """Entrega o frontend público de matrícula incorporado ao mesmo site."""
