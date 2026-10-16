@@ -1,0 +1,101 @@
+{% extends 'site_publico/gestao/base.html' %}
+{% block title %}Editar página inicial{% endblock %}
+{% block header_icon %}house{% endblock %}
+{% block header_title %}Editar página inicial{% endblock %}
+{% block header_subtitle %}Altere os conteúdos da Home em um único lugar. Os menus e botões de navegação permanecem protegidos.{% endblock %}
+
+{% block content %}
+<div class="manager-toolbar">
+  <a class="manager-back" href="{% url 'site_publico:gestao_site' %}"><i data-lucide="arrow-left"></i> Voltar</a>
+  <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:home' %}" target="_blank" rel="noopener">
+    <i data-lucide="external-link"></i> Visualizar página inicial
+  </a>
+</div>
+
+<section class="manager-home-editor-card">
+  <div class="manager-section__heading">
+    <div>
+      <span class="manager-kicker">Apresentação principal</span>
+      <h2>Título, texto e pilares</h2>
+      <p>Esses campos controlam a apresentação institucional e os três pilares exibidos na página inicial.</p>
+    </div>
+  </div>
+
+  <form class="manager-form-card manager-form-card--embedded" method="post">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="manager-form-error">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="manager-form-grid">
+      {% for field in form %}
+        <div class="manager-field{% if field.name == 'home_texto' or field.name == 'home_pilar1_texto' or field.name == 'home_pilar2_texto' or field.name == 'home_pilar3_texto' %} manager-field--full{% endif %}">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+          {% for error in field.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+    <div class="manager-form-actions">
+      <button class="manager-btn manager-btn--primary" type="submit">
+        <i data-lucide="save"></i> Salvar página inicial
+      </button>
+    </div>
+  </form>
+</section>
+
+<section class="manager-section">
+  <div class="manager-section__heading">
+    <div>
+      <span class="manager-kicker">Blocos da Home</span>
+      <h2>Textos e imagens de cada seção</h2>
+      <p>Edite os títulos, textos e imagens dos blocos que compõem a página inicial.</p>
+    </div>
+  </div>
+
+  <div class="editable-section-grid">
+    {% for secao in secoes %}
+      <article class="editable-section-card">
+        <div class="editable-section-card__media">
+          {% if secao.imagem %}
+            <img src="{{ secao.imagem.url }}" alt="">
+          {% else %}
+            <span><i data-lucide="layout-template"></i></span>
+          {% endif %}
+        </div>
+        <div class="editable-section-card__body">
+          <div class="editable-section-card__top">
+            <strong>{{ secao.nome }}</strong>
+          </div>
+          {% if secao.titulo %}<p><strong>{{ secao.titulo }}</strong></p>{% endif %}
+          {% if secao.texto %}<p>{{ secao.texto|truncatechars:150 }}</p>{% endif %}
+          <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_secao_editar' secao.chave %}">
+            <i data-lucide="pencil"></i> Editar bloco
+          </a>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="manager-section">
+  <div class="manager-section__heading">
+    <div>
+      <span class="manager-kicker">Conteúdo que aparece na Home</span>
+      <h2>Carrossel, avisos e destaques</h2>
+      <p>Gerencie os itens dinâmicos que alimentam automaticamente a página inicial.</p>
+    </div>
+  </div>
+
+  <div class="content-manager-grid">
+    {% for item in conteudos_home %}
+      <a class="content-manager-card" href="{% url 'site_publico:gestao_conteudo_lista' item.chave %}">
+        <span><i data-lucide="{{ item.icon }}"></i></span>
+        <div>
+          <strong>{{ item.label }}</strong>
+          <small>{{ item.total }} item{{ item.total|pluralize }}</small>
+        </div>
+        <i data-lucide="chevron-right"></i>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
