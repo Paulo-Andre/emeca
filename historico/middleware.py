@@ -20,6 +20,7 @@ class SecurityAuditMiddleware:
         request.audit_request_id = uuid.uuid4()
         request.csp_nonce = secrets.token_urlsafe(18)
         response = self.get_response(request)
+        content_type = response.get("Content-Type", "")
 
         if (
             content_type.startswith("text/html")
@@ -54,7 +55,6 @@ class SecurityAuditMiddleware:
             "camera=(), microphone=(), geolocation=(), payment=()"
         )
         response["Cross-Origin-Resource-Policy"] = "same-origin"
-        content_type = response.get("Content-Type", "")
         if (
             content_type.startswith("text/html")
             or content_type.startswith("application/json")
