@@ -55,12 +55,18 @@
       </div>
 
       <div class="nav-section-label">Zona de risco</div>
-      <a class="nav-item nav-danger" href="{% url 'apagar_todos_alunos_matricula' %}" onclick="return confirmarExclusaoGeral('matrículas')">
-        <i data-lucide="folder-x"></i><span>Apagar matrículas</span>
-      </a>
-      <a class="nav-item nav-danger" href="{% url 'apagar_todos_alunos' %}" onclick="return confirmarExclusaoGeral('declarações')">
-        <i data-lucide="file-x"></i><span>Apagar declarações</span>
-      </a>
+      <form method="post" action="{% url 'apagar_todos_alunos_matricula' %}" onsubmit="return confirmarExclusaoGeral('matrículas')" class="nav-danger-form">
+        {% csrf_token %}
+        <button class="nav-item nav-danger" type="submit">
+          <i data-lucide="folder-x"></i><span>Apagar matrículas</span>
+        </button>
+      </form>
+      <form method="post" action="{% url 'apagar_todos_alunos' %}" onsubmit="return confirmarExclusaoGeral('declarações')" class="nav-danger-form">
+        {% csrf_token %}
+        <button class="nav-item nav-danger" type="submit">
+          <i data-lucide="file-x"></i><span>Apagar declarações</span>
+        </button>
+      </form>
     {% endif %}
 
     <a class="nav-item nav-logout" href="{% url 'sair' %}">
