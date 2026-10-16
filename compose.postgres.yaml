@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DJANGO_DB_NAME:-emeca}
+      POSTGRES_USER: ${DJANGO_DB_USER:-emeca}
+      POSTGRES_PASSWORD: ${DJANGO_DB_PASSWORD}
+    volumes:
+      - emeca_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DJANGO_DB_USER:-emeca} -d ${DJANGO_DB_NAME:-emeca}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - default
+
+  web:
+    environment:
+      DJANGO_DB_ENGINE: postgresql
+      DJANGO_DB_HOST: db
+      DJANGO_DB_PORT: "5432"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  whatsapp-worker:
+    environment:
+      DJANGO_DB_ENGINE: postgresql
+      DJANGO_DB_HOST: db
+      DJANGO_DB_PORT: "5432"
+      SKIP_DJANGO_INIT: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+      web:
+        condition: service_started
+
+volumes:
+  emeca_postgres:
