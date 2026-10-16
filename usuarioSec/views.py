@@ -19,7 +19,7 @@ from .importacao_declaracoes import (
 from django.http import JsonResponse
 import json
 from django.utils import timezone
-from django.db import connection, transaction
+from django.db import transaction
 from django.http import HttpResponseForbidden
 from functools import wraps
 from django.utils.decorators import method_decorator
@@ -495,24 +495,52 @@ def cadastrar_aluno(request):
     return redirect("telaDeclaracao")
 @usuario_administrador   
 def apagar_todos_alunos(request):
-        if request.user.is_superuser:
+    if not request.user.is_superuser:
+        messages.error(request, "Somente um superusuário pode apagar todos os dados de declarações.")
+        return redirect("telaDeclaracao")
 
-            tabela = declaracao._meta.db_table  
-            with connection.cursor() as cursor:
-                cursor.execute(f"DELETE FROM {tabela};")
-                cursor.execute(f"DELETE FROM sqlite_sequence WHERE name='{tabela}';")
-                messages.success(request, "Todos os alunos foram apagados com sucesso!")
+    try:
+        with transaction.atomic():
+            total_declaracoes = declaracao.objects.count()
+            total_telefones = TelefoneDeclaracao.objects.count()
+            declaracao.objects.all().delete()
+    except Exception:
+        messages.error(
+            request,
+            "Não foi possível apagar os dados das declarações. Nenhum dado foi removido.",
+        )
+        return redirect("telaDeclaracao")
 
-        return redirect('dashboard')
-@usuario_administrador    
+    messages.success(
+        request,
+        (
+            f"Registros de declarações removidos: {total_declaracoes}. "
+            f"Telefones vinculados removidos: {total_telefones}."
+        ),
+    )
+    return redirect("telaDeclaracao")
+
+
+@usuario_administrador
 def apagar_todos_alunos_matricula(request):
-        if request.user.is_superuser:
+    if not request.user.is_superuser:
+        messages.error(request, "Somente um superusuário pode apagar todas as matrículas.")
+        return redirect("dashboard")
 
-            tabela = matricula._meta.db_table  
-            with connection.cursor() as cursor:
-                cursor.execute(f"DELETE FROM {tabela};")
-                cursor.execute(f"DELETE FROM sqlite_sequence WHERE name='{tabela}';")
-                messages.success(request, "Todos os alunos foram apagados com sucesso!")
+    try:
+        with transaction.atomic():
+            total = matricula.objects.count()
+            matricula.objects.all().delete()
+    except Exception:
+        messages.error(
+            request,
+            "Não foi possível apagar as matrículas. Nenhum dado foi removido.",
+        )
+        return redirect("dashboard")
 
-        return redirect('dashboard')
+    messages.success(
+        request,
+        f"{total} matrícula{'s' if total != 1 else ''} removida{'s' if total != 1 else ''} com sucesso.",
+    )
+    return redirect("dashboard")
     
