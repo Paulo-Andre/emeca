@@ -22,3 +22,33 @@ class declaracao(models.Model):
 
     def __str__(self):
         return self.nomeDoAluno
+
+
+class TelefoneDeclaracao(models.Model):
+    TIPOS = [
+        ("PAI", "Pai"),
+        ("MAE", "Mãe"),
+        ("RESPONSAVEL", "Responsável"),
+    ]
+
+    declaracao = models.ForeignKey(
+        declaracao,
+        on_delete=models.CASCADE,
+        related_name="telefones",
+    )
+    tipo = models.CharField(max_length=20, choices=TIPOS)
+    telefone = models.CharField(max_length=20)
+
+    class Meta:
+        ordering = ["tipo", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["declaracao", "tipo", "telefone"],
+                name="uniq_telefone_por_responsavel_declaracao",
+            )
+        ]
+        verbose_name = "Telefone da declaração"
+        verbose_name_plural = "Telefones da declaração"
+
+    def __str__(self):
+        return f"{self.get_tipo_display()}: {self.telefone}"

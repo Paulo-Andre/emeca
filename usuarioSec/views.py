@@ -9,13 +9,13 @@ from .forms import AccountSignupForm
 from cadastro.models import matricula
 from django.contrib.auth import logout
 import re
-import pandas as pd
 from datetime import datetime
-from .models import declaracao
+from .models import declaracao, TelefoneDeclaracao
+from .importacao_declaracoes import ImportacaoDeclaracaoErro, ler_planilha
 from django.http import JsonResponse
 import json
 from django.utils import timezone
-from django.db import connection
+from django.db import connection, transaction
 from django.http import HttpResponseForbidden
 from functools import wraps
 from django.utils.decorators import method_decorator
@@ -249,40 +249,69 @@ def comparecimento(request):
     return render(request, "declaracoes/comparecimento.html")
 def telaDeclaracao(request):
     return render(request, "declaracoes/telaDeclaracao.html")
-@usuario_administrador 
+@usuario_administrador
 def importar_alunos(request):
-
     if request.method == "POST":
         arquivo = request.FILES.get("arquivo")
 
-        if arquivo:
-            df = pd.read_excel(arquivo)
-
-            for _, row in df.iterrows():
-
-                # Converter data
-                data_nascimento = None
-                if pd.notna(row["NASCIMENTO"]):
-                    data_nascimento = datetime.strptime(
-                        str(row["NASCIMENTO"]), "%d/%m/%Y"
-                    ).date()
-
-                declaracao.objects.create(
-                    nomeDoAluno=row["NOME"],
-                    ufAluno=row["UF"],
-                    nomePai=row["PAI"],
-                    nomeMae=row["MÃE"],
-                    dataNascimentoAluno=data_nascimento,
-                    natularidadeAluno=row["NATURALIDADE"],
-                    nacionaliadeAluno=row["NACIONALIDADE"],
-                    sexoDoAluno=row["SEXO"],
-                    turmaDoAluno=row["TURMA"],
-                )
-            messages.success(request, "Dados importados com sucesso!")
-        else:
+        if not arquivo:
             messages.error(request, "Selecione um arquivo!")
+            return redirect("importar_alunos")
+
+        try:
+            resultado = ler_planilha(arquivo)
+        except ImportacaoDeclaracaoErro as exc:
+            messages.error(request, str(exc))
+            return redirect("importar_alunos")
+
+        importados = 0
+        telefones_salvos = 0
+
+        try:
+            with transaction.atomic():
+                for dados in resultado["registros"]:
+                    telefones = dados.pop("telefones", {})
+                    aluno = declaracao.objects.create(**dados)
+                    importados += 1
+
+                    registros_telefone = []
+                    for tipo, numeros in telefones.items():
+                        for numero in numeros:
+                            registros_telefone.append(
+                                TelefoneDeclaracao(
+                                    declaracao=aluno,
+                                    tipo=tipo,
+                                    telefone=numero,
+                                )
+                            )
+
+                    if registros_telefone:
+                        TelefoneDeclaracao.objects.bulk_create(
+                            registros_telefone,
+                            ignore_conflicts=True,
+                        )
+                        telefones_salvos += len(registros_telefone)
+        except Exception:
+            messages.error(
+                request,
+                "Não foi possível concluir a importação. Nenhum dado foi alterado.",
+            )
+            return redirect("importar_alunos")
+
+        resumo = (
+            f"{importados} aluno{'s' if importados != 1 else ''} importado"
+            f"{'s' if importados != 1 else ''} com sucesso."
+        )
+        if telefones_salvos:
+            resumo += f" {telefones_salvos} telefone{'s' if telefones_salvos != 1 else ''} associado{'s' if telefones_salvos != 1 else ''} aos responsáveis."
+        if resultado["telefones_duplicados"]:
+            total = resultado["telefones_duplicados"]
+            resumo += f" {total} telefone{'s' if total != 1 else ''} duplicado{'s' if total != 1 else ''} foi{'ram' if total != 1 else ''} ignorado{'s' if total != 1 else ''}."
+        if resultado["ignoradas"]:
+            resumo += f" {resultado['ignoradas']} linha{'s' if resultado['ignoradas'] != 1 else ''} sem aluno foi{'ram' if resultado['ignoradas'] != 1 else ''} ignorada{'s' if resultado['ignoradas'] != 1 else ''}."
+
+        messages.success(request, resumo)
         return redirect("importar_alunos")
-        
 
     return render(request, "declaracoes/importardados.html")
 
