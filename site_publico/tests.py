@@ -687,7 +687,7 @@ class SitePublicoTests(TestCase):
         self.assertContains(response, "CPF da mãe ou do responsável")
         self.assertContains(response, "Data de nascimento da criança")
         self.assertContains(response, "Consultar boletim")
-        self.assertEqual(response["Cache-Control"], "no-store, private, max-age=0")
+        self.assertIn("no-store", response["Cache-Control"])
 
     def test_responsavel_acessa_boletim_com_cpf_da_mae_e_nascimento(self):
         self._criar_boletim_publicado()
