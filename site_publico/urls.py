@@ -6,6 +6,7 @@ app_name = "site_publico"
 urlpatterns = [
     path("gestao-site/", management_views.gestao_site, name="gestao_site"),
     path("gestao-site/configuracao/", management_views.gestao_configuracao, name="gestao_configuracao"),
+    path("gestao-site/pagina-inicial/", management_views.gestao_inicio, name="gestao_inicio"),
     path("gestao-site/textos-imagens/", management_views.gestao_secoes, name="gestao_secoes"),
     path("gestao-site/textos-imagens/<slug:chave>/editar/", management_views.gestao_secao_editar, name="gestao_secao_editar"),
     path("gestao-site/paginas/", management_views.gestao_paginas, name="gestao_paginas"),
