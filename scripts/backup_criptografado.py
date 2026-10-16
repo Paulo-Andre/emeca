@@ -21,7 +21,7 @@ def main():
 
     data_dir = Path(os.environ.get("DJANGO_DATA_DIR", "/data")).resolve()
     db_path = Path(os.environ.get("DJANGO_DB_PATH", str(data_dir / "emeca.sqlite3"))).resolve()
-    backup_dir = Path(os.environ.get("EMECA_BACKUP_DIR", "/srv/backups/emeca")).resolve()
+    backup_dir = Path(os.environ.get("EMECA_BACKUP_DIR", "/backups")).resolve()
     retention_days = max(7, int(os.environ.get("EMECA_BACKUP_RETENTION_DAYS", "30")))
 
     if not db_path.is_file():
