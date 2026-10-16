@@ -1,0 +1,9 @@
+[Unit]
+Description=Expurgo de dados operacionais do EMECA
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/projetos/emeca
+ExecStart=/usr/bin/docker compose exec -T web python manage.py expurgar_dados_operacionais
