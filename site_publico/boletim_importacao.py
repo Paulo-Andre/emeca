@@ -260,11 +260,13 @@ def _metadados(df):
             break
 
     regente = ""
+    regente_col = None
     for linha in range(min(len(df.index), 20)):
         valores = [texto(v) for v in df.iloc[linha].tolist()]
         for col, valor in enumerate(valores):
             if normalizar(valor) != "REGENTE":
                 continue
+            regente_col = col
 
             # No modelo usado pela escola, o marcador "REGENTE" fica acima
             # do nome do professor. Por isso procuramos primeiro logo abaixo
@@ -297,6 +299,43 @@ def _metadados(df):
             break
         if regente:
             break
+
+    # Alguns relatórios do Crystal Reports colocam o nome do regente
+    # no rodapé da mesma coluna, depois da lista de alunos.
+    if not regente and regente_col is not None:
+        try:
+            cabecalho_idx = _linha_cabecalho(df)
+            headers = [normalizar(v) for v in df.iloc[cabecalho_idx].tolist()]
+            nome_col = headers.index("NOME")
+            numero_col = next(
+                (i for i, valor in enumerate(headers[: nome_col + 1]) if valor in {"NUM", "NUMERO", "N"}),
+                None,
+            )
+        except (ImportacaoBoletimErro, ValueError):
+            cabecalho_idx = 0
+            nome_col = None
+            numero_col = None
+
+        if regente_col != nome_col:
+            for linha in range(cabecalho_idx + 1, len(df.index)):
+                if numero_col is not None and numero_col < len(df.columns):
+                    if _numero_inteiro(df.iat[linha, numero_col]) is not None:
+                        continue
+                candidato = texto(df.iat[linha, regente_col])
+                norm_candidato = normalizar(candidato)
+                if (
+                    candidato
+                    and len(candidato.split()) >= 2
+                    and _nome_disciplina_valido(candidato)
+                    and norm_candidato not in {"REGENTE"}
+                ):
+                    regente = re.sub(
+                        r"^PROF(?:ESSOR(?:A)?)?\.?\s*",
+                        "",
+                        candidato,
+                        flags=re.I,
+                    ).strip()
+                    break
 
     return {
         "tipo": tipo,
