@@ -50,4 +50,57 @@
     <button class="manager-btn manager-btn--primary" type="submit"><i data-lucide="save"></i> Salvar alterações</button>
   </div>
 </form>
+
+{% if permitir_documentos %}
+<section class="manager-documents-card">
+  <div class="manager-documents-card__heading">
+    <div>
+      <span class="manager-kicker">Documentos anexos</span>
+      <h2>Adicionar vários documentos</h2>
+      <p>Você pode selecionar vários arquivos de uma vez e também adicionar novos depois.</p>
+    </div>
+    <span class="manager-documents-count">{{ pagina_arquivos|length }} arquivo{{ pagina_arquivos|length|pluralize }}</span>
+  </div>
+
+  <form class="manager-documents-upload" method="post" enctype="multipart/form-data" action="{% url 'site_publico:gestao_pagina_documentos_adicionar' objeto.chave %}">
+    {% csrf_token %}
+    <label for="id_documentos">Selecionar documentos</label>
+    <input id="id_documentos" class="site-manager-input" type="file" name="documentos" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.odt" required>
+    <small>Formatos permitidos: PDF, DOC, DOCX, XLS, XLSX e ODT. É possível selecionar vários arquivos na mesma janela.</small>
+    <button class="manager-btn manager-btn--primary" type="submit">
+      <i data-lucide="files"></i> Adicionar documentos
+    </button>
+  </form>
+
+  {% if pagina_arquivos %}
+    <div class="manager-documents-list">
+      {% for documento in pagina_arquivos %}
+        <div class="manager-document-row">
+          <span class="manager-document-row__icon"><i data-lucide="file-text"></i></span>
+          <div>
+            <strong>{{ documento.nome_exibicao }}</strong>
+            <small>Documento anexado à página</small>
+          </div>
+          <div class="manager-document-row__actions">
+            <a class="manager-icon-btn" href="{{ documento.arquivo.url }}" target="_blank" rel="noopener" title="Abrir documento">
+              <i data-lucide="external-link"></i>
+            </a>
+            <form method="post" action="{% url 'site_publico:gestao_pagina_documento_excluir' objeto.chave documento.pk %}" onsubmit="return confirm('Remover este documento?');">
+              {% csrf_token %}
+              <button class="manager-icon-btn danger" type="submit" title="Excluir documento">
+                <i data-lucide="trash-2"></i>
+              </button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="manager-documents-empty">
+      <i data-lucide="files"></i>
+      <span>Nenhum documento adicional anexado ainda.</span>
+    </div>
+  {% endif %}
+</section>
+{% endif %}
 {% endblock %}
