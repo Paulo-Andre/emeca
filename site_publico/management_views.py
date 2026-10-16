@@ -161,7 +161,7 @@ def gestao_boletim_periodo_novo(request):
     return render(request, "site_publico/gestao/form.html", {
         "form": form,
         "titulo": "Novo período de boletim",
-        "descricao": "Escolha Bimestre ou Trimestre, informe o período e as disciplinas.",
+        "descricao": "Use esta opção apenas quando não existir uma planilha para importar. Com planilha, esses dados são extraídos automaticamente.",
         "voltar": "site_publico:gestao_boletins",
     })
 
