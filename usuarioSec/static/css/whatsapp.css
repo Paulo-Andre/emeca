@@ -9,6 +9,8 @@
 .status-indisponivel,.status-nao_configurado{background:#ef4444;box-shadow:0 0 0 4px rgba(239,68,68,.14)}
 .connection-actions{display:flex;gap:10px;flex-wrap:wrap}
 .connection-actions form{margin:0}
+.persistent-session-badge{display:inline-flex;align-items:center;gap:8px;padding:11px 14px;border-radius:999px;background:#dcfce7;color:#166534;border:1px solid #86efac;font-weight:700;font-size:.9rem}
+.persistent-session-badge svg{width:18px;height:18px}
 .btn-secondary,.btn-primary,.btn-send{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer;text-decoration:none}
 .btn-secondary{background:#fff;border:1px solid #cbd5e1;color:#334155}
 .send-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(360px,.85fr);gap:22px}
