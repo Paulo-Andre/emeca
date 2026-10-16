@@ -122,7 +122,11 @@ class MultipleImageField(forms.FileField):
         if not data and self.required:
             raise forms.ValidationError("Selecione pelo menos uma foto.")
         arquivos = data if isinstance(data, (list, tuple)) else [data]
-        return [super().clean(arquivo, initial) for arquivo in arquivos if arquivo]
+        limpos = []
+        for arquivo in arquivos:
+            if arquivo:
+                limpos.append(super().clean(arquivo, initial))
+        return limpos
 
 
 class FotoGaleriaLoteForm(forms.Form):
