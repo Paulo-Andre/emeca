@@ -14,8 +14,12 @@ services:
   whatsapp-worker:
     build: .
     restart: unless-stopped
+    depends_on:
+      - web
     env_file:
       - .env
+    environment:
+      SKIP_DJANGO_INIT: "1"
     command: ["python", "manage.py", "processar_envios_whatsapp"]
     extra_hosts:
       - "host.docker.internal:host-gateway"
