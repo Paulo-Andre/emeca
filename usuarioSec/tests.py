@@ -252,3 +252,42 @@ class ImportacaoDeclaracoesTests(TestCase):
             resultado["registros"][0]["nomeResponsavel"],
             "Maria Responsável",
         )
+
+
+    def test_apagar_todas_declaracoes_remove_telefones_sem_erro_500(self):
+        aluno1 = declaracao.objects.create(
+            nomeDoAluno="Aluno 1",
+            nomeResponsavel="Responsável 1",
+        )
+        aluno2 = declaracao.objects.create(
+            nomeDoAluno="Aluno 2",
+            nomeResponsavel="Responsável 2",
+        )
+        TelefoneDeclaracao.objects.create(
+            declaracao=aluno1,
+            tipo="RESPONSAVEL",
+            telefone="(38) 99999-1111",
+        )
+        TelefoneDeclaracao.objects.create(
+            declaracao=aluno2,
+            tipo="PAI",
+            telefone="(38) 99999-2222",
+        )
+
+        response = self.client.get(reverse("apagar_todos_alunos"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("telaDeclaracao"))
+        self.assertEqual(declaracao.objects.count(), 0)
+        self.assertEqual(TelefoneDeclaracao.objects.count(), 0)
+
+    def test_apagar_declaracoes_com_banco_vazio_nao_gera_erro(self):
+        response = self.client.get(reverse("apagar_todos_alunos"), follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(declaracao.objects.count(), 0)
+        self.assertEqual(TelefoneDeclaracao.objects.count(), 0)
+        mensagens = [str(m) for m in response.context["messages"]]
+        self.assertTrue(
+            any("Registros de declarações removidos: 0" in mensagem for mensagem in mensagens)
+        )
