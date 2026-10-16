@@ -2,6 +2,7 @@ import time
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.db import OperationalError, ProgrammingError
 from django.utils import timezone
 from django.utils.text import slugify
 
@@ -38,23 +39,35 @@ class Command(BaseCommand):
     help = "Processa a fila de boletins personalizados enviados pelo WhatsApp."
 
     def handle(self, *args, **options):
-        # Em reinício inesperado, evita duplicar silenciosamente um documento cujo
-        # envio pode ter concluído no WhatsApp antes da atualização do banco.
-        ItemEnvioBoletimWhatsApp.objects.filter(status="PROCESSANDO").update(
-            status="ERRO",
-            erro="Envio interrompido durante o processamento. Reenvie este boletim se necessário.",
-        )
-        EnvioBoletimWhatsApp.objects.filter(status="PROCESSANDO").update(status="PENDENTE")
+        # Aguarda o container web concluir as migrações quando os dois serviços
+        # sobem juntos pela primeira vez.
+        while True:
+            try:
+                ItemEnvioBoletimWhatsApp.objects.filter(status="PROCESSANDO").update(
+                    status="ERRO",
+                    erro="Envio interrompido durante o processamento. Reenvie este boletim se necessário.",
+                )
+                EnvioBoletimWhatsApp.objects.filter(status="PROCESSANDO").update(
+                    status="PENDENTE"
+                )
+                break
+            except (OperationalError, ProgrammingError):
+                time.sleep(3)
 
         self.stdout.write(self.style.SUCCESS("Worker de boletins do WhatsApp iniciado."))
 
         while True:
-            envio = (
-                EnvioBoletimWhatsApp.objects
-                .filter(status="PENDENTE")
-                .order_by("criado_em")
-                .first()
-            )
+            try:
+                envio = (
+                    EnvioBoletimWhatsApp.objects
+                    .filter(status="PENDENTE")
+                    .order_by("criado_em")
+                    .first()
+                )
+            except (OperationalError, ProgrammingError):
+                time.sleep(3)
+                continue
+
             if not envio:
                 time.sleep(3)
                 continue
