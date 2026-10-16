@@ -29,6 +29,11 @@ jobs:
       - name: Instalar dependências Python
         run: pip install -r requirements.txt
 
+      - name: Auditar dependências Python
+        run: |
+          python -m pip install pip-audit
+          pip-audit -r requirements.txt
+
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -49,6 +54,12 @@ jobs:
           python manage.py migrate --noinput
           python manage.py collectstatic --noinput
           python manage.py test
+
+      - name: Smoke de carga com dados sintéticos
+        run: |
+          gunicorn App.wsgi:application --bind 127.0.0.1:8010 --workers 2 --timeout 30 --access-logfile /tmp/emeca-audit-access.log --daemon
+          python scripts/auditoria_carga.py --base http://127.0.0.1:8010
+          test ! -s /tmp/emeca-audit-access.log || tail -n 20 /tmp/emeca-audit-access.log
 
       - name: Verificação de produção
         env:
