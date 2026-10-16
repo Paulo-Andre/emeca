@@ -3800,3 +3800,87 @@ textarea {
   color: #657267;
   font-size: 11px;
 }
+
+
+/* Documentos anexos das páginas públicas */
+.page-attached-documents {
+  width: min(680px, 100%);
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid #dce7d8;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 7px 20px rgba(29, 67, 37, .05);
+}
+
+.page-attached-documents__heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 10px;
+  color: #27471f;
+}
+
+.page-attached-documents__heading > svg {
+  width: 21px;
+  height: 21px;
+}
+
+.page-attached-documents__heading > span {
+  display: grid;
+  gap: 1px;
+}
+
+.page-attached-documents__heading strong {
+  font-size: 12px;
+}
+
+.page-attached-documents__heading small {
+  color: #6a7668;
+  font-size: 10px;
+}
+
+.page-attached-documents__list {
+  display: grid;
+  gap: 7px;
+}
+
+.page-attached-documents__list > a {
+  min-height: 46px;
+  padding: 8px 10px;
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr) auto;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid #e3ebe0;
+  border-radius: 10px;
+  background: #f8fbf7;
+  color: #294b21;
+  text-decoration: none;
+}
+
+.page-attached-documents__list > a:hover {
+  border-color: #c9dbc3;
+  background: #f0f7ed;
+}
+
+.page-attached-documents__list > a > span {
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #e6f1e2;
+}
+
+.page-attached-documents__list svg {
+  width: 17px;
+  height: 17px;
+}
+
+.page-attached-documents__list strong {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
