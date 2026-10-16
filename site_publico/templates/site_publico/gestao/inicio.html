@@ -2,100 +2,300 @@
 {% block title %}Editar página inicial{% endblock %}
 {% block header_icon %}house{% endblock %}
 {% block header_title %}Editar página inicial{% endblock %}
-{% block header_subtitle %}Altere os conteúdos da Home em um único lugar. Os menus e botões de navegação permanecem protegidos.{% endblock %}
+{% block header_subtitle %}Escolha uma área abaixo e altere somente o que precisa. Os menus e botões de navegação permanecem protegidos.{% endblock %}
 
 {% block content %}
-<div class="manager-toolbar">
-  <a class="manager-back" href="{% url 'site_publico:gestao_site' %}"><i data-lucide="arrow-left"></i> Voltar</a>
+<div class="manager-toolbar home-editor-toolbar">
+  <a class="manager-back" href="{% url 'site_publico:gestao_site' %}">
+    <i data-lucide="arrow-left"></i> Voltar
+  </a>
   <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:home' %}" target="_blank" rel="noopener">
-    <i data-lucide="external-link"></i> Visualizar página inicial
+    <i data-lucide="external-link"></i> Ver página publicada
   </a>
 </div>
 
-<section class="manager-home-editor-card">
-  <div class="manager-section__heading">
-    <div>
-      <span class="manager-kicker">Apresentação principal</span>
-      <h2>Título, texto e pilares</h2>
-      <p>Esses campos controlam a apresentação institucional e os três pilares exibidos na página inicial.</p>
-    </div>
+<section class="home-editor-intro">
+  <div>
+    <span class="manager-kicker">Página inicial</span>
+    <h2>O que você quer alterar?</h2>
+    <p>Escolha uma das quatro áreas. Apenas a área selecionada será mostrada na tela.</p>
   </div>
+</section>
 
-  <form class="manager-form-card manager-form-card--embedded" method="post">
-    {% csrf_token %}
-    {% if form.non_field_errors %}<div class="manager-form-error">{{ form.non_field_errors }}</div>{% endif %}
-    <div class="manager-form-grid">
-      {% for field in form %}
-        <div class="manager-field{% if field.name == 'home_texto' or field.name == 'home_pilar1_texto' or field.name == 'home_pilar2_texto' or field.name == 'home_pilar3_texto' %} manager-field--full{% endif %}">
-          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-          {{ field }}
-          {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
-          {% for error in field.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
+<nav class="home-editor-tabs" aria-label="Áreas da página inicial">
+  <button class="home-editor-tab is-active" type="button" data-home-tab-target="apresentacao" aria-selected="true">
+    <span class="home-editor-tab__icon"><i data-lucide="school"></i></span>
+    <span>
+      <strong>Apresentação</strong>
+      <small>Título, texto e pilares</small>
+    </span>
+  </button>
+
+  <button class="home-editor-tab" type="button" data-home-tab-target="blocos" aria-selected="false">
+    <span class="home-editor-tab__icon"><i data-lucide="layout-template"></i></span>
+    <span>
+      <strong>Blocos da página</strong>
+      <small>Textos e imagens das seções</small>
+    </span>
+  </button>
+
+  <button class="home-editor-tab" type="button" data-home-tab-target="topo" aria-selected="false">
+    <span class="home-editor-tab__icon"><i data-lucide="gallery-horizontal-end"></i></span>
+    <span>
+      <strong>Carrossel e avisos</strong>
+      <small>Destaques do topo e comunicados</small>
+    </span>
+  </button>
+
+  <button class="home-editor-tab" type="button" data-home-tab-target="conteudos" aria-selected="false">
+    <span class="home-editor-tab__icon"><i data-lucide="newspaper"></i></span>
+    <span>
+      <strong>Conteúdos em destaque</strong>
+      <small>Notícias, projetos, agenda e galeria</small>
+    </span>
+  </button>
+</nav>
+
+<div class="home-editor-panels">
+  <section class="home-editor-panel is-active" data-home-panel="apresentacao">
+    <div class="home-editor-panel__heading">
+      <span class="home-editor-panel__number">1</span>
+      <div>
+        <h2>Apresentação da escola</h2>
+        <p>Altere o título, o texto principal e os três pilares exibidos na Home.</p>
+      </div>
+    </div>
+
+    <form class="manager-form-card home-simple-form" method="post">
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="manager-form-error">{{ form.non_field_errors }}</div>{% endif %}
+
+      <div class="home-form-group">
+        <div class="home-form-group__title">
+          <i data-lucide="type"></i>
+          <div><strong>Texto principal</strong><small>É a apresentação central da escola.</small></div>
         </div>
+        <div class="manager-form-grid">
+          {% for field in form %}
+            {% if field.name == 'home_titulo' or field.name == 'home_texto' %}
+              <div class="manager-field manager-field--full">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                {% for error in field.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="home-form-group">
+        <div class="home-form-group__title">
+          <i data-lucide="columns-3"></i>
+          <div><strong>Três pilares</strong><small>Cada pilar possui um título curto e um texto explicativo.</small></div>
+        </div>
+
+        <div class="home-pillars-editor">
+          <article class="home-pillar-editor">
+            <span>1</span>
+            {% for field in form %}
+              {% if field.name == 'home_pilar1_titulo' or field.name == 'home_pilar1_texto' %}
+                <div class="manager-field">
+                  <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                  {{ field }}
+                  {% for error in field.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
+                </div>
+              {% endif %}
+            {% endfor %}
+          </article>
+
+          <article class="home-pillar-editor">
+            <span>2</span>
+            {% for field in form %}
+              {% if field.name == 'home_pilar2_titulo' or field.name == 'home_pilar2_texto' %}
+                <div class="manager-field">
+                  <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                  {{ field }}
+                  {% for error in field.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
+                </div>
+              {% endif %}
+            {% endfor %}
+          </article>
+
+          <article class="home-pillar-editor">
+            <span>3</span>
+            {% for field in form %}
+              {% if field.name == 'home_pilar3_titulo' or field.name == 'home_pilar3_texto' %}
+                <div class="manager-field">
+                  <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                  {{ field }}
+                  {% for error in field.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
+                </div>
+              {% endif %}
+            {% endfor %}
+          </article>
+        </div>
+      </div>
+
+      <div class="manager-form-actions">
+        <button class="manager-btn manager-btn--primary" type="submit">
+          <i data-lucide="save"></i> Salvar apresentação
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <section class="home-editor-panel" data-home-panel="blocos" hidden>
+    <div class="home-editor-panel__heading">
+      <span class="home-editor-panel__number">2</span>
+      <div>
+        <h2>Blocos da página</h2>
+        <p>Escolha somente o bloco que deseja alterar. Cada cartão corresponde a uma área visível da Home.</p>
+      </div>
+    </div>
+
+    <div class="home-block-list">
+      {% for secao in secoes %}
+        <article class="home-block-item">
+          <div class="home-block-item__icon">
+            {% if secao.imagem %}
+              <img src="{{ secao.imagem.url }}" alt="">
+            {% else %}
+              {% if secao.chave == 'home_avisos' %}<i data-lucide="megaphone"></i>
+              {% elif secao.chave == 'home_acesso' %}<i data-lucide="mouse-pointer-click"></i>
+              {% elif secao.chave == 'home_modelo' %}<i data-lucide="school"></i>
+              {% elif secao.chave == 'home_noticias' %}<i data-lucide="newspaper"></i>
+              {% elif secao.chave == 'home_atividades' %}<i data-lucide="gamepad-2"></i>
+              {% elif secao.chave == 'home_projetos' %}<i data-lucide="users-round"></i>
+              {% elif secao.chave == 'home_galeria' %}<i data-lucide="images"></i>
+              {% elif secao.chave == 'home_agenda' %}<i data-lucide="calendar-days"></i>
+              {% elif secao.chave == 'home_contato' %}<i data-lucide="messages-square"></i>
+              {% else %}<i data-lucide="layout-template"></i>{% endif %}
+            {% endif %}
+          </div>
+          <div class="home-block-item__copy">
+            <strong>
+              {% if secao.chave == 'home_fallback_slide' %}Slide alternativo
+              {% elif secao.chave == 'home_avisos' %}Avisos
+              {% elif secao.chave == 'home_acesso' %}Acesso rápido
+              {% elif secao.chave == 'home_modelo' %}Apresentação visual
+              {% elif secao.chave == 'home_noticias' %}Notícias
+              {% elif secao.chave == 'home_atividades' %}Atividades e jogos
+              {% elif secao.chave == 'home_projetos' %}Projetos
+              {% elif secao.chave == 'home_galeria' %}Galeria
+              {% elif secao.chave == 'home_agenda' %}Agenda
+              {% elif secao.chave == 'home_contato' %}Contato
+              {% else %}{{ secao.nome }}{% endif %}
+            </strong>
+            {% if secao.titulo %}<small>{{ secao.titulo }}</small>{% else %}<small>Editar texto e imagem deste bloco</small>{% endif %}
+          </div>
+          <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_secao_editar' secao.chave %}">
+            <i data-lucide="pencil"></i> Editar
+          </a>
+        </article>
       {% endfor %}
     </div>
-    <div class="manager-form-actions">
-      <button class="manager-btn manager-btn--primary" type="submit">
-        <i data-lucide="save"></i> Salvar página inicial
-      </button>
-    </div>
-  </form>
-</section>
+  </section>
 
-<section class="manager-section">
-  <div class="manager-section__heading">
-    <div>
-      <span class="manager-kicker">Blocos da Home</span>
-      <h2>Textos e imagens de cada seção</h2>
-      <p>Edite os títulos, textos e imagens dos blocos que compõem a página inicial.</p>
+  <section class="home-editor-panel" data-home-panel="topo" hidden>
+    <div class="home-editor-panel__heading">
+      <span class="home-editor-panel__number">3</span>
+      <div>
+        <h2>Carrossel e avisos</h2>
+        <p>Gerencie somente os conteúdos que aparecem no topo e os comunicados importantes.</p>
+      </div>
     </div>
-  </div>
 
-  <div class="editable-section-grid">
-    {% for secao in secoes %}
-      <article class="editable-section-card">
-        <div class="editable-section-card__media">
-          {% if secao.imagem %}
-            <img src="{{ secao.imagem.url }}" alt="">
-          {% else %}
-            <span><i data-lucide="layout-template"></i></span>
-          {% endif %}
-        </div>
-        <div class="editable-section-card__body">
-          <div class="editable-section-card__top">
-            <strong>{{ secao.nome }}</strong>
-          </div>
-          {% if secao.titulo %}<p><strong>{{ secao.titulo }}</strong></p>{% endif %}
-          {% if secao.texto %}<p>{{ secao.texto|truncatechars:150 }}</p>{% endif %}
-          <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_secao_editar' secao.chave %}">
-            <i data-lucide="pencil"></i> Editar bloco
+    <div class="home-simple-actions">
+      {% for item in conteudos_home %}
+        {% if item.chave == 'carrossel' or item.chave == 'avisos' %}
+          <a class="home-simple-action" href="{% url 'site_publico:gestao_conteudo_lista' item.chave %}">
+            <span class="home-simple-action__icon"><i data-lucide="{{ item.icon }}"></i></span>
+            <div>
+              <strong>{{ item.label }}</strong>
+              <small>
+                {% if item.chave == 'carrossel' %}Imagens e chamadas que aparecem no topo da página.
+                {% else %}Comunicados importantes exibidos para famílias e estudantes.{% endif %}
+              </small>
+            </div>
+            <span class="home-simple-action__count">{{ item.total }}</span>
+            <i data-lucide="chevron-right"></i>
           </a>
-        </div>
-      </article>
-    {% endfor %}
-  </div>
-</section>
-
-<section class="manager-section">
-  <div class="manager-section__heading">
-    <div>
-      <span class="manager-kicker">Conteúdo que aparece na Home</span>
-      <h2>Carrossel, avisos e destaques</h2>
-      <p>Gerencie os itens dinâmicos que alimentam automaticamente a página inicial.</p>
+        {% endif %}
+      {% endfor %}
     </div>
-  </div>
+  </section>
 
-  <div class="content-manager-grid">
-    {% for item in conteudos_home %}
-      <a class="content-manager-card" href="{% url 'site_publico:gestao_conteudo_lista' item.chave %}">
-        <span><i data-lucide="{{ item.icon }}"></i></span>
-        <div>
-          <strong>{{ item.label }}</strong>
-          <small>{{ item.total }} item{{ item.total|pluralize }}</small>
-        </div>
-        <i data-lucide="chevron-right"></i>
-      </a>
-    {% endfor %}
-  </div>
-</section>
+  <section class="home-editor-panel" data-home-panel="conteudos" hidden>
+    <div class="home-editor-panel__heading">
+      <span class="home-editor-panel__number">4</span>
+      <div>
+        <h2>Conteúdos em destaque</h2>
+        <p>Esses conteúdos são cadastrados em suas áreas próprias e aparecem automaticamente na Home.</p>
+      </div>
+    </div>
+
+    <div class="home-simple-actions">
+      {% for item in conteudos_home %}
+        {% if item.chave != 'carrossel' and item.chave != 'avisos' %}
+          <a class="home-simple-action" href="{% url 'site_publico:gestao_conteudo_lista' item.chave %}">
+            <span class="home-simple-action__icon"><i data-lucide="{{ item.icon }}"></i></span>
+            <div>
+              <strong>{{ item.label }}</strong>
+              <small>
+                {% if item.chave == 'noticias' %}Notícias e acontecimentos publicados pela escola.
+                {% elif item.chave == 'atividades' %}Atividades, jogos, quizzes e materiais educativos.
+                {% elif item.chave == 'projetos' %}Projetos pedagógicos e ações da escola.
+                {% elif item.chave == 'eventos' %}Agenda e próximos acontecimentos.
+                {% elif item.chave == 'albuns' %}Álbuns e fotos exibidos na galeria.
+                {% else %}Conteúdo que pode aparecer na página inicial.{% endif %}
+              </small>
+            </div>
+            <span class="home-simple-action__count">{{ item.total }}</span>
+            <i data-lucide="chevron-right"></i>
+          </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const tabs = Array.from(document.querySelectorAll('[data-home-tab-target]'));
+  const panels = Array.from(document.querySelectorAll('[data-home-panel]'));
+  if (!tabs.length || !panels.length) return;
+
+  function activate(name, updateHash) {
+    tabs.forEach((tab) => {
+      const active = tab.dataset.homeTabTarget === name;
+      tab.classList.toggle('is-active', active);
+      tab.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+
+    panels.forEach((panel) => {
+      const active = panel.dataset.homePanel === name;
+      panel.classList.toggle('is-active', active);
+      panel.hidden = !active;
+    });
+
+    if (updateHash && history.replaceState) {
+      history.replaceState(null, '', '#' + name);
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', () => activate(tab.dataset.homeTabTarget, true));
+  });
+
+  const initial = location.hash.replace('#', '');
+  if (tabs.some((tab) => tab.dataset.homeTabTarget === initial)) {
+    activate(initial, false);
+  }
+})();
+</script>
 {% endblock %}
