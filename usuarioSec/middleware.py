@@ -153,7 +153,7 @@ class LoginRequiredMiddleware:
 
 class ModuleAccessMiddleware:
     MODULE_PREFIXES = (
-        ("administracao", ("/cadastro",)),
+        ("administracao", ("/cadastro", "/usuarios/acessos/")),
         ("historico", ("/historico/",)),
         ("boletins", ("/boletins/",)),
         ("site", ("/gestao-site/",)),
