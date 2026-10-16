@@ -17,6 +17,8 @@ jobs:
       DJANGO_SECRET_KEY: "ci-django-secret-key-0123456789-abcdefghijklmnopqrstuvwxyz"
       DOCUMENT_SIGNING_KEY: "ci-document-signing-key-0123456789-abcdefghijklmnopqrstuvwxyz"
       DJANGO_ALLOWED_HOSTS: "127.0.0.1,localhost,testserver"
+      DJANGO_RBAC_STRICT: "0"
+      DJANGO_RATE_LIMIT_ENABLED: "0"
 
     steps:
       - uses: actions/checkout@v4
@@ -46,7 +48,7 @@ jobs:
       - name: Compilar e auditar área pública
         working-directory: frontend_publico
         run: |
-          npm install
+          npm ci
           npm audit --omit=dev --audit-level=high
           npm run build
 
