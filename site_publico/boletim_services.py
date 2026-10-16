@@ -31,6 +31,13 @@ def somente_digitos(valor):
     return re.sub(r"\D", "", valor or "")
 
 
+def formatar_cpf(valor):
+    digitos = somente_digitos(valor)
+    if len(digitos) == 11:
+        return f"{digitos[:3]}.{digitos[3:6]}.{digitos[6:9]}-{digitos[9:]}"
+    return (valor or "").strip()
+
+
 def sincronizar_perfil_matricula(aluno_matricula):
     perfil, _ = AlunoBoletim.objects.get_or_create(
         matricula=aluno_matricula,
@@ -423,10 +430,10 @@ def localizar_alunos_por_credenciais(
                 )
             )
             if origem_mae:
-                aluno.cpf_mae = cpf
+                aluno.cpf_mae = formatar_cpf(cpf)
                 alterados.append("cpf_mae")
             else:
-                aluno.cpf_responsavel = cpf
+                aluno.cpf_responsavel = formatar_cpf(cpf)
                 alterados.append("cpf_responsavel")
 
         if alterados:
