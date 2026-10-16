@@ -373,6 +373,43 @@ class PeriodoBoletimNovoForm(PeriodoBoletimForm):
     )
 
 
+class PeriodoBoletimGestaoForm(PeriodoBoletimForm):
+    disciplinas = forms.CharField(
+        label="Disciplinas",
+        widget=forms.Textarea(
+            attrs={
+                "class": "site-manager-input site-manager-textarea",
+                "rows": 12,
+                "placeholder": "Uma disciplina por linha",
+            }
+        ),
+        help_text=(
+            "Uma disciplina por linha. Você pode corrigir nomes ou adicionar novas disciplinas. "
+            "Ao remover uma disciplina, as notas vinculadas a ela também serão removidas."
+        ),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields["disciplinas"].initial = "\n".join(
+                self.instance.disciplinas.order_by("ordem", "id").values_list("nome", flat=True)
+            )
+
+    def clean_disciplinas(self):
+        nomes = []
+        vistos = set()
+        for linha in self.cleaned_data["disciplinas"].splitlines():
+            nome = " ".join(linha.split()).strip()
+            chave = nome.casefold()
+            if nome and chave not in vistos:
+                vistos.add(chave)
+                nomes.append(nome)
+        if not nomes:
+            raise forms.ValidationError("Informe pelo menos uma disciplina.")
+        return "\n".join(nomes)
+
+
 class BoletimImportacaoForm(forms.Form):
     arquivo = forms.FileField(
         label="Planilha de notas e faltas",
@@ -382,64 +419,11 @@ class BoletimImportacaoForm(forms.Form):
                 "accept": ".xls,.xlsx",
             }
         ),
-        help_text="Aceita .xls e .xlsx no modelo de Notas e Faltas por turma.",
-    )
-    tipo = forms.ChoiceField(
-        choices=PeriodoBoletim.TIPOS,
-        label="Organização do ano",
-        initial="TRIMESTRE",
-        widget=forms.Select(attrs={"class": "site-manager-input"}),
-    )
-    numero = forms.IntegerField(
-        min_value=1,
-        max_value=4,
-        label="Período",
-        initial=1,
-        widget=forms.NumberInput(attrs={"class": "site-manager-input", "min": 1, "max": 4}),
-        help_text="Use 1 a 4 para bimestre e 1 a 3 para trimestre.",
-    )
-    ano = forms.IntegerField(
-        min_value=2000,
-        max_value=2100,
-        label="Ano letivo",
-        widget=forms.NumberInput(attrs={"class": "site-manager-input", "min": 2000, "max": 2100}),
-    )
-    turma = forms.CharField(
-        max_length=160,
-        required=False,
-        label="Turma",
-        widget=forms.TextInput(
-            attrs={
-                "class": "site-manager-input",
-                "placeholder": "Deixe vazio para usar a turma identificada na planilha",
-            }
+        help_text=(
+            "Envie a planilha .xls ou .xlsx. Organização do ano, período, ano letivo, "
+            "turma, professor(a) regente e disciplinas serão extraídos automaticamente."
         ),
     )
-    regente = forms.CharField(
-        max_length=180,
-        required=False,
-        label="Professor(a) regente",
-        widget=forms.TextInput(attrs={"class": "site-manager-input"}),
-    )
-    publicar = forms.BooleanField(
-        required=False,
-        label="Publicar após importar",
-        widget=forms.CheckboxInput(attrs={"class": "site-manager-check"}),
-        help_text="Se marcado, os responsáveis poderão consultar assim que a importação terminar.",
-    )
-
-    def clean(self):
-        cleaned = super().clean()
-        tipo = cleaned.get("tipo")
-        numero = cleaned.get("numero")
-        if tipo and numero:
-            limite = 4 if tipo == "BIMESTRE" else 3
-            if numero > limite:
-                self.add_error(
-                    "numero",
-                    f"Para {'bimestre' if tipo == 'BIMESTRE' else 'trimestre'}, use um período entre 1 e {limite}.",
-                )
-        return cleaned
 
 
 class AlunoMatriculaChoiceField(forms.ModelChoiceField):
