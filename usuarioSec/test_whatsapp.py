@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -206,18 +208,25 @@ class WhatsAppBoletimTests(TestCase):
         )
         self.client.force_login(usuario)
 
-        response = self.client.post(
-            reverse("whatsapp_enviar"),
-            {
-                "conteudo": "boletim",
-                "modo": "individual",
-                "contato_id": str(self.mae_a.pk),
-                "boletim_tipo": "TRIMESTRE",
-                "boletim_numero": "2",
-                "boletim_ano": "2026",
-                "mensagem_boletim": "Olá! Segue o boletim de {aluno}.",
-            },
-        )
+        with (
+            patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True),
+            patch(
+                "usuarioSec.whatsapp_views.obter_sessao",
+                return_value={"data": {"status": "CONNECTED"}},
+            ),
+        ):
+            response = self.client.post(
+                reverse("whatsapp_enviar"),
+                {
+                    "conteudo": "boletim",
+                    "modo": "individual",
+                    "contato_id": str(self.mae_a.pk),
+                    "boletim_tipo": "TRIMESTRE",
+                    "boletim_numero": "2",
+                    "boletim_ano": "2026",
+                    "mensagem_boletim": "Olá! Segue o boletim de {aluno}.",
+                },
+            )
 
         self.assertEqual(response.status_code, 302)
         envio = EnvioBoletimWhatsApp.objects.get()
