@@ -8,6 +8,27 @@ from .models import AuditoriaEvento
 
 
 SENSITIVE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+SENSITIVE_KEYS = {
+    "authorization",
+    "api_key",
+    "apikey",
+    "chave",
+    "cookie",
+    "cpf",
+    "cpf_mae",
+    "cpf_pai",
+    "cpf_responsavel",
+    "data_nascimento",
+    "email",
+    "nascimento",
+    "password",
+    "senha",
+    "secret",
+    "segredo",
+    "telefone",
+    "token",
+    "whatsapp",
+}
 
 
 def _ip_cliente(request):
@@ -17,11 +38,16 @@ def _ip_cliente(request):
     return request.META.get("REMOTE_ADDR", "") or ""
 
 
-def hash_ip(ip):
-    if not ip:
+def _hash_privado(valor):
+    if valor in (None, ""):
         return ""
     segredo = str(settings.SECRET_KEY).encode("utf-8")
-    return hashlib.sha256(segredo + b":" + ip.encode("utf-8")).hexdigest()
+    bruto = str(valor).encode("utf-8")
+    return hashlib.sha256(segredo + b":" + bruto).hexdigest()
+
+
+def hash_ip(ip):
+    return _hash_privado(ip)
 
 
 def request_id(request):
@@ -33,18 +59,46 @@ def request_id(request):
     return valor
 
 
+def _chave_sensivel(chave):
+    normalizada = str(chave or "").strip().lower().replace("-", "_")
+    return any(
+        normalizada == item
+        or normalizada.startswith(f"{item}_")
+        or normalizada.endswith(f"_{item}")
+        for item in SENSITIVE_KEYS
+    )
+
+
+def _redigir(valor):
+    if isinstance(valor, dict):
+        return {
+            str(chave): "[REDACTED]" if _chave_sensivel(chave) else _redigir(item)
+            for chave, item in valor.items()
+        }
+    if isinstance(valor, (list, tuple, set)):
+        return [_redigir(item) for item in valor]
+    return valor
+
+
 def detalhes_seguros(detalhes):
     if not detalhes:
         return {}
-    # Normalização defensiva: evita objetos não serializáveis e payloads
-    # gigantes em logs. Nunca grave senha, token, CPF ou arquivo bruto aqui.
-    bruto = json.dumps(detalhes, ensure_ascii=False, default=str)
+    # Redação defensiva antes da serialização. Mesmo que um chamador envie
+    # acidentalmente senha, token, CPF ou contato, o valor não é persistido.
+    seguro = _redigir(detalhes)
+    bruto = json.dumps(seguro, ensure_ascii=False, default=str)
     if len(bruto) > 12000:
         bruto = bruto[:12000]
     try:
         return json.loads(bruto)
     except json.JSONDecodeError:
-        return {"resumo": bruto}
+        return {"resumo": "[TRUNCATED]"}
+
+
+def _referencia_segura(valor):
+    if not valor:
+        return ""
+    return f"ref:{_hash_privado(valor)[:16]}"
 
 
 def registrar_auditoria(
@@ -62,14 +116,22 @@ def registrar_auditoria(
         if candidato is not None and getattr(candidato, "is_authenticated", False):
             usuario = candidato
 
+    resolver = getattr(request, "resolver_match", None) if request else None
+    caminho = (
+        getattr(resolver, "view_name", "")
+        or (getattr(request, "path", "") if request else "")
+    )
+
     evento = AuditoriaEvento.objects.create(
         usuario=usuario,
         acao=acao,
         entidade=str(entidade or "")[:80],
         objeto_id=str(objeto_id or "")[:80],
-        objeto_repr=str(objeto_repr or "")[:255],
+        # A representação frequentemente contém nome de aluno. Guardamos apenas
+        # uma referência correlacionável, sem PII em texto claro.
+        objeto_repr=_referencia_segura(objeto_repr)[:255],
         metodo=(getattr(request, "method", "") or "")[:10] if request else "",
-        caminho=(getattr(request, "path", "") or "")[:255] if request else "",
+        caminho=str(caminho)[:255],
         ip_hash=hash_ip(_ip_cliente(request)) if request else "",
         user_agent=(
             (request.META.get("HTTP_USER_AGENT", "") or "")[:255]
