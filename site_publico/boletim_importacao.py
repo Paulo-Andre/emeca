@@ -141,6 +141,13 @@ def _disciplinas_por_rotulos(df, cabecalho_idx, nome_col):
     # Procura rótulos nas linhas imediatamente acima de Num./Nome.
     inicio = max(0, cabecalho_idx - 8)
     for col in range(nome_col + 1, len(df.columns)):
+        # A coluna reservada ao professor regente não é disciplina.
+        if any(
+            normalizar(df.iat[linha, col]) == "REGENTE"
+            for linha in range(inicio, cabecalho_idx)
+        ):
+            continue
+
         encontrado = ""
         linha_encontrada = None
         for linha in range(cabecalho_idx - 1, inicio - 1, -1):
