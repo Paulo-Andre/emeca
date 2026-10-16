@@ -24,8 +24,8 @@ class ImportacaoDeclaracoesTests(TestCase):
     def _planilha_modelo_antigo():
         return pd.DataFrame(
             [
-                ["E.M EGIDIO CORDEIRO AQUINO"] + [None] * 15,
-                ["declara"] + [None] * 15,
+                ["E.M EGIDIO CORDEIRO AQUINO"] + [None] * 18,
+                ["declara"] + [None] * 18,
                 [
                     "NOME",
                     "",
@@ -43,6 +43,9 @@ class ImportacaoDeclaracoesTests(TestCase):
                     "Telefone2 da Mãe",
                     "Telefone2 do Pai",
                     "RESPONS",
+                    "CPF do Pai",
+                    "CPF da Mãe",
+                    "CPF RESPONS.",
                 ],
                 [
                     "Aluno Teste",
@@ -61,6 +64,9 @@ class ImportacaoDeclaracoesTests(TestCase):
                     "(38) 99959-8271",
                     "998215463",
                     "Maria Responsável",
+                    "11122233344",
+                    "555.666.777-88",
+                    "99988877766",
                 ],
             ]
         )
@@ -93,6 +99,9 @@ class ImportacaoDeclaracoesTests(TestCase):
         self.assertEqual(aluno["nomeMae"], "Maria Teste")
         self.assertEqual(aluno["nomePai"], "João Teste")
         self.assertEqual(aluno["nomeResponsavel"], "Maria Responsável")
+        self.assertEqual(aluno["cpfPai"], "111.222.333-44")
+        self.assertEqual(aluno["cpfMae"], "555.666.777-88")
+        self.assertEqual(aluno["cpfResponsavel"], "999.888.777-66")
         self.assertEqual(str(aluno["dataNascimentoAluno"]), "2017-08-13")
         self.assertEqual(aluno["nacionaliadeAluno"], "Brasileira")
         self.assertEqual(aluno["turmaDoAluno"], "3º Ano Lavanda")
@@ -133,6 +142,9 @@ class ImportacaoDeclaracoesTests(TestCase):
         self.assertEqual(aluno.nomeMae, "Maria Teste")
         self.assertEqual(aluno.nomePai, "João Teste")
         self.assertEqual(aluno.nomeResponsavel, "Maria Responsável")
+        self.assertEqual(aluno.cpfPai, "111.222.333-44")
+        self.assertEqual(aluno.cpfMae, "555.666.777-88")
+        self.assertEqual(aluno.cpfResponsavel, "999.888.777-66")
 
         responsavel = list(
             aluno.telefones.filter(tipo="RESPONSAVEL").values_list("telefone", flat=True)
@@ -166,6 +178,9 @@ class ImportacaoDeclaracoesTests(TestCase):
         self.assertContains(response, 'name="nomeMae"')
         self.assertContains(response, 'name="nomePai"')
         self.assertContains(response, 'name="nomeResponsavel"')
+        self.assertContains(response, 'name="cpfPai"')
+        self.assertContains(response, 'name="cpfMae"')
+        self.assertContains(response, 'name="cpfResponsavel"')
         self.assertContains(response, 'name="dataNascimentoAluno"')
         self.assertContains(response, 'name="natularidadeAluno"')
         self.assertContains(response, 'name="nacionaliadeAluno"')
@@ -184,6 +199,9 @@ class ImportacaoDeclaracoesTests(TestCase):
                 "nomeMae": "Maria Manual",
                 "nomePai": "João Manual",
                 "nomeResponsavel": "Ana Responsável",
+                "cpfPai": "11122233344",
+                "cpfMae": "55566677788",
+                "cpfResponsavel": "99988877766",
                 "dataNascimentoAluno": "2017-08-13",
                 "natularidadeAluno": "Montes Claros",
                 "nacionaliadeAluno": "Brasileira",
@@ -215,6 +233,9 @@ class ImportacaoDeclaracoesTests(TestCase):
         self.assertEqual(aluno.nomeMae, "Maria Manual")
         self.assertEqual(aluno.nomePai, "João Manual")
         self.assertEqual(aluno.nomeResponsavel, "Ana Responsável")
+        self.assertEqual(aluno.cpfPai, "111.222.333-44")
+        self.assertEqual(aluno.cpfMae, "555.666.777-88")
+        self.assertEqual(aluno.cpfResponsavel, "999.888.777-66")
         self.assertEqual(str(aluno.dataNascimentoAluno), "2017-08-13")
         self.assertEqual(aluno.natularidadeAluno, "Montes Claros")
         self.assertEqual(aluno.nacionaliadeAluno, "Brasileira")
@@ -291,3 +312,20 @@ class ImportacaoDeclaracoesTests(TestCase):
         self.assertTrue(
             any("Registros de declarações removidos: 0" in mensagem for mensagem in mensagens)
         )
+
+
+    @patch("usuarioSec.importacao_declaracoes.pd.read_excel")
+    def test_importacao_reconhece_variacoes_de_cabecalho_de_cpf(self, read_excel):
+        read_excel.return_value = self._planilha_modelo_antigo()
+        arquivo = SimpleUploadedFile(
+            "declaracao-com-cpf.xls",
+            b"conteudo-xls-simulado",
+            content_type="application/vnd.ms-excel",
+        )
+
+        resultado = ler_planilha(arquivo)
+        aluno = resultado["registros"][0]
+
+        self.assertEqual(aluno["cpfPai"], "111.222.333-44")
+        self.assertEqual(aluno["cpfMae"], "555.666.777-88")
+        self.assertEqual(aluno["cpfResponsavel"], "999.888.777-66")
