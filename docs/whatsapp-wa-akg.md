@@ -100,6 +100,22 @@ No EMECA:
 
 Quando o status ficar **CONNECTED**, os disparos são habilitados.
 
+## Persistência da conexão
+
+O vínculo do WhatsApp **não pertence ao usuário que está logado no EMECA**. O login do funcionário serve apenas para acessar a tela da Secretaria.
+
+O WA-AKG salva as credenciais do WhatsApp no modelo `AuthState` do banco próprio. Por isso:
+
+- sair do EMECA não desconecta o WhatsApp;
+- trocar de usuário da Secretaria não exige novo QR Code;
+- fechar o navegador não desconecta o WhatsApp;
+- reiniciar o container do EMECA não desconecta o WhatsApp;
+- ao reiniciar o WA-AKG, sessões que possuem credenciais salvas são carregadas novamente automaticamente.
+
+Para preservar a vinculação, mantenha o volume do banco do WA-AKG. **Não use `docker compose down -v` no WA-AKG**, pois o `-v` remove os volumes e pode apagar as credenciais persistidas.
+
+Um novo QR Code só deve ser necessário se o aparelho for removido em **WhatsApp → Aparelhos conectados**, se houver logout explícito da sessão no WA-AKG ou se os dados persistentes do WA-AKG forem apagados.
+
 ## Destinatários disponíveis
 
 A tela do EMECA usa os telefones já importados em `TelefoneDeclaracao` e os vínculos existentes com `declaracao`:
