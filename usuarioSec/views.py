@@ -514,14 +514,8 @@ def apagar_todos_alunos(request):
     messages.success(
         request,
         (
-            f"{total_declaracoes} declaração"
-            f"{'ões' if total_declaracoes != 1 else ''} removida"
-            f"{'s' if total_declaracoes != 1 else ''} com sucesso. "
-            f"{total_telefones} telefone"
-            f"{'s' if total_telefones != 1 else ''} vinculado"
-            f"{'s' if total_telefones != 1 else ''} também foi"
-            f"{'ram' if total_telefones != 1 else ''} removido"
-            f"{'s' if total_telefones != 1 else ''}."
+            f"Registros de declarações removidos: {total_declaracoes}. "
+            f"Telefones vinculados removidos: {total_telefones}."
         ),
     )
     return redirect("telaDeclaracao")
