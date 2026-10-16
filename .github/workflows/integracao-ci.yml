@@ -26,6 +26,9 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
+      - name: Verificar segredos versionados
+        run: python scripts/auditoria_segredos.py
+
       - name: Instalar dependências Python
         run: pip install -r requirements.txt
 
@@ -59,6 +62,10 @@ jobs:
         run: |
           gunicorn App.wsgi:application --bind 127.0.0.1:8010 --workers 2 --timeout 30 --access-logfile /tmp/emeca-audit-access.log --daemon
           python scripts/auditoria_carga.py --base http://127.0.0.1:8010
+          if grep -Eq 'ESTUDANTE SINTETICO|2017-01-01|Senha-Sintetica' /tmp/emeca-audit-access.log; then
+            echo "Falha: corpo sintético/PII apareceu no access log."
+            exit 1
+          fi
           test ! -s /tmp/emeca-audit-access.log || tail -n 20 /tmp/emeca-audit-access.log
 
       - name: Verificação de produção
