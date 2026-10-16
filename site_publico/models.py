@@ -489,12 +489,13 @@ class PeriodoBoletim(models.Model):
         verbose_name_plural = "Períodos de boletim"
 
     def clean(self):
-        limite = 4 if self.tipo == "BIMESTRE" else 3
-        if self.numero < 1 or self.numero > limite:
-            raise ValidationError(
-                {"numero": f"Para {self.get_tipo_display().lower()}, informe um período entre 1 e {limite}."}
-            )
-        if self.ano < 2000 or self.ano > 2100:
+        if self.tipo and self.numero is not None:
+            limite = 4 if self.tipo == "BIMESTRE" else 3
+            if self.numero < 1 or self.numero > limite:
+                raise ValidationError(
+                    {"numero": f"Para {self.get_tipo_display().lower()}, informe um período entre 1 e {limite}."}
+                )
+        if self.ano is not None and (self.ano < 2000 or self.ano > 2100):
             raise ValidationError({"ano": "Informe um ano letivo válido."})
 
     @property
