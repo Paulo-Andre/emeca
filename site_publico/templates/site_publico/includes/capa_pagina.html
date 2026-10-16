@@ -20,7 +20,7 @@
         <i data-lucide="files"></i>
         <span>
           <strong>Documentos da página</strong>
-          <small>{{ documentos|length }} arquivo{{ documentos|length|pluralize }} disponível{{ documentos|length|pluralize:"is" }}</small>
+          <small>{% if documentos|length == 1 %}1 documento disponível{% else %}{{ documentos|length }} documentos disponíveis{% endif %}</small>
         </span>
       </div>
       <div class="page-attached-documents__list">
