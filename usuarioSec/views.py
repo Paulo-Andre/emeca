@@ -11,7 +11,11 @@ from django.contrib.auth import logout
 import re
 from datetime import datetime
 from .models import declaracao, TelefoneDeclaracao
-from .importacao_declaracoes import ImportacaoDeclaracaoErro, ler_planilha
+from .importacao_declaracoes import (
+    ImportacaoDeclaracaoErro,
+    deduplicar_telefones,
+    ler_planilha,
+)
 from django.http import JsonResponse
 import json
 from django.utils import timezone
@@ -432,21 +436,62 @@ def deletar_aluno_declaracao(request, id):
 
     return redirect('telaDeclaracao')
 def cadastrar_aluno(request):
-    if request.method == "POST":
-        declaracao.objects.create(
-            nomeDoAluno=request.POST.get("nomeDoAluno"),
-            nacionaliadeAluno=request.POST.get("nacionaliadeAluno"),
-            natularidadeAluno=request.POST.get("natularidadeAluno"),
-            ufAluno=request.POST.get("ufAluno"),
-            dataNascimentoAluno=request.POST.get("dataNascimentoAluno"),
-            sexoDoAluno=request.POST.get("sexoDoAluno"),
-            turmaDoAluno=request.POST.get("turmaDoAluno"),
-            cartaoSusDoAluno=request.POST.get("cartaoSusDoAluno"),
-            cpfDoAluno=request.POST.get("cpfDoAluno"),
-            nomePai=request.POST.get("nomePai"),
-            nomeMae=request.POST.get("nomeMae"),
-        )
-        return redirect('telaDeclaracao')  
+    if request.method != "POST":
+        return redirect("telaDeclaracao")
+
+    nome = request.POST.get("nomeDoAluno", "").strip()
+    if not nome:
+        messages.error(request, "Informe o nome do aluno.")
+        return redirect("telaDeclaracao")
+
+    telefones_por_tipo = {
+        "PAI": request.POST.getlist("telefonePai"),
+        "MAE": request.POST.getlist("telefoneMae"),
+        "RESPONSAVEL": request.POST.getlist("telefoneResponsavel"),
+    }
+
+    try:
+        with transaction.atomic():
+            aluno = declaracao(
+                nomeDoAluno=nome,
+                nacionaliadeAluno=request.POST.get("nacionaliadeAluno", "").strip(),
+                natularidadeAluno=request.POST.get("natularidadeAluno", "").strip(),
+                ufAluno=request.POST.get("ufAluno", "").strip(),
+                dataNascimentoAluno=request.POST.get("dataNascimentoAluno") or None,
+                sexoDoAluno=request.POST.get("sexoDoAluno", "").strip(),
+                turmaDoAluno=request.POST.get("turmaDoAluno", "").strip(),
+                cartaoSusDoAluno=request.POST.get("cartaoSusDoAluno", "").strip(),
+                cpfDoAluno=request.POST.get("cpfDoAluno", "").strip(),
+                nomePai=request.POST.get("nomePai", "").strip(),
+                nomeMae=request.POST.get("nomeMae", "").strip(),
+            )
+            aluno.full_clean()
+            aluno.save()
+
+            telefones_salvos = 0
+            duplicados_ignorados = 0
+            for tipo, valores in telefones_por_tipo.items():
+                unicos, duplicados = deduplicar_telefones(valores)
+                duplicados_ignorados += duplicados
+                for numero in unicos:
+                    TelefoneDeclaracao.objects.create(
+                        declaracao=aluno,
+                        tipo=tipo,
+                        telefone=numero,
+                    )
+                    telefones_salvos += 1
+    except Exception:
+        messages.error(request, "Não foi possível cadastrar o aluno. Verifique os dados informados.")
+        return redirect("telaDeclaracao")
+
+    mensagem = "Aluno cadastrado com sucesso."
+    if telefones_salvos:
+        mensagem += f" {telefones_salvos} telefone{'s' if telefones_salvos != 1 else ''} associado{'s' if telefones_salvos != 1 else ''}."
+    if duplicados_ignorados:
+        mensagem += f" {duplicados_ignorados} telefone{'s' if duplicados_ignorados != 1 else ''} repetido{'s' if duplicados_ignorados != 1 else ''} foi{'ram' if duplicados_ignorados != 1 else ''} ignorado{'s' if duplicados_ignorados != 1 else ''}."
+
+    messages.success(request, mensagem)
+    return redirect("telaDeclaracao")
 @usuario_administrador   
 def apagar_todos_alunos(request):
         if request.user.is_superuser:
