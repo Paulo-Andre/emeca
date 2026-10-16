@@ -615,7 +615,7 @@ class SitePublicoTests(TestCase):
 
 
     @staticmethod
-    def _matricula_para_boletim(nome="Alice Vitória Soares Veloso", cpf_mae="123.456.789-09", cpf_responsavel=""):
+    def _matricula_para_boletim(nome="Estudante Sintética Alfa", cpf_mae="111.111.111-11", cpf_responsavel=""):
         return matricula.objects.create(
             nomeDoAluno=nome,
             dataNascimentoAluno=date(2017, 8, 13),
@@ -638,13 +638,13 @@ class SitePublicoTests(TestCase):
         )
 
     @staticmethod
-    def _periodo_publicado(tipo="TRIMESTRE", numero=2, ano=2026, turma="1º Tulipa"):
+    def _periodo_publicado(tipo="TRIMESTRE", numero=2, ano=2026, turma="1º Teste"):
         return PeriodoBoletim.objects.create(
             tipo=tipo,
             numero=numero,
             ano=ano,
             turma=turma,
-            regente="Helena Freitas Oliveira",
+            regente="Regente Sintética",
             publicado=True,
         )
 
@@ -697,7 +697,7 @@ class SitePublicoTests(TestCase):
         response = self.client.post(
             reverse("site_publico:boletim"),
             {
-                "cpf": "12345678909",
+                "cpf": "11111111111",
                 "data_nascimento": "2017-08-13",
             },
         )
@@ -707,7 +707,7 @@ class SitePublicoTests(TestCase):
 
         resultado = self.client.get(response.url)
         self.assertEqual(resultado.status_code, 200)
-        self.assertContains(resultado, "Alice Vitória Soares Veloso")
+        self.assertContains(resultado, "Estudante Sintética Alfa")
         self.assertContains(resultado, "Língua Portuguesa")
         self.assertContains(resultado, "21")
         self.assertContains(resultado, "Faltas totais")
@@ -720,11 +720,11 @@ class SitePublicoTests(TestCase):
         nome = "ESTUDANTE HOMONIMO SINTETICO"
         cadastro_a = self._matricula_para_boletim(
             nome=nome,
-            cpf_mae="123.456.789-09",
+            cpf_mae="111.111.111-11",
         )
         cadastro_b = self._matricula_para_boletim(
             nome=nome,
-            cpf_mae="987.654.321-00",
+            cpf_mae="222.222.222-22",
         )
         perfil_a = sincronizar_perfil_matricula(cadastro_a)
         perfil_b = sincronizar_perfil_matricula(cadastro_b)
@@ -738,7 +738,7 @@ class SitePublicoTests(TestCase):
         BoletimAluno.objects.create(periodo=periodo, aluno=perfil_b)
 
         encontrados = localizar_alunos_por_credenciais(
-            "12345678909",
+            "11111111111",
             date(2017, 8, 13),
         )
 
@@ -763,7 +763,7 @@ class SitePublicoTests(TestCase):
     def test_cpf_do_responsavel_tambem_da_acesso(self):
         cadastro = self._matricula_para_boletim(
             cpf_mae="",
-            cpf_responsavel="987.654.321-00",
+            cpf_responsavel="222.222.222-22",
         )
         perfil = sincronizar_perfil_matricula(cadastro)
         periodo = self._periodo_publicado()
@@ -782,7 +782,7 @@ class SitePublicoTests(TestCase):
 
         response = self.client.post(
             reverse("site_publico:boletim"),
-            {"cpf": "98765432100", "data_nascimento": "2017-08-13"},
+            {"cpf": "22222222222", "data_nascimento": "2017-08-13"},
         )
 
         self.assertEqual(response.status_code, 302)
@@ -791,11 +791,11 @@ class SitePublicoTests(TestCase):
         _, _, periodo, boletim = self._criar_boletim_publicado()
         acesso = self.client.post(
             reverse("site_publico:boletim"),
-            {"cpf": "12345678909", "data_nascimento": "2017-08-13"},
+            {"cpf": "11111111111", "data_nascimento": "2017-08-13"},
         )
 
         self.assertEqual(acesso.url, reverse("site_publico:boletim_acesso"))
-        self.assertNotIn("12345678909", acesso.url)
+        self.assertNotIn("11111111111", acesso.url)
         self.assertNotIn("2017-08-13", acesso.url)
 
         response = self.client.get(
@@ -832,7 +832,7 @@ class SitePublicoTests(TestCase):
                 "tipo": "TRIMESTRE",
                 "numero": 4,
                 "ano": 2026,
-                "turma": "1º Tulipa",
+                "turma": "1º Teste",
                 "regente": "",
                 "publicado": "on",
             }
@@ -846,7 +846,7 @@ class SitePublicoTests(TestCase):
                 "tipo": "BIMESTRE",
                 "numero": 4,
                 "ano": 2026,
-                "turma": "1º Tulipa",
+                "turma": "1º Teste",
                 "regente": "",
                 "publicado": "on",
             }
@@ -860,15 +860,15 @@ class SitePublicoTests(TestCase):
         # aparecem acima dos pares N./F.
         read_excel.return_value = pd.DataFrame([
             ["E.M EGIDIO CORDEIRO AQUINO", None, None, None, None, None, None, None],
-            ["Notas e Faltas do 2º Trimestre - Turma 1º Tulipa - 2026", None, None, None, None, None, None, None],
+            ["Notas e Faltas do 2º Trimestre - Turma 1º Teste - 2026", None, None, None, None, None, None, None],
             [None, None, "LÍNG. PORT.", None, "REGENTE", None, "MATEMÁTICA", None],
-            [None, None, None, None, "Prof. Helena Freitas Oliveira", None, None, None],
+            [None, None, None, None, "Prof. Regente Sintética", None, None, None],
             ["Num.", "Nome", "N.", "F.", None, None, "N.", "F."],
-            [1, "Alice Vitória Soares Veloso", 21.0, 1, None, None, 30.0, 0],
-            [2, "Arthur Gabriel Alves Lopes", 18.0, 2, None, None, 27.0, 1],
+            [1, "Estudante Sintética Alfa", 21.0, 1, None, None, 30.0, 0],
+            [2, "Estudante Sintético Beta", 18.0, 2, None, None, 27.0, 1],
         ])
         arquivo = SimpleUploadedFile(
-            "NotaseFaltasdo2TrimestreTurma1Tulipa2026.xls",
+            "NotaseFaltasdo2TrimestreTurma1Teste2026.xls",
             b"xls-simulado",
             content_type="application/vnd.ms-excel",
         )
@@ -878,10 +878,10 @@ class SitePublicoTests(TestCase):
         self.assertEqual(dados["metadados"]["tipo"], "TRIMESTRE")
         self.assertEqual(dados["metadados"]["numero"], 2)
         self.assertEqual(dados["metadados"]["ano"], 2026)
-        self.assertIn("Tulipa", dados["metadados"]["turma"])
-        self.assertEqual(dados["metadados"]["regente"], "Helena Freitas Oliveira")
+        self.assertIn("Teste", dados["metadados"]["turma"])
+        self.assertEqual(dados["metadados"]["regente"], "Regente Sintética")
         self.assertEqual([item["nome"] for item in dados["disciplinas"]], ["LÍNG. PORT.", "MATEMÁTICA"])
-        self.assertEqual(dados["alunos"][0]["nome"], "Alice Vitória Soares Veloso")
+        self.assertEqual(dados["alunos"][0]["nome"], "Estudante Sintética Alfa")
         self.assertEqual(dados["alunos"][0]["resultados"][0]["nota"], Decimal("21.00"))
         self.assertEqual(dados["alunos"][0]["resultados"][0]["faltas"], 1)
 
@@ -892,8 +892,8 @@ class SitePublicoTests(TestCase):
                 "tipo": "TRIMESTRE",
                 "numero": 2,
                 "ano": 2026,
-                "turma": "1º Tulipa",
-                "regente": "Helena Freitas Oliveira",
+                "turma": "1º Teste",
+                "regente": "Regente Sintética",
                 "titulo_original": "",
             },
             "disciplinas": [
@@ -903,7 +903,7 @@ class SitePublicoTests(TestCase):
             "alunos": [
                 {
                     "numero_chamada": 1,
-                    "nome": "Alice Vitória Soares Veloso",
+                    "nome": "Estudante Sintética Alfa",
                     "nome_normalizado": "ALICE VITORIA SOARES VELOSO",
                     "resultados": [
                         {"disciplina": "Língua Portuguesa", "ordem": 0, "nota": Decimal("21.00"), "faltas": 1},
@@ -923,8 +923,8 @@ class SitePublicoTests(TestCase):
         self.assertEqual(resultado["periodo"].tipo, "TRIMESTRE")
         self.assertEqual(resultado["periodo"].numero, 2)
         self.assertEqual(resultado["periodo"].ano, 2026)
-        self.assertEqual(resultado["periodo"].turma, "1º Tulipa")
-        self.assertEqual(resultado["periodo"].regente, "Helena Freitas Oliveira")
+        self.assertEqual(resultado["periodo"].turma, "1º Teste")
+        self.assertEqual(resultado["periodo"].regente, "Regente Sintética")
         self.assertEqual(
             resultado["disciplinas_detectadas"],
             ["Língua Portuguesa", "Matemática"],
@@ -936,8 +936,8 @@ class SitePublicoTests(TestCase):
                 "tipo": "TRIMESTRE",
                 "numero": 2,
                 "ano": 2026,
-                "turma": "1º Tulipa",
-                "regente": "Helena Freitas Oliveira",
+                "turma": "1º Teste",
+                "regente": "Regente Sintética",
                 "titulo_original": "",
             },
             "disciplinas": [
@@ -980,14 +980,14 @@ class SitePublicoTests(TestCase):
         self._matricula_para_boletim(nome="João da Silva")
         self._matricula_para_boletim(
             nome="João da Silva",
-            cpf_mae="111.222.333-44",
+            cpf_mae="333.333.333-33",
         )
         dados = {
             "metadados": {
                 "tipo": "TRIMESTRE",
                 "numero": 2,
                 "ano": 2026,
-                "turma": "1º Tulipa",
+                "turma": "1º Teste",
                 "regente": "",
                 "titulo_original": "",
             },
@@ -1019,7 +1019,7 @@ class SitePublicoTests(TestCase):
             nomeDoAluno="Aluno Somente da Declaração",
             dataNascimentoAluno=date(2019, 8, 18),
             nomeMae="Mãe Teste",
-            cpfMae="138.090.846-97",
+            cpfMae="444.444.444-44",
             nomeResponsavel="Responsável Teste",
             cpfResponsavel="",
         )
@@ -1028,8 +1028,8 @@ class SitePublicoTests(TestCase):
                 "tipo": "TRIMESTRE",
                 "numero": 2,
                 "ano": 2026,
-                "turma": "1º Tulipa",
-                "regente": "Helena Freitas Oliveira",
+                "turma": "1º Teste",
+                "regente": "Regente Sintética",
                 "titulo_original": "",
             },
             "disciplinas": [
@@ -1052,7 +1052,7 @@ class SitePublicoTests(TestCase):
         perfil = AlunoBoletim.objects.get(nome="Aluno Somente da Declaração")
         self.assertIsNone(perfil.matricula_id)
         self.assertEqual(perfil.data_nascimento, date(2019, 8, 18))
-        self.assertEqual(perfil.cpf_mae, "138.090.846-97")
+        self.assertEqual(perfil.cpf_mae, "444.444.444-44")
         self.assertNotIn(perfil.nome, resultado["sem_acesso"])
 
     def test_consulta_publica_encontra_boletim_avulso_pelos_dados_da_mae_em_matriculas(self):
@@ -1060,7 +1060,7 @@ class SitePublicoTests(TestCase):
             tipo="TRIMESTRE",
             numero=2,
             ano=2026,
-            turma="1º Tulipa",
+            turma="1º Teste",
             publicado=True,
         )
         disciplina = DisciplinaBoletim.objects.create(
@@ -1069,7 +1069,7 @@ class SitePublicoTests(TestCase):
             ordem=0,
         )
         perfil = AlunoBoletim.objects.create(
-            nome="Alice Vitória Soares Veloso",
+            nome="Estudante Sintética Alfa",
         )
         boletim = BoletimAluno.objects.create(
             periodo=periodo,
@@ -1083,14 +1083,14 @@ class SitePublicoTests(TestCase):
             nota=Decimal("30.00"),
         )
         self._matricula_para_boletim(
-            nome="Alice Vitória Soares Veloso",
-            cpf_mae="138.090.846-97",
+            nome="Estudante Sintética Alfa",
+            cpf_mae="444.444.444-44",
         )
 
         response = self.client.post(
             reverse("site_publico:boletim"),
             {
-                "cpf": "138.090.846-97",
+                "cpf": "444.444.444-44",
                 "data_nascimento": "2017-08-13",
             },
         )
@@ -1104,7 +1104,7 @@ class SitePublicoTests(TestCase):
                 "tipo": "TRIMESTRE",
                 "numero": 2,
                 "ano": 2026,
-                "turma": "1º Tulipa",
+                "turma": "1º Teste",
                 "regente": "",
                 "titulo_original": "",
             },
@@ -1116,7 +1116,7 @@ class SitePublicoTests(TestCase):
             "alunos": [
                 {
                     "numero_chamada": 1,
-                    "nome": "Alice Vitória Soares Veloso",
+                    "nome": "Estudante Sintética Alfa",
                     "nome_normalizado": "ALICE VITORIA SOARES VELOSO",
                     "faltas_totais": 3,
                     "resultados": [
@@ -1142,7 +1142,7 @@ class SitePublicoTests(TestCase):
             tipo="TRIMESTRE",
             numero=2,
             ano=2026,
-            turma="1º Tulipa",
+            turma="1º Teste",
             publicado=True,
         )
         disciplina = DisciplinaBoletim.objects.create(
@@ -1165,13 +1165,13 @@ class SitePublicoTests(TestCase):
         declaracao.objects.create(
             nomeDoAluno="Criança Teste",
             dataNascimentoAluno=date(2019, 8, 18),
-            cpfMae="138.090.846-97",
+            cpfMae="444.444.444-44",
         )
 
         response = self.client.post(
             reverse("site_publico:boletim"),
             {
-                "cpf": "13809084697",
+                "cpf": "44444444444",
                 "data_nascimento": "2019-08-18",
             },
         )
@@ -1181,14 +1181,14 @@ class SitePublicoTests(TestCase):
 
         perfil.refresh_from_db()
         self.assertEqual(perfil.data_nascimento, date(2019, 8, 18))
-        self.assertEqual(perfil.cpf_mae, "138.090.846-97")
+        self.assertEqual(perfil.cpf_mae, "444.444.444-44")
 
     def test_consulta_avisa_quando_dados_estao_corretos_mas_boletim_nao_publicado(self):
         periodo = PeriodoBoletim.objects.create(
             tipo="TRIMESTRE",
             numero=2,
             ano=2026,
-            turma="1º Tulipa",
+            turma="1º Teste",
             publicado=False,
         )
         perfil = AlunoBoletim.objects.create(nome="Criança em Rascunho")
@@ -1200,13 +1200,13 @@ class SitePublicoTests(TestCase):
         declaracao.objects.create(
             nomeDoAluno="Criança em Rascunho",
             dataNascimentoAluno=date(2019, 8, 18),
-            cpfResponsavel="138.090.846-97",
+            cpfResponsavel="444.444.444-44",
         )
 
         response = self.client.post(
             reverse("site_publico:boletim"),
             {
-                "cpf": "13809084697",
+                "cpf": "44444444444",
                 "data_nascimento": "2019-08-18",
             },
         )
@@ -1367,14 +1367,14 @@ class SitePublicoTests(TestCase):
         # as disciplinas ficam acima, mas N./F. não são gravados como texto.
         read_excel.return_value = pd.DataFrame([
             ["E.M EGIDIO CORDEIRO AQUINO", None, None, None, None, None],
-            ["Notas e Faltas do 2º Trimestre - Turma 1º Tulipa - 2026", None, None, None, None, None],
+            ["Notas e Faltas do 2º Trimestre - Turma 1º Teste - 2026", None, None, None, None, None],
             [None, None, "LÍNG. PORT.", None, "MATEMÁTICA", None],
             ["Num.", "Nome", None, None, None, None],
-            [1, "Alice Vitória Soares Veloso", 21.0, 1, 30.0, 0],
-            [2, "Arthur Gabriel Alves Lopes", 18.0, 2, 27.0, 1],
+            [1, "Estudante Sintética Alfa", 21.0, 1, 30.0, 0],
+            [2, "Estudante Sintético Beta", 18.0, 2, 27.0, 1],
         ])
         arquivo = SimpleUploadedFile(
-            "NotaseFaltasdo2TrimestreTurma1Tulipa2026.xls",
+            "NotaseFaltasdo2TrimestreTurma1Teste2026.xls",
             b"xls-crystal-simulado",
             content_type="application/vnd.ms-excel",
         )
@@ -1396,14 +1396,14 @@ class SitePublicoTests(TestCase):
     def test_leitor_usa_falta_total_do_campo_geral_do_crystal(self, read_excel):
         read_excel.return_value = pd.DataFrame([
             ["E.M EGIDIO CORDEIRO AQUINO"] + [None] * 11,
-            ["Notas e Faltas do 2º Trimestre - Turma 1º Tulipa - 2026"] + [None] * 11,
+            ["Notas e Faltas do 2º Trimestre - Turma 1º Teste - 2026"] + [None] * 11,
             [None, None, None, None, None, None, "Regente", None, "LÍNG. PORT.", None, "MATEMÁTICA", None],
             ["Num.", None, "Nome", None, None, None, None, None, None, None, None, None],
             [None, None, None, None, None, None, "N.", "F.", "N.", "F.", "N.", "F."],
-            [1, None, "Alice Vitória Soares Veloso", None, None, None, None, "3", "21,00", "0", "30,00", "1"],
+            [1, None, "Estudante Sintética Alfa", None, None, None, None, "3", "21,00", "0", "30,00", "1"],
         ])
         arquivo = SimpleUploadedFile(
-            "NotaseFaltasdo2TrimestreTurma1Tulipa2026.xls",
+            "NotaseFaltasdo2TrimestreTurma1Teste2026.xls",
             b"xls-crystal-simulado",
             content_type="application/vnd.ms-excel",
         )
@@ -1419,12 +1419,12 @@ class SitePublicoTests(TestCase):
             tipo="TRIMESTRE",
             numero=2,
             ano=2026,
-            turma="1º Tulipa",
+            turma="1º Teste",
             publicado=True,
         )
         perfil = AlunoBoletim.objects.create(
-            nome="Alice Vitória Soares Veloso",
-            cpf_mae="138.090.846-97",
+            nome="Estudante Sintética Alfa",
+            cpf_mae="444.444.444-44",
         )
         BoletimAluno.objects.create(
             periodo=periodo,
@@ -1433,14 +1433,14 @@ class SitePublicoTests(TestCase):
             faltas_totais=3,
         )
         declaracao.objects.create(
-            nomeDoAluno="Alice Vitória Soares Veloso",
+            nomeDoAluno="Estudante Sintética Alfa",
             dataNascimentoAluno=date(2019, 8, 18),
         )
 
         response = self.client.post(
             reverse("site_publico:boletim"),
             {
-                "cpf": "13809084697",
+                "cpf": "44444444444",
                 "data_nascimento": "2019-08-18",
             },
         )
@@ -1459,7 +1459,7 @@ class SitePublicoTests(TestCase):
             [None] * 34,
             [None, None, None, None, None, "E.M EGIDIO CORDEIRO AQUINO"] + [None] * 28,
             [None] * 34,
-            [None, None, None, None, None, "Notas e Faltas do 2º Trimestre - Turma 1º Tulipa - 2026"] + [None] * 28,
+            [None, None, None, None, None, "Notas e Faltas do 2º Trimestre - Turma 1º Teste - 2026"] + [None] * 28,
             [None] * 34,
             [None, None, None, None, None, None, "Regente", None,
              "LÍNG. PORT.", None, "EXP. LITERÁRIAS", None, "ARTES", None,
@@ -1470,13 +1470,13 @@ class SitePublicoTests(TestCase):
              "N.", "F.", "N.", "F.", "N.", "F.", "N.", "F.", "N.", "F.",
              "N.", "F.", "N.", "F.", "N.", "F.", "N.", "F.", "N.", "F."] + [None] * 6,
             [None] * 34,
-            [1, None, "Alice Vitória Soares Veloso", None, None, None, None, "3",
+            [1, None, "Estudante Sintética Alfa", None, None, None, None, "3",
              "21,00", None, None, None, "30,00", "0", "29,00", "1",
              "28,00", "0", "23,00", None, "25,00", None, "28,00", None,
              "26,00", None, "30,00", "0"] + [None] * 6,
         ])
         arquivo = SimpleUploadedFile(
-            "NotaseFaltasdo2TrimestreTurma1Tulipa2026(1).xls",
+            "NotaseFaltasdo2TrimestreTurma1Teste2026(1).xls",
             b"xls-real-simulado",
             content_type="application/vnd.ms-excel",
         )
@@ -1484,7 +1484,7 @@ class SitePublicoTests(TestCase):
         dados = ler_planilha_boletim(arquivo)
 
         alice = dados["alunos"][0]
-        self.assertEqual(alice["nome"], "Alice Vitória Soares Veloso")
+        self.assertEqual(alice["nome"], "Estudante Sintética Alfa")
         self.assertEqual(alice["faltas_totais"], 3)
         self.assertEqual(alice["resultados"][0]["nota"], Decimal("21.00"))
 
@@ -1493,10 +1493,10 @@ class SitePublicoTests(TestCase):
             tipo="TRIMESTRE",
             numero=2,
             ano=2026,
-            turma="1º Tulipa",
+            turma="1º Teste",
             publicado=True,
         )
-        perfil = AlunoBoletim.objects.create(nome="Alice Vitória Soares Veloso")
+        perfil = AlunoBoletim.objects.create(nome="Estudante Sintética Alfa")
         BoletimAluno.objects.create(
             periodo=periodo,
             aluno=perfil,
@@ -1506,8 +1506,8 @@ class SitePublicoTests(TestCase):
 
         # Duplicata legada 1: contém o CPF da mãe, mas sem data.
         matricula.objects.create(
-            nomeDoAluno="Alice Vitória Soares Veloso",
-            cpfMae="138.090.846-97",
+            nomeDoAluno="Estudante Sintética Alfa",
+            cpfMae="444.444.444-44",
             dataNascimentoAluno=None,
             temIrmaosEscola="NAO",
             problemaSaude="NAO",
@@ -1527,14 +1527,14 @@ class SitePublicoTests(TestCase):
 
         # Duplicata legada 2 / Declarações: contém a data correta.
         declaracao.objects.create(
-            nomeDoAluno="Alice Vitória Soares Veloso",
+            nomeDoAluno="Estudante Sintética Alfa",
             dataNascimentoAluno=date(2019, 8, 18),
         )
 
         response = self.client.post(
             reverse("site_publico:boletim"),
             {
-                "cpf": "138.090.846-97",
+                "cpf": "444.444.444-44",
                 "data_nascimento": "2019-08-18",
             },
         )
@@ -1544,7 +1544,7 @@ class SitePublicoTests(TestCase):
 
         perfil.refresh_from_db()
         self.assertEqual(perfil.data_nascimento, date(2019, 8, 18))
-        self.assertEqual(perfil.cpf_mae, "138.090.846-97")
+        self.assertEqual(perfil.cpf_mae, "444.444.444-44")
 
     def test_menu_boletins_tem_apenas_importar_e_editar_dados(self):
         User = get_user_model()
@@ -1582,7 +1582,7 @@ class SitePublicoTests(TestCase):
                 "aluno": "",
                 "nome_aluno": "Aluno Inserido Manualmente",
                 "data_nascimento": "2017-05-10",
-                "cpf_mae": "123.456.789-09",
+                "cpf_mae": "111.111.111-11",
                 "cpf_responsavel": "",
                 "numero_chamada": 30,
                 "faltas_totais": "2",
@@ -1622,9 +1622,9 @@ class SitePublicoTests(TestCase):
                 args=[periodo.pk, boletim.pk],
             ),
             {
-                "nome_aluno": "Alice Vitória Soares Veloso Corrigido",
+                "nome_aluno": "Estudante Sintética Alfa Corrigido",
                 "data_nascimento": "2017-08-13",
-                "cpf_mae": "123.456.789-09",
+                "cpf_mae": "111.111.111-11",
                 "cpf_responsavel": "",
                 "numero_chamada": 1,
                 "faltas_totais": "3",
@@ -1637,7 +1637,7 @@ class SitePublicoTests(TestCase):
         boletim.aluno.refresh_from_db()
         self.assertEqual(
             boletim.aluno.nome,
-            "Alice Vitória Soares Veloso Corrigido",
+            "Estudante Sintética Alfa Corrigido",
         )
         resultado = NotaBoletim.objects.get(
             boletim=boletim,
