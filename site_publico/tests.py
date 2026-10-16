@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .forms import PaginaPublicaForm
+from .forms import FotoGaleriaLoteForm, PaginaPublicaForm, get_content_form
 from .models import (
     AlbumGaleria,
     ArquivoPaginaPublica,
@@ -477,3 +477,43 @@ class SitePublicoTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(FotoGaleria.objects.filter(album=album).count(), 2)
+
+
+    def test_data_do_album_usa_campo_date_do_navegador(self):
+        FormClass = get_content_form("albuns")
+        form = FormClass()
+
+        self.assertEqual(form.fields["data_evento"].widget.input_type, "date")
+        self.assertEqual(form.fields["data_evento"].input_formats, ["%Y-%m-%d"])
+
+    def test_data_do_album_rejeita_letras(self):
+        FormClass = get_content_form("albuns")
+        form = FormClass(
+            data={
+                "titulo": "Álbum com data inválida",
+                "descricao": "",
+                "data_evento": "45/45sfdsf",
+                "ativo": "on",
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("data_evento", form.errors)
+
+    def test_upload_multiplo_rejeita_data_com_letras(self):
+        form = FotoGaleriaLoteForm(
+            data={
+                "novo_album": "Novo álbum",
+                "data_evento": "45/45sfdsf",
+            },
+            files={
+                "fotos": SimpleUploadedFile(
+                    "foto.jpg",
+                    b"imagem",
+                    content_type="image/jpeg",
+                )
+            },
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("data_evento", form.errors)
