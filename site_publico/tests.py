@@ -903,10 +903,9 @@ class SitePublicoTests(TestCase):
 
         lista = self.client.get(url_boletins)
         self.assertEqual(lista.status_code, 200)
-        self.assertContains(lista, "Bimestre ou trimestre")
-        self.assertContains(lista, "Importar planilha")
-        self.assertContains(lista, "Gerenciar boletins")
+        self.assertContains(lista, "Editar dados dos boletins")
         self.assertContains(lista, "Importar boletim")
+        self.assertNotContains(lista, "Cadastrar sem planilha")
 
     def test_gestao_boletins_funciona_mesmo_com_pagina_publica_boletim_desativada(self):
         User = get_user_model()
@@ -923,8 +922,8 @@ class SitePublicoTests(TestCase):
         response = self.client.get(reverse("site_publico:gestao_boletins"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Gestão de boletins")
-        self.assertContains(response, "Importar planilha")
+        self.assertContains(response, "Editar dados dos boletins")
+        self.assertContains(response, "Importar boletim")
 
     def test_formulario_importacao_solicita_somente_o_arquivo(self):
         form = BoletimImportacaoForm()
@@ -1023,3 +1022,134 @@ class SitePublicoTests(TestCase):
         self.assertEqual(periodo.turma, "2º Girassol")
         self.assertEqual(periodo.regente, "Maria Silva")
         self.assertFalse(periodo.publicado)
+
+
+    @patch("site_publico.boletim_importacao.pd.read_excel")
+    def test_leitor_reconhece_xls_crystal_sem_celulas_nota_falta_no_cabecalho(self, read_excel):
+        # Replica a característica do arquivo enviado: Num./Nome existem,
+        # as disciplinas ficam acima, mas N./F. não são gravados como texto.
+        read_excel.return_value = pd.DataFrame([
+            ["E.M EGIDIO CORDEIRO AQUINO", None, None, None, None, None],
+            ["Notas e Faltas do 2º Trimestre - Turma 1º Tulipa - 2026", None, None, None, None, None],
+            [None, None, "LÍNG. PORT.", None, "MATEMÁTICA", None],
+            ["Num.", "Nome", None, None, None, None],
+            [1, "Alice Vitória Soares Veloso", 21.0, 1, 30.0, 0],
+            [2, "Arthur Gabriel Alves Lopes", 18.0, 2, 27.0, 1],
+        ])
+        arquivo = SimpleUploadedFile(
+            "NotaseFaltasdo2TrimestreTurma1Tulipa2026.xls",
+            b"xls-crystal-simulado",
+            content_type="application/vnd.ms-excel",
+        )
+
+        dados = ler_planilha_boletim(arquivo)
+
+        self.assertEqual(
+            [item["nome"] for item in dados["disciplinas"]],
+            ["LÍNG. PORT.", "MATEMÁTICA"],
+        )
+        self.assertEqual(dados["disciplinas"][0]["nota_col"], 2)
+        self.assertEqual(dados["disciplinas"][0]["faltas_col"], 3)
+        self.assertEqual(dados["disciplinas"][1]["nota_col"], 4)
+        self.assertEqual(dados["disciplinas"][1]["faltas_col"], 5)
+        self.assertEqual(dados["alunos"][0]["resultados"][0]["nota"], Decimal("21.00"))
+        self.assertEqual(dados["alunos"][0]["resultados"][0]["faltas"], 1)
+
+    def test_menu_boletins_tem_apenas_importar_e_editar_dados(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="gestor_menu_boletim_simples",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+
+        response = self.client.get(reverse("site_publico:gestao_boletins"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Importar boletim")
+        self.assertContains(response, "Editar dados")
+        self.assertNotContains(response, "Cadastrar período")
+
+    def test_adicionar_aluno_manual_sem_matricula_e_lancar_notas(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="gestor_aluno_manual_boletim",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+
+        periodo = self._periodo_publicado()
+        disciplina = DisciplinaBoletim.objects.create(
+            periodo=periodo,
+            nome="Língua Portuguesa",
+            ordem=0,
+        )
+
+        response = self.client.post(
+            reverse("site_publico:gestao_boletim_aluno_novo", args=[periodo.pk]),
+            {
+                "aluno": "",
+                "nome_aluno": "Aluno Inserido Manualmente",
+                "data_nascimento": "2017-05-10",
+                "cpf_mae": "123.456.789-09",
+                "cpf_responsavel": "",
+                "numero_chamada": 30,
+                f"nota_{disciplina.pk}": "24,50",
+                f"faltas_{disciplina.pk}": "2",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        boletim = BoletimAluno.objects.select_related("aluno").get(
+            periodo=periodo,
+            aluno__nome="Aluno Inserido Manualmente",
+        )
+        self.assertIsNone(boletim.aluno.matricula_id)
+        self.assertEqual(boletim.numero_chamada, 30)
+        resultado = NotaBoletim.objects.get(
+            boletim=boletim,
+            disciplina=disciplina,
+        )
+        self.assertEqual(resultado.nota, Decimal("24.50"))
+        self.assertEqual(resultado.faltas, 2)
+
+    def test_editar_nome_e_nota_de_aluno_existente_no_boletim(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="gestor_edita_nome_boletim",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+
+        _, _, periodo, boletim = self._criar_boletim_publicado()
+        disciplina = periodo.disciplinas.get(nome="Língua Portuguesa")
+
+        response = self.client.post(
+            reverse(
+                "site_publico:gestao_boletim_aluno_editar",
+                args=[periodo.pk, boletim.pk],
+            ),
+            {
+                "nome_aluno": "Alice Vitória Soares Veloso Corrigido",
+                "data_nascimento": "2017-08-13",
+                "cpf_mae": "123.456.789-09",
+                "cpf_responsavel": "",
+                "numero_chamada": 1,
+                f"nota_{disciplina.pk}": "25",
+                f"faltas_{disciplina.pk}": "0",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        boletim.refresh_from_db()
+        boletim.aluno.refresh_from_db()
+        self.assertEqual(
+            boletim.aluno.nome,
+            "Alice Vitória Soares Veloso Corrigido",
+        )
+        resultado = NotaBoletim.objects.get(
+            boletim=boletim,
+            disciplina=disciplina,
+        )
+        self.assertEqual(resultado.nota, Decimal("25.00"))
+        self.assertEqual(resultado.faltas, 0)
