@@ -1,6 +1,8 @@
 from django import forms
 from django.forms import modelform_factory
 
+from cadastro.models import matricula
+
 from .models import (
     AlbumGaleria,
     AtividadeJogo,
@@ -13,6 +15,7 @@ from .models import (
     IMAGEM_VALIDATOR,
     Noticia,
     PaginaPublica,
+    PeriodoBoletim,
     PerguntaFrequente,
     SecaoPagina,
     Projeto,
@@ -295,3 +298,173 @@ def get_content_form(tipo):
         fields=config["fields"],
         **extras,
     )
+
+
+
+DISCIPLINAS_BOLETIM_PADRAO = """Língua Portuguesa
+Experiências Literárias
+Artes
+Educação Física
+LEM - Inglês
+Matemática
+Ciências Naturais
+Geografia
+História
+Ensino Religioso"""
+
+
+class BoletimConsultaForm(forms.Form):
+    cpf = forms.CharField(
+        max_length=18,
+        label="CPF da mãe ou do responsável",
+        widget=forms.TextInput(
+            attrs={
+                "class": "bulletin-access-input",
+                "inputmode": "numeric",
+                "autocomplete": "off",
+                "placeholder": "000.000.000-00",
+            }
+        ),
+    )
+    data_nascimento = forms.DateField(
+        label="Data de nascimento da criança",
+        input_formats=["%Y-%m-%d"],
+        widget=forms.DateInput(
+            format="%Y-%m-%d",
+            attrs={
+                "class": "bulletin-access-input",
+                "type": "date",
+                "autocomplete": "off",
+            },
+        ),
+    )
+
+
+class PeriodoBoletimForm(StyledModelForm):
+    class Meta:
+        model = PeriodoBoletim
+        fields = ["tipo", "numero", "ano", "turma", "regente", "publicado"]
+        labels = {
+            "tipo": "Organização do ano",
+            "numero": "Período",
+            "ano": "Ano letivo",
+            "turma": "Turma",
+            "regente": "Professor(a) regente",
+            "publicado": "Disponibilizar para os responsáveis",
+        }
+        help_texts = {
+            "tipo": "Escolha Bimestre ou Trimestre.",
+            "numero": "Bimestre: 1 a 4. Trimestre: 1 a 3.",
+            "publicado": "Quando marcado, os responsáveis já poderão consultar este boletim.",
+        }
+
+
+class PeriodoBoletimNovoForm(PeriodoBoletimForm):
+    disciplinas = forms.CharField(
+        label="Disciplinas",
+        initial=DISCIPLINAS_BOLETIM_PADRAO,
+        widget=forms.Textarea(
+            attrs={
+                "class": "site-manager-input site-manager-textarea",
+                "rows": 11,
+            }
+        ),
+        help_text="Informe uma disciplina por linha. Você poderá lançar Nota e Faltas para cada uma.",
+    )
+
+
+class BoletimImportacaoForm(forms.Form):
+    arquivo = forms.FileField(
+        label="Planilha de notas e faltas",
+        widget=forms.ClearableFileInput(
+            attrs={
+                "class": "site-manager-input",
+                "accept": ".xls,.xlsx",
+            }
+        ),
+        help_text="Aceita .xls e .xlsx no modelo de Notas e Faltas por turma.",
+    )
+    tipo = forms.ChoiceField(
+        choices=PeriodoBoletim.TIPOS,
+        label="Organização do ano",
+        initial="TRIMESTRE",
+        widget=forms.Select(attrs={"class": "site-manager-input"}),
+    )
+    numero = forms.IntegerField(
+        min_value=1,
+        max_value=4,
+        label="Período",
+        initial=1,
+        widget=forms.NumberInput(attrs={"class": "site-manager-input", "min": 1, "max": 4}),
+        help_text="Use 1 a 4 para bimestre e 1 a 3 para trimestre.",
+    )
+    ano = forms.IntegerField(
+        min_value=2000,
+        max_value=2100,
+        label="Ano letivo",
+        widget=forms.NumberInput(attrs={"class": "site-manager-input", "min": 2000, "max": 2100}),
+    )
+    turma = forms.CharField(
+        max_length=160,
+        required=False,
+        label="Turma",
+        widget=forms.TextInput(
+            attrs={
+                "class": "site-manager-input",
+                "placeholder": "Deixe vazio para usar a turma identificada na planilha",
+            }
+        ),
+    )
+    regente = forms.CharField(
+        max_length=180,
+        required=False,
+        label="Professor(a) regente",
+        widget=forms.TextInput(attrs={"class": "site-manager-input"}),
+    )
+    publicar = forms.BooleanField(
+        required=False,
+        label="Publicar após importar",
+        widget=forms.CheckboxInput(attrs={"class": "site-manager-check"}),
+        help_text="Se marcado, os responsáveis poderão consultar assim que a importação terminar.",
+    )
+
+    def clean(self):
+        cleaned = super().clean()
+        tipo = cleaned.get("tipo")
+        numero = cleaned.get("numero")
+        if tipo and numero:
+            limite = 4 if tipo == "BIMESTRE" else 3
+            if numero > limite:
+                self.add_error(
+                    "numero",
+                    f"Para {'bimestre' if tipo == 'BIMESTRE' else 'trimestre'}, use um período entre 1 e {limite}.",
+                )
+        return cleaned
+
+
+class AlunoMatriculaChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        data = obj.dataNascimentoAluno.strftime("%d/%m/%Y") if obj.dataNascimentoAluno else "sem data"
+        return f"{obj.nomeDoAluno} · {data}"
+
+
+class BoletimAlunoManualForm(forms.Form):
+    aluno = AlunoMatriculaChoiceField(
+        queryset=matricula.objects.none(),
+        label="Aluno",
+        widget=forms.Select(attrs={"class": "site-manager-input"}),
+    )
+    numero_chamada = forms.IntegerField(
+        required=False,
+        min_value=1,
+        label="Número da chamada",
+        widget=forms.NumberInput(attrs={"class": "site-manager-input", "min": 1}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        aluno_fixo = kwargs.pop("aluno_fixo", None)
+        super().__init__(*args, **kwargs)
+        self.fields["aluno"].queryset = matricula.objects.order_by("nomeDoAluno")
+        if aluno_fixo is not None:
+            self.fields["aluno"].initial = aluno_fixo.pk
+            self.fields["aluno"].disabled = True
