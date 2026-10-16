@@ -463,11 +463,23 @@ def ler_planilha_boletim(arquivo):
                 }
             )
 
-        faltas_totais = (
-            _numero_inteiro(row.iloc[faltas_totais_col])
-            if faltas_totais_col is not None and faltas_totais_col < len(row)
-            else None
-        )
+        faltas_por_disciplina = [
+            item["faltas"]
+            for item in resultados
+            if item.get("faltas") is not None
+        ]
+        if faltas_por_disciplina:
+            # No relatório real da escola, o total correto corresponde à soma
+            # das faltas dos componentes curriculares. O campo F. geral do
+            # Crystal pode representar outro indicador e não deve sobrescrever
+            # essa soma.
+            faltas_totais = sum(faltas_por_disciplina)
+        else:
+            faltas_totais = (
+                _numero_inteiro(row.iloc[faltas_totais_col])
+                if faltas_totais_col is not None and faltas_totais_col < len(row)
+                else None
+            )
 
         alunos.append(
             {
