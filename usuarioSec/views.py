@@ -316,8 +316,10 @@ def matriculaimpressao(request,  id):
     return render(request, "matriculaimpressao.html", contexto)
 
 def sair(request):
-    logout(request)
-    return redirect('login')  
+    if request.method == "POST":
+        logout(request)
+        return redirect("login")
+    return render(request, "registration/logout_confirm.html")
 
 def declaracoes(request):
     return render(request, "declaracoes.html")
