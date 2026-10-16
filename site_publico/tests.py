@@ -298,3 +298,60 @@ class SitePublicoTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertFalse(ArquivoPaginaPublica.objects.filter(pk=documento.pk).exists())
+
+
+    def test_pagina_inicial_tem_editor_dedicado(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="gestor_home",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+
+        response = self.client.get(reverse("site_publico:gestao_inicio"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Editar página inicial")
+        self.assertContains(response, "Título, texto e pilares")
+        self.assertContains(response, "Carrossel, avisos e destaques")
+
+    def test_editor_da_pagina_inicial_salva_conteudo(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="editor_home",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+
+        response = self.client.post(
+            reverse("site_publico:gestao_inicio"),
+            {
+                "home_titulo": "Nossa escola, nosso futuro",
+                "home_texto": "Texto atualizado da página inicial.",
+                "home_pilar1_titulo": "Aprender",
+                "home_pilar1_texto": "Aprender todos os dias.",
+                "home_pilar2_titulo": "Conviver",
+                "home_pilar2_texto": "Conviver com respeito.",
+                "home_pilar3_titulo": "Participar",
+                "home_pilar3_texto": "Família e comunidade presentes.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        pagina = self.client.get(reverse("site_publico:home"))
+        self.assertContains(pagina, "Nossa escola, nosso futuro")
+        self.assertContains(pagina, "Texto atualizado da página inicial.")
+
+    def test_lista_de_paginas_mostra_pagina_inicial(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="gestor_lista_home",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+
+        response = self.client.get(reverse("site_publico:gestao_paginas"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Página inicial")
+        self.assertContains(response, reverse("site_publico:gestao_inicio"))
