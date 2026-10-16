@@ -179,9 +179,6 @@ def _resolver_boletins_destinatarios(
         .prefetch_related("resultados__disciplina")
     )
 
-    if modo == "turma":
-        boletins = boletins.filter(periodo__turma__iexact=(turma or "").strip())
-
     por_nome = defaultdict(list)
     for boletim in boletins:
         por_nome[normalizar_nome(boletim.aluno.nome)].append(boletim)
