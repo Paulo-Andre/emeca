@@ -24,8 +24,8 @@ class ImportacaoDeclaracoesTests(TestCase):
     def _planilha_modelo_antigo():
         return pd.DataFrame(
             [
-                ["E.M EGIDIO CORDEIRO AQUINO"] + [None] * 14,
-                ["declara"] + [None] * 14,
+                ["E.M EGIDIO CORDEIRO AQUINO"] + [None] * 15,
+                ["declara"] + [None] * 15,
                 [
                     "NOME",
                     "",
@@ -42,6 +42,7 @@ class ImportacaoDeclaracoesTests(TestCase):
                     "Telefone do Pai*",
                     "Telefone2 da Mãe",
                     "Telefone2 do Pai",
+                    "RESPONS",
                 ],
                 [
                     "Aluno Teste",
@@ -59,6 +60,7 @@ class ImportacaoDeclaracoesTests(TestCase):
                     "(38) 99821-5463",
                     "(38) 99959-8271",
                     "998215463",
+                    "Maria Responsável",
                 ],
             ]
         )
@@ -90,6 +92,7 @@ class ImportacaoDeclaracoesTests(TestCase):
         self.assertEqual(aluno["nomeDoAluno"], "Aluno Teste")
         self.assertEqual(aluno["nomeMae"], "Maria Teste")
         self.assertEqual(aluno["nomePai"], "João Teste")
+        self.assertEqual(aluno["nomeResponsavel"], "Maria Responsável")
         self.assertEqual(str(aluno["dataNascimentoAluno"]), "2017-08-13")
         self.assertEqual(aluno["nacionaliadeAluno"], "Brasileira")
         self.assertEqual(aluno["turmaDoAluno"], "3º Ano Lavanda")
@@ -129,6 +132,7 @@ class ImportacaoDeclaracoesTests(TestCase):
         self.assertEqual(aluno.nomeDoAluno, "Aluno Teste")
         self.assertEqual(aluno.nomeMae, "Maria Teste")
         self.assertEqual(aluno.nomePai, "João Teste")
+        self.assertEqual(aluno.nomeResponsavel, "Maria Responsável")
 
         responsavel = list(
             aluno.telefones.filter(tipo="RESPONSAVEL").values_list("telefone", flat=True)
@@ -161,6 +165,7 @@ class ImportacaoDeclaracoesTests(TestCase):
         self.assertContains(response, 'name="nomeDoAluno"')
         self.assertContains(response, 'name="nomeMae"')
         self.assertContains(response, 'name="nomePai"')
+        self.assertContains(response, 'name="nomeResponsavel"')
         self.assertContains(response, 'name="dataNascimentoAluno"')
         self.assertContains(response, 'name="natularidadeAluno"')
         self.assertContains(response, 'name="nacionaliadeAluno"')
@@ -168,8 +173,8 @@ class ImportacaoDeclaracoesTests(TestCase):
         self.assertContains(response, 'name="turmaDoAluno"')
         self.assertContains(response, "3º ANO LAVANDA")
         self.assertContains(response, 'name="telefonePai"', count=3)
-        self.assertContains(response, 'name="telefoneMae"', count=2)
-        self.assertContains(response, 'name="telefoneResponsavel"', count=2)
+        self.assertContains(response, 'name="telefoneMae"', count=3)
+        self.assertContains(response, 'name="telefoneResponsavel"', count=3)
 
     def test_cadastro_manual_salva_dados_da_planilha_e_remove_telefones_repetidos(self):
         response = self.client.post(
@@ -178,6 +183,7 @@ class ImportacaoDeclaracoesTests(TestCase):
                 "nomeDoAluno": "Aluno Manual",
                 "nomeMae": "Maria Manual",
                 "nomePai": "João Manual",
+                "nomeResponsavel": "Ana Responsável",
                 "dataNascimentoAluno": "2017-08-13",
                 "natularidadeAluno": "Montes Claros",
                 "nacionaliadeAluno": "Brasileira",
@@ -194,10 +200,12 @@ class ImportacaoDeclaracoesTests(TestCase):
                 "telefoneMae": [
                     "99959-8271",
                     "(38) 99959-8271",
+                    "999598271",
                 ],
                 "telefoneResponsavel": [
                     "99855-2563",
                     "(38) 99855-2563",
+                    "998552563",
                 ],
             },
         )
@@ -206,6 +214,7 @@ class ImportacaoDeclaracoesTests(TestCase):
         aluno = declaracao.objects.get(nomeDoAluno="Aluno Manual")
         self.assertEqual(aluno.nomeMae, "Maria Manual")
         self.assertEqual(aluno.nomePai, "João Manual")
+        self.assertEqual(aluno.nomeResponsavel, "Ana Responsável")
         self.assertEqual(str(aluno.dataNascimentoAluno), "2017-08-13")
         self.assertEqual(aluno.natularidadeAluno, "Montes Claros")
         self.assertEqual(aluno.nacionaliadeAluno, "Brasileira")
@@ -226,3 +235,20 @@ class ImportacaoDeclaracoesTests(TestCase):
             ["(38) 99855-2563"],
         )
         self.assertEqual(TelefoneDeclaracao.objects.filter(declaracao=aluno).count(), 3)
+
+
+    @patch("usuarioSec.importacao_declaracoes.pd.read_excel")
+    def test_importacao_reconhece_coluna_respons_do_arquivo_enviado(self, read_excel):
+        read_excel.return_value = self._planilha_modelo_antigo()
+        arquivo = SimpleUploadedFile(
+            "declarao-respons.xls",
+            b"conteudo-xls-simulado",
+            content_type="application/vnd.ms-excel",
+        )
+
+        resultado = ler_planilha(arquivo)
+
+        self.assertEqual(
+            resultado["registros"][0]["nomeResponsavel"],
+            "Maria Responsável",
+        )
