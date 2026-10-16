@@ -45,6 +45,10 @@ class WhatsAppDestinatariosTests(TestCase):
             _normalizar_jid("+55 38 98888-2222"),
             "5538988882222@s.whatsapp.net",
         )
+        self.assertEqual(
+            _normalizar_jid("(55) 99999-1111"),
+            "5555999991111@s.whatsapp.net",
+        )
         self.assertIsNone(_normalizar_jid("9999-0000"))
 
     def test_envio_para_todos_remove_duplicados(self):
@@ -69,4 +73,12 @@ class WhatsAppDestinatariosTests(TestCase):
             destinatarios,
             ["5538999991111@s.whatsapp.net"],
         )
+        self.assertEqual(invalidos, 0)
+
+    def test_sem_tipos_selecionados_nao_envia_para_todos(self):
+        destinatarios, invalidos, _ = _resolver_destinatarios(
+            "todos",
+            tipos=[],
+        )
+        self.assertEqual(destinatarios, [])
         self.assertEqual(invalidos, 0)
