@@ -174,12 +174,38 @@ def _metadados(df):
     for linha in range(min(len(df.index), 20)):
         valores = [texto(v) for v in df.iloc[linha].tolist()]
         for col, valor in enumerate(valores):
-            if normalizar(valor) == "REGENTE":
-                for candidato in valores[col + 1 :]:
-                    if candidato:
-                        regente = candidato
+            if normalizar(valor) != "REGENTE":
+                continue
+
+            # No modelo usado pela escola, o marcador "REGENTE" fica acima
+            # do nome do professor. Por isso procuramos primeiro logo abaixo
+            # da mesma coluna e só depois à direita, para não confundir o
+            # próximo componente curricular com o nome do regente.
+            for deslocamento in range(1, 4):
+                linha_abaixo = linha + deslocamento
+                if linha_abaixo >= len(df.index):
+                    break
+                candidato = texto(df.iat[linha_abaixo, col])
+                candidato_norm = normalizar(candidato)
+                if (
+                    candidato
+                    and candidato_norm not in {"N", "F", "NOTA", "NOTAS", "FALTA", "FALTAS"}
+                    and re.search(r"[A-Za-zÀ-ÿ]", candidato)
+                ):
+                    regente = re.sub(r"^PROF(?:ESSOR(?:A)?)?\.?\s*", "", candidato, flags=re.I).strip()
+                    break
+
+            if not regente:
+                for candidato in valores[col + 1 : col + 4]:
+                    candidato_norm = normalizar(candidato)
+                    if (
+                        candidato
+                        and candidato_norm not in {"N", "F", "NOTA", "NOTAS", "FALTA", "FALTAS"}
+                        and re.search(r"[A-Za-zÀ-ÿ]", candidato)
+                    ):
+                        regente = re.sub(r"^PROF(?:ESSOR(?:A)?)?\.?\s*", "", candidato, flags=re.I).strip()
                         break
-                break
+            break
         if regente:
             break
 
