@@ -31,11 +31,11 @@
     <a class="nav-item" href="{% url 'historico:inicio' %}">
       <i data-lucide="graduation-cap"></i><span>Histórico Escolar</span>
     </a>
-    <a class="nav-item{% if 'gestao_boletim' in request.resolver_match.url_name %} active{% endif %}" href="{% url 'site_publico:gestao_boletins' %}">
+    <a class="nav-item{% if request.resolver_match.url_name == 'gestao_boletins' or 'gestao_boletim_' in request.resolver_match.url_name %} active{% endif %}" href="{% url 'site_publico:gestao_boletins' %}">
       <i data-lucide="notebook-tabs"></i><span>Boletins</span>
     </a>
 
-    {% if 'gestao_boletim' in request.resolver_match.url_name %}
+    {% if request.resolver_match.url_name == 'gestao_boletins' or 'gestao_boletim_' in request.resolver_match.url_name %}
       <div class="nav-section-label">Boletins</div>
       <a class="nav-item bulletin-subitem{% if request.resolver_match.url_name == 'gestao_boletins' or request.resolver_match.url_name == 'gestao_boletim_periodo' or request.resolver_match.url_name == 'gestao_boletim_periodo_editar' or request.resolver_match.url_name == 'gestao_boletim_aluno_novo' or request.resolver_match.url_name == 'gestao_boletim_aluno_editar' %} bulletin-subitem-active{% endif %}" href="{% url 'site_publico:gestao_boletins' %}">
         <i data-lucide="layout-dashboard"></i><span>Gerenciar boletins</span>
@@ -49,7 +49,7 @@
     {% endif %}
 
     <div class="nav-section-label">Site público</div>
-    <a class="nav-item{% if 'gestao_boletim' not in request.resolver_match.url_name %} active{% endif %}" href="{% url 'site_publico:gestao_site' %}">
+    <a class="nav-item{% if request.resolver_match.url_name != 'gestao_boletins' and 'gestao_boletim_' not in request.resolver_match.url_name %} active{% endif %}" href="{% url 'site_publico:gestao_site' %}">
       <i data-lucide="panel-top"></i><span>Gestão do Site</span>
     </a>
     <a class="nav-item" href="{% url 'site_publico:home' %}" target="_blank" rel="noopener">
