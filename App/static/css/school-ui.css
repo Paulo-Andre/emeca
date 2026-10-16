@@ -1115,3 +1115,8 @@ table thead th {
     animation-iteration-count: 1 !important;
   }
 }
+
+
+/* Ações destrutivas usam POST/CSRF sem perder o visual do menu. */
+.nav-danger-form{margin:0;padding:0}
+.nav-danger-form .nav-item{width:100%;border:0;font:inherit;text-align:left;cursor:pointer}
