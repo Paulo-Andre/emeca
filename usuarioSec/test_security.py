@@ -10,6 +10,7 @@ from django.utils import timezone
 from cadastro.models import matricula
 from historico.auditoria import detalhes_seguros, registrar_auditoria
 from historico.models import AuditoriaEvento
+from site_publico.forms import get_content_form
 from site_publico.models import Noticia
 from usuarioSec.forms import AccountSignupForm
 from usuarioSec.models import declaracao
@@ -123,6 +124,23 @@ class SecurityValidationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "<script id=xss>", html=False)
         self.assertContains(response, "&lt;script id=xss&gt;", html=False)
+
+
+    def test_link_editavel_rejeita_javascript_scheme(self):
+        FormClass = get_content_form("avisos")
+        form = FormClass(
+            data={
+                "titulo": "Aviso sintético",
+                "texto": "Conteúdo de teste",
+                "tipo": "INFO",
+                "link": "javascript:alert(1)",
+                "ativo": "on",
+                "inicio": "",
+                "fim": "",
+            }
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("link", form.errors)
 
     def test_headers_defensivos_estao_presentes(self):
         response = self.client.get(reverse("site_publico:home"))
