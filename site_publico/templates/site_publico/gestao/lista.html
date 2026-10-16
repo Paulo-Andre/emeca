@@ -7,7 +7,13 @@
 {% block content %}
 <div class="manager-toolbar">
   <a class="manager-back" href="{% url 'site_publico:gestao_site' %}"><i data-lucide="arrow-left"></i> Voltar</a>
-  <a class="manager-btn manager-btn--primary" href="{% url 'site_publico:gestao_conteudo_novo' tipo %}"><i data-lucide="plus"></i> Novo {{ config.singular }}</a>
+  <a class="manager-btn manager-btn--primary" href="{% url 'site_publico:gestao_conteudo_novo' tipo %}">
+    {% if tipo == 'fotos' %}
+      <i data-lucide="images"></i> Adicionar várias fotos
+    {% else %}
+      <i data-lucide="plus"></i> Novo {{ config.singular }}
+    {% endif %}
+  </a>
 </div>
 
 <section class="manager-list-card">
