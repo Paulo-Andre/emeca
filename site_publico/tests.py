@@ -1363,7 +1363,7 @@ class SitePublicoTests(TestCase):
         read_excel.return_value = pd.DataFrame([
             ["E.M EGIDIO CORDEIRO AQUINO"] + [None] * 11,
             ["Notas e Faltas do 2º Trimestre - Turma 1º Tulipa - 2026"] + [None] * 11,
-            [None, None, None, None, None, None, None, None, "LÍNG. PORT.", None, "MATEMÁTICA", None],
+            [None, None, None, None, None, None, "Regente", None, "LÍNG. PORT.", None, "MATEMÁTICA", None],
             ["Num.", None, "Nome", None, None, None, None, None, None, None, None, None],
             [None, None, None, None, None, None, "N.", "F.", "N.", "F.", "N.", "F."],
             [1, None, "Alice Vitória Soares Veloso", None, None, None, None, "3", "21,00", None, "30,00", "0"],
