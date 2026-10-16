@@ -56,10 +56,7 @@ def _cabecalho_corresponde(cabecalho, aliases):
         return True
     return any(
         len(alias) >= 4
-        and (
-            cabecalho.startswith(alias + " ")
-            or alias.startswith(cabecalho + " ")
-        )
+        and cabecalho.startswith(alias + " ")
         for alias in aliases
     )
 
