@@ -152,3 +152,77 @@ class ImportacaoDeclaracoesTests(TestCase):
         self.assertContains(response, ".xls")
         self.assertContains(response, 'accept=".xls,.xlsx,.csv"')
         self.assertContains(response, "Telefones repetidos")
+
+
+    def test_modal_cadastro_manual_tem_os_mesmos_campos_da_planilha(self):
+        response = self.client.get(reverse("telaDeclaracao"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="nomeDoAluno"')
+        self.assertContains(response, 'name="nomeMae"')
+        self.assertContains(response, 'name="nomePai"')
+        self.assertContains(response, 'name="dataNascimentoAluno"')
+        self.assertContains(response, 'name="natularidadeAluno"')
+        self.assertContains(response, 'name="nacionaliadeAluno"')
+        self.assertContains(response, 'name="sexoDoAluno"')
+        self.assertContains(response, 'name="turmaDoAluno"')
+        self.assertContains(response, "3º ANO LAVANDA")
+        self.assertContains(response, 'name="telefonePai"', count=3)
+        self.assertContains(response, 'name="telefoneMae"', count=2)
+        self.assertContains(response, 'name="telefoneResponsavel"', count=2)
+
+    def test_cadastro_manual_salva_dados_da_planilha_e_remove_telefones_repetidos(self):
+        response = self.client.post(
+            reverse("cadastrar_aluno"),
+            {
+                "nomeDoAluno": "Aluno Manual",
+                "nomeMae": "Maria Manual",
+                "nomePai": "João Manual",
+                "dataNascimentoAluno": "2017-08-13",
+                "natularidadeAluno": "Montes Claros",
+                "nacionaliadeAluno": "Brasileira",
+                "ufAluno": "MG",
+                "sexoDoAluno": "MASCULINO",
+                "turmaDoAluno": "3º ANO LAVANDA",
+                "cartaoSusDoAluno": "123456",
+                "cpfDoAluno": "11122233344",
+                "telefonePai": [
+                    "99821-5463",
+                    "(38) 99821-5463",
+                    "998215463",
+                ],
+                "telefoneMae": [
+                    "99959-8271",
+                    "(38) 99959-8271",
+                ],
+                "telefoneResponsavel": [
+                    "99855-2563",
+                    "(38) 99855-2563",
+                ],
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        aluno = declaracao.objects.get(nomeDoAluno="Aluno Manual")
+        self.assertEqual(aluno.nomeMae, "Maria Manual")
+        self.assertEqual(aluno.nomePai, "João Manual")
+        self.assertEqual(str(aluno.dataNascimentoAluno), "2017-08-13")
+        self.assertEqual(aluno.natularidadeAluno, "Montes Claros")
+        self.assertEqual(aluno.nacionaliadeAluno, "Brasileira")
+        self.assertEqual(aluno.ufAluno, "MG")
+        self.assertEqual(aluno.sexoDoAluno, "MASCULINO")
+        self.assertEqual(aluno.turmaDoAluno, "3º ANO LAVANDA")
+
+        self.assertEqual(
+            list(aluno.telefones.filter(tipo="PAI").values_list("telefone", flat=True)),
+            ["(38) 99821-5463"],
+        )
+        self.assertEqual(
+            list(aluno.telefones.filter(tipo="MAE").values_list("telefone", flat=True)),
+            ["(38) 99959-8271"],
+        )
+        self.assertEqual(
+            list(aluno.telefones.filter(tipo="RESPONSAVEL").values_list("telefone", flat=True)),
+            ["(38) 99855-2563"],
+        )
+        self.assertEqual(TelefoneDeclaracao.objects.filter(declaracao=aluno).count(), 3)
