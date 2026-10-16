@@ -732,8 +732,8 @@
         <div class="student-modal-section__title">
           <span>2</span>
           <div>
-            <strong>Filiação</strong>
-            <small>Os nomes de Mãe e Pai correspondem às colunas da planilha.</small>
+            <strong>Filiação e responsável</strong>
+            <small>Os nomes de Mãe, Pai e Responsável correspondem às colunas da planilha.</small>
           </div>
         </div>
 
@@ -746,6 +746,11 @@
           <div class="input-group half-width">
             <label>Nome do Pai</label>
             <input name="nomePai">
+          </div>
+
+          <div class="input-group full-width">
+            <label>Nome do Responsável</label>
+            <input name="nomeResponsavel" placeholder="Nome informado na coluna RESPONS da planilha">
           </div>
         </div>
       </section>
@@ -789,10 +794,14 @@
               <i data-lucide="user-round"></i>
               <div>
                 <strong>Mãe</strong>
-                <small>Telefone da Mãe / Telefone 2 da Mãe</small>
+                <small>Celular Mãe / Telefone da Mãe / Telefone 2 da Mãe</small>
               </div>
             </div>
             <div class="student-phone-inputs">
+              <div class="input-group">
+                <label>Celular Mãe</label>
+                <input name="telefoneMae" type="tel" inputmode="tel">
+              </div>
               <div class="input-group">
                 <label>Telefone da Mãe</label>
                 <input name="telefoneMae" type="tel" inputmode="tel">
@@ -809,16 +818,20 @@
               <i data-lucide="contact-round"></i>
               <div>
                 <strong>Responsável</strong>
-                <small>TELEFONE / TEL. RESPONS.</small>
+                <small>Celular Responsável / TELEFONE / TEL. RESPONS.</small>
               </div>
             </div>
             <div class="student-phone-inputs">
               <div class="input-group">
-                <label>Telefone</label>
+                <label>Celular Responsável</label>
                 <input name="telefoneResponsavel" type="tel" inputmode="tel">
               </div>
               <div class="input-group">
-                <label>Tel. Responsável</label>
+                <label>Telefone Responsável</label>
+                <input name="telefoneResponsavel" type="tel" inputmode="tel">
+              </div>
+              <div class="input-group">
+                <label>Telefone 2 Responsável</label>
                 <input name="telefoneResponsavel" type="tel" inputmode="tel">
               </div>
             </div>
