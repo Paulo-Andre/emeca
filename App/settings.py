@@ -170,3 +170,9 @@ if REQUIRE_SECURE_PRODUCTION and not DEBUG:
         raise RuntimeError(
             "Hardening de produção incompleto: " + ", ".join(faltando)
         )
+
+
+RETENTION_RATE_LIMIT_DAYS = max(1, int(os.getenv("EMECA_RETENTION_RATE_LIMIT_DAYS", "2")))
+RETENTION_WHATSAPP_DAYS = max(30, int(os.getenv("EMECA_RETENTION_WHATSAPP_DAYS", "180")))
+RETENTION_CONTATO_DAYS = max(30, int(os.getenv("EMECA_RETENTION_CONTATO_DAYS", "365")))
+RETENTION_AUDIT_DAYS = max(90, int(os.getenv("EMECA_RETENTION_AUDIT_DAYS", "730")))
