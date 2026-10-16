@@ -67,13 +67,32 @@ TEMPLATES = [{
 }]
 WSGI_APPLICATION = "App.wsgi.application"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": Path(os.getenv("DJANGO_DB_PATH", str(BASE_DIR / "db.sqlite3"))),
-        "OPTIONS": {"timeout": 60},
+DB_ENGINE = os.getenv("DJANGO_DB_ENGINE", "sqlite").strip().lower()
+if DB_ENGINE in {"postgres", "postgresql"}:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.getenv("DJANGO_DB_NAME", "emeca"),
+            "USER": os.getenv("DJANGO_DB_USER", "emeca"),
+            "PASSWORD": os.getenv("DJANGO_DB_PASSWORD", ""),
+            "HOST": os.getenv("DJANGO_DB_HOST", "db"),
+            "PORT": os.getenv("DJANGO_DB_PORT", "5432"),
+            "CONN_MAX_AGE": max(0, int(os.getenv("DJANGO_DB_CONN_MAX_AGE", "60"))),
+            "CONN_HEALTH_CHECKS": True,
+        }
     }
-}
+elif DB_ENGINE == "sqlite":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": Path(os.getenv("DJANGO_DB_PATH", str(BASE_DIR / "db.sqlite3"))),
+            "OPTIONS": {"timeout": 60},
+        }
+    }
+else:
+    raise RuntimeError(
+        "DJANGO_DB_ENGINE inválido. Use 'sqlite' ou 'postgresql'."
+    )
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
