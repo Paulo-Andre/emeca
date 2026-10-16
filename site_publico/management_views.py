@@ -8,6 +8,7 @@ from django.db.models import Max
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from cadastro.models import matricula
@@ -637,7 +638,14 @@ def gestao_pagina_toggle(request, chave):
     pagina.save(update_fields=["ativa", "atualizado_em"])
     estado = "ativada" if pagina.ativa else "desativada"
     messages.success(request, f'Página "{pagina.nome}" {estado}.')
-    return redirect(request.POST.get("next") or "site_publico:gestao_paginas")
+    destino = (request.POST.get("next") or "").strip()
+    if destino and url_has_allowed_host_and_scheme(
+        destino,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(destino)
+    return redirect("site_publico:gestao_paginas")
 
 
 @login_required
