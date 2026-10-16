@@ -18,9 +18,12 @@
       <div class="bulletin-access-card__head">
         <span><i data-lucide="shield-check"></i></span>
         <div>
-          <span class="section-kicker">Acesso protegido</span>
-          <h2>Consultar boletim do estudante</h2>
-          <p>Informe o CPF da mãe ou do responsável e a data de nascimento da criança.</p>
+          <span class="section-kicker">{{ secoes_site.boletim_consulta.rotulo|default:"Acesso protegido" }}</span>
+          <h2>{{ secoes_site.boletim_consulta.titulo|default:"Consultar boletim do estudante" }}</h2>
+          <p>{{ secoes_site.boletim_consulta.texto|default:"Informe o CPF da mãe ou do responsável e a data de nascimento da criança." }}</p>
+          {% if secoes_site.boletim_consulta.imagem %}
+            <img class="editable-public-image" src="{{ secoes_site.boletim_consulta.imagem.url }}" alt="">
+          {% endif %}
         </div>
       </div>
 
