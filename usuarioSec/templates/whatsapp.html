@@ -81,22 +81,31 @@
           </strong>
         </div>
         <p>
-          O envio usa o WA-AKG no servidor. A chave de API não é exposta no navegador.
+          {% if gateway_status == "CONNECTED" %}
+            A conexão fica salva no servidor. Você pode sair do EMECA ou trocar de usuário sem desconectar o WhatsApp.
+          {% else %}
+            O envio usa o WA-AKG no servidor. A chave de API não é exposta no navegador.
+          {% endif %}
           {% if gateway_status_detalhe %}<br>{{ gateway_status_detalhe }}{% endif %}
         </p>
       </div>
       <div class="connection-actions">
-        {% if gateway_configurado %}
+        {% if gateway_configurado and gateway_status != "CONNECTED" %}
           <form method="post" action="{% url 'whatsapp_conectar' %}">
             {% csrf_token %}
             <button class="btn-secondary" type="submit">
               <i data-lucide="power"></i>
-              {% if gateway_status == "CONNECTED" %}Reiniciar conexão{% else %}Iniciar conexão{% endif %}
+              Iniciar conexão
             </button>
           </form>
           <button class="btn-primary" type="button" id="btnQr">
             <i data-lucide="qr-code"></i> Exibir QR
           </button>
+        {% elif gateway_status == "CONNECTED" %}
+          <span class="persistent-session-badge">
+            <i data-lucide="server"></i>
+            Sessão persistente no servidor
+          </span>
         {% endif %}
       </div>
     </section>
