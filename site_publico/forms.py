@@ -373,43 +373,6 @@ class PeriodoBoletimNovoForm(PeriodoBoletimForm):
     )
 
 
-class PeriodoBoletimGestaoForm(PeriodoBoletimForm):
-    disciplinas = forms.CharField(
-        label="Disciplinas",
-        widget=forms.Textarea(
-            attrs={
-                "class": "site-manager-input site-manager-textarea",
-                "rows": 12,
-                "placeholder": "Uma disciplina por linha",
-            }
-        ),
-        help_text=(
-            "Uma disciplina por linha. Você pode corrigir nomes ou adicionar novas disciplinas. "
-            "Ao remover uma disciplina, as notas vinculadas a ela também serão removidas."
-        ),
-    )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if self.instance and self.instance.pk:
-            self.fields["disciplinas"].initial = "\n".join(
-                self.instance.disciplinas.order_by("ordem", "id").values_list("nome", flat=True)
-            )
-
-    def clean_disciplinas(self):
-        nomes = []
-        vistos = set()
-        for linha in self.cleaned_data["disciplinas"].splitlines():
-            nome = " ".join(linha.split()).strip()
-            chave = nome.casefold()
-            if nome and chave not in vistos:
-                vistos.add(chave)
-                nomes.append(nome)
-        if not nomes:
-            raise forms.ValidationError("Informe pelo menos uma disciplina.")
-        return "\n".join(nomes)
-
-
 class BoletimImportacaoForm(forms.Form):
     arquivo = forms.FileField(
         label="Planilha de notas e faltas",
