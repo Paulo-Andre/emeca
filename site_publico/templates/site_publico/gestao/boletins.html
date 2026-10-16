@@ -6,7 +6,7 @@
 
 {% block content %}
 <div class="manager-toolbar">
-  <a class="manager-back" href="{% url 'site_publico:gestao_site' %}"><i data-lucide="arrow-left"></i> Voltar</a>
+  <a class="manager-back" href="{% url 'dashboard' %}"><i data-lucide="arrow-left"></i> Voltar</a>
   <div class="bulletin-manager-actions">
     <a class="manager-btn manager-btn--primary" href="{% url 'site_publico:gestao_boletim_importar' %}">
       <i data-lucide="file-spreadsheet"></i> Importar boletim
@@ -56,7 +56,7 @@
             <span><strong>{{ periodo.disciplinas.count }}</strong> disciplinas</span>
           </div>
           <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_boletim_periodo' periodo.pk %}">
-            Abrir período <i data-lucide="arrow-right"></i>
+            Editar alunos e notas <i data-lucide="arrow-right"></i>
           </a>
         </article>
       {% endfor %}
