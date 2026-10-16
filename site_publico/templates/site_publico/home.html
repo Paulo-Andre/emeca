@@ -355,7 +355,9 @@
   <div class="home-gallery">
     {% for item in albuns %}
       <a class="home-gallery__item" href="{{ item.get_absolute_url }}">
-        {% if item.capa %}
+        {% if item.foto_capa %}
+          <img src="{{ item.foto_capa.imagem.url }}" alt="">
+        {% elif item.capa %}
           <img src="{{ item.capa.url }}" alt="">
         {% elif item.fotos.first %}
           <img src="{{ item.fotos.first.imagem.url }}" alt="">
