@@ -71,29 +71,55 @@ def _mapa_matriculas_por_nome():
 
 
 @transaction.atomic
-def importar_dados_boletim(dados_planilha, dados_periodo):
+def importar_dados_boletim(dados_planilha, dados_periodo=None):
+    """Importa o boletim usando os metadados detectados no próprio arquivo."""
     metadados = dados_planilha["metadados"]
-    turma = (dados_periodo.get("turma") or metadados.get("turma") or "").strip()
+    dados_periodo = dados_periodo or {}
+
+    tipo = (metadados.get("tipo") or "").strip().upper()
+    numero = metadados.get("numero")
+    ano = metadados.get("ano")
+    turma = (metadados.get("turma") or "").strip()
+    regente = (metadados.get("regente") or "").strip()
+
+    faltantes = []
+    if tipo not in {"BIMESTRE", "TRIMESTRE"}:
+        faltantes.append("organização do ano (Bimestre/Trimestre)")
+    if not numero:
+        faltantes.append("período")
+    if not ano:
+        faltantes.append("ano letivo")
     if not turma:
+        faltantes.append("turma")
+
+    if faltantes:
         raise ValueError(
-            "A turma não foi identificada na planilha. Informe a turma no formulário."
+            "Não foi possível identificar automaticamente no arquivo: "
+            + ", ".join(faltantes)
+            + ". Verifique se a planilha segue o modelo de Notas e Faltas da escola."
         )
 
-    regente = (dados_periodo.get("regente") or metadados.get("regente") or "").strip()
+    limite = 4 if tipo == "BIMESTRE" else 3
+    if numero < 1 or numero > limite:
+        raise ValueError(
+            f"O arquivo informa {numero}º {tipo.lower()}, mas para essa organização "
+            f"o período deve estar entre 1 e {limite}."
+        )
 
     periodo, criado = PeriodoBoletim.objects.get_or_create(
-        tipo=dados_periodo["tipo"],
-        numero=dados_periodo["numero"],
-        ano=dados_periodo["ano"],
+        tipo=tipo,
+        numero=numero,
+        ano=ano,
         turma=turma,
         defaults={
             "regente": regente,
-            "publicado": bool(dados_periodo.get("publicar")),
+            # Toda importação entra como rascunho para revisão antes da publicação.
+            "publicado": False,
         },
     )
     if not criado:
         periodo.regente = regente
-        periodo.publicado = bool(dados_periodo.get("publicar"))
+        periodo.publicado = False
         periodo.full_clean()
         periodo.save(update_fields=["regente", "publicado", "atualizado_em"])
 
@@ -102,13 +128,21 @@ def importar_dados_boletim(dados_planilha, dados_periodo):
     periodo.disciplinas.all().delete()
 
     disciplinas = {}
+    nomes_disciplinas = []
     for item in dados_planilha["disciplinas"]:
+        nome_disciplina = (item.get("nome") or "").strip()
+        if not nome_disciplina:
+            continue
         disciplina = DisciplinaBoletim.objects.create(
             periodo=periodo,
-            nome=item["nome"],
+            nome=nome_disciplina,
             ordem=item["ordem"],
         )
-        disciplinas[normalizar_nome(item["nome"])] = disciplina
+        disciplinas[normalizar_nome(nome_disciplina)] = disciplina
+        nomes_disciplinas.append(nome_disciplina)
+
+    if not disciplinas:
+        raise ValueError("Nenhuma disciplina foi identificada na planilha.")
 
     mapa_alunos = _mapa_matriculas_por_nome()
     importados = 0
@@ -163,6 +197,7 @@ def importar_dados_boletim(dados_planilha, dados_periodo):
         "ambiguos": ambiguos,
         "sem_acesso": sem_acesso,
         "detectado": metadados,
+        "disciplinas_detectadas": nomes_disciplinas,
     }
 
 
