@@ -1400,3 +1400,247 @@
     display: none;
   }
 }
+
+
+/* Galeria: criação de álbum + upload múltiplo */
+.gallery-batch-card {
+  display: grid;
+  gap: 18px;
+}
+
+.gallery-batch-error {
+  padding: 12px 14px;
+  display: grid;
+  gap: 4px;
+  border: 1px solid #efcaca;
+  border-radius: 11px;
+  background: #fff5f5;
+}
+
+.gallery-batch-step {
+  padding: 22px;
+  border: 1px solid var(--mgr-border);
+  border-radius: 17px;
+  background: #fff;
+  box-shadow: var(--mgr-shadow);
+}
+
+.gallery-batch-step__head {
+  margin-bottom: 18px;
+  padding-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #edf1eb;
+}
+
+.gallery-batch-step__head > span {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--mgr-green);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.gallery-batch-step__head h2 {
+  margin: 0;
+  color: var(--mgr-text);
+  font-size: 17px;
+}
+
+.gallery-batch-step__head p {
+  margin: 4px 0 0;
+  color: var(--mgr-muted);
+  font-size: 10.5px;
+}
+
+.gallery-album-choice {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.gallery-album-option {
+  padding: 16px;
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  border: 1px solid #dfe7dc;
+  border-radius: 14px;
+  background: #fafcf9;
+}
+
+.gallery-album-option--new {
+  background: #fffdf6;
+  border-color: #eadfae;
+}
+
+.gallery-album-option__title {
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gallery-album-option__title > svg {
+  width: 21px;
+  height: 21px;
+  color: var(--mgr-green);
+}
+
+.gallery-album-option__title > div {
+  display: grid;
+  gap: 2px;
+}
+
+.gallery-album-option__title strong {
+  color: var(--mgr-text);
+  font-size: 12px;
+}
+
+.gallery-album-option__title small {
+  color: var(--mgr-muted);
+  font-size: 9.5px;
+}
+
+.gallery-album-option > label,
+.gallery-album-option .manager-field > label {
+  color: #4a594b;
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+.gallery-choice-or {
+  align-self: center;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #eef3ec;
+  color: #788378;
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.gallery-new-album-details {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 170px;
+  gap: 10px;
+}
+
+.gallery-multi-upload {
+  display: grid;
+  gap: 9px;
+}
+
+.gallery-multi-upload__drop {
+  min-height: 180px;
+  padding: 24px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 6px;
+  border: 2px dashed #bfd2b8;
+  border-radius: 16px;
+  background: #f8fbf6;
+  color: var(--mgr-green);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease;
+}
+
+.gallery-multi-upload__drop:hover {
+  border-color: var(--mgr-green);
+  background: #f0f7ed;
+}
+
+.gallery-multi-upload__drop > span {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  background: #e7f2e3;
+}
+
+.gallery-multi-upload__drop svg {
+  width: 25px;
+  height: 25px;
+}
+
+.gallery-multi-upload__drop strong {
+  color: var(--mgr-text);
+  font-size: 13px;
+}
+
+.gallery-multi-upload__drop small {
+  color: var(--mgr-muted);
+  font-size: 9.5px;
+}
+
+.gallery-multi-upload__drop em {
+  margin-top: 6px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--mgr-green);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 850;
+  box-shadow: 0 2px 8px rgba(29,67,37,.07);
+}
+
+.gallery-multi-upload > input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.gallery-upload-help {
+  color: var(--mgr-muted);
+  font-size: 9.5px;
+}
+
+.gallery-batch-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 900px) {
+  .gallery-album-choice {
+    grid-template-columns: 1fr;
+  }
+
+  .gallery-choice-or {
+    justify-self: center;
+  }
+}
+
+@media (max-width: 700px) {
+  .gallery-batch-step {
+    padding: 16px;
+  }
+
+  .gallery-new-album-details {
+    grid-template-columns: 1fr;
+  }
+
+  .gallery-batch-actions {
+    flex-direction: column-reverse;
+  }
+
+  .gallery-batch-actions .manager-btn {
+    width: 100%;
+  }
+}
