@@ -329,3 +329,15 @@ class ImportacaoDeclaracoesTests(TestCase):
         self.assertEqual(aluno["cpfPai"], "111.222.333-44")
         self.assertEqual(aluno["cpfMae"], "555.666.777-88")
         self.assertEqual(aluno["cpfResponsavel"], "999.888.777-66")
+
+
+    def test_menu_principal_da_secretaria_exibe_boletins_independente_da_gestao_site(self):
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Boletins")
+        self.assertContains(
+            response,
+            f'href="{reverse("site_publico:gestao_boletins")}"',
+        )
+        self.assertEqual(reverse("site_publico:gestao_boletins"), "/boletins/")
