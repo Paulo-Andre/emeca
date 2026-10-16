@@ -353,12 +353,13 @@ def localizar_alunos_por_credenciais(
     data_nascimento,
     somente_publicados=True,
 ):
-    """Localiza boletins combinando os dados confiáveis do mesmo estudante.
+    """Localiza boletins com CPF do responsável + nascimento da criança.
 
-    Em cadastros legados, a data de nascimento pode estar em Declarações
-    enquanto o CPF da mãe está em Matrículas ou no próprio perfil do boletim.
-    Para o mesmo nome normalizado, os dois fatores podem vir dessas fontes
-    diferentes sem reduzir a segurança da consulta.
+    Cadastros antigos podem ter informações divididas entre Matrículas,
+    Declarações e o próprio perfil de Boletim. Para o mesmo nome completo,
+    o sistema combina essas fontes e também tolera registros duplicados,
+    desde que o CPF informado e a data informada sejam encontrados entre
+    os registros daquele mesmo estudante.
     """
     cpf_normalizado = somente_digitos(cpf)
     if len(cpf_normalizado) != 11:
@@ -381,53 +382,80 @@ def localizar_alunos_por_credenciais(
             continue
 
         chave_nome = normalizar_nome(aluno.nome)
-        cpfs = set()
-        datas = set()
+        registros = []
 
-        if aluno.data_nascimento:
-            datas.add(aluno.data_nascimento)
-        cpf_mae_perfil = somente_digitos(aluno.cpf_mae)
-        cpf_resp_perfil = somente_digitos(aluno.cpf_responsavel)
-        if cpf_mae_perfil:
-            cpfs.add(cpf_mae_perfil)
-        if cpf_resp_perfil:
-            cpfs.add(cpf_resp_perfil)
+        # O próprio perfil do boletim entra como uma fonte.
+        registros.append({
+            "data": aluno.data_nascimento,
+            "cpf_mae": somente_digitos(aluno.cpf_mae),
+            "cpf_responsavel": somente_digitos(aluno.cpf_responsavel),
+            "origem": "boletim",
+        })
 
-        # Vínculo explícito com Matrículas é sempre uma fonte confiável.
         if aluno.matricula_id:
-            _adicionar_identidade(cpfs, datas, aluno.matricula)
+            registros.append({
+                "data": aluno.matricula.dataNascimentoAluno,
+                "cpf_mae": somente_digitos(aluno.matricula.cpfMae),
+                "cpf_responsavel": somente_digitos(aluno.matricula.cpfResponsavel),
+                "origem": aluno.matricula,
+            })
 
-        # Para registros avulsos, usa fontes por nome somente quando a
-        # correspondência é única, evitando associar homônimos automaticamente.
-        matriculas_mesmo_nome = mapa_matriculas.get(chave_nome, [])
-        if len(matriculas_mesmo_nome) == 1:
-            _adicionar_identidade(cpfs, datas, matriculas_mesmo_nome[0])
+        # Não exige mais correspondência única por nome. Duplicatas do mesmo
+        # aluno são comuns nos bancos legados; as credenciais informadas é que
+        # determinam qual registro é válido.
+        for registro in mapa_matriculas.get(chave_nome, []):
+            registros.append({
+                "data": registro.dataNascimentoAluno,
+                "cpf_mae": somente_digitos(registro.cpfMae),
+                "cpf_responsavel": somente_digitos(registro.cpfResponsavel),
+                "origem": registro,
+            })
 
-        declaracoes_mesmo_nome = mapa_declaracoes.get(chave_nome, [])
-        if len(declaracoes_mesmo_nome) == 1:
-            _adicionar_identidade(cpfs, datas, declaracoes_mesmo_nome[0])
+        for registro in mapa_declaracoes.get(chave_nome, []):
+            registros.append({
+                "data": registro.dataNascimentoAluno,
+                "cpf_mae": somente_digitos(registro.cpfMae),
+                "cpf_responsavel": somente_digitos(registro.cpfResponsavel),
+                "origem": registro,
+            })
 
-        if cpf_normalizado not in cpfs or data_nascimento not in datas:
+        cpf_matches = [
+            item for item in registros
+            if cpf_normalizado in {item["cpf_mae"], item["cpf_responsavel"]}
+        ]
+        data_matches = [
+            item for item in registros
+            if item["data"] == data_nascimento
+        ]
+
+        # Primeiro tenta a forma mais forte: CPF e nascimento no mesmo registro.
+        mesmo_registro = any(
+            item["data"] == data_nascimento
+            and cpf_normalizado in {item["cpf_mae"], item["cpf_responsavel"]}
+            for item in registros
+        )
+
+        # Em dados legados, CPF e nascimento podem estar divididos entre
+        # fontes diferentes. Como todas as fontes acima pertencem ao mesmo
+        # nome completo normalizado, a combinação continua identificando o
+        # mesmo estudante sem abrir acesso por apenas um dos fatores.
+        if not mesmo_registro and not (cpf_matches and data_matches):
             continue
 
-        # Completa o perfil do boletim com os dados disponíveis para que a
-        # gestão mostre a identificação correta nas próximas consultas.
         alterados = []
-        if not aluno.data_nascimento:
+
+        if aluno.data_nascimento != data_nascimento:
             aluno.data_nascimento = data_nascimento
             alterados.append("data_nascimento")
 
-        if cpf_normalizado not in {
+        cpfs_perfil = {
             somente_digitos(aluno.cpf_mae),
             somente_digitos(aluno.cpf_responsavel),
-        }:
+        }
+        if cpf_normalizado not in cpfs_perfil:
             origem_mae = any(
-                somente_digitos(getattr(registro, "cpfMae", "")) == cpf_normalizado
-                for registro in (
-                    ([aluno.matricula] if aluno.matricula_id else [])
-                    + (matriculas_mesmo_nome if len(matriculas_mesmo_nome) == 1 else [])
-                    + (declaracoes_mesmo_nome if len(declaracoes_mesmo_nome) == 1 else [])
-                )
+                item["cpf_mae"] == cpf_normalizado
+                for item in cpf_matches
             )
             if origem_mae:
                 aluno.cpf_mae = formatar_cpf(cpf)
