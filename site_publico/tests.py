@@ -7,7 +7,15 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .forms import PaginaPublicaForm
-from .models import ArquivoPaginaPublica, Aviso, Noticia, PaginaPublica, SecaoPagina
+from .models import (
+    AlbumGaleria,
+    ArquivoPaginaPublica,
+    Aviso,
+    FotoGaleria,
+    Noticia,
+    PaginaPublica,
+    SecaoPagina,
+)
 
 
 class SitePublicoTests(TestCase):
@@ -379,3 +387,93 @@ class SitePublicoTests(TestCase):
             response,
             reverse("site_publico:gestao_inicio") + "#blocos",
         )
+
+
+    def test_tela_de_fotos_permite_nome_de_novo_album_e_varias_imagens(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="gestor_galeria_lote",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+
+        response = self.client.get(
+            reverse("site_publico:gestao_conteudo_novo", args=["fotos"])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Nome do novo álbum")
+        self.assertContains(response, "Escolher várias fotos")
+        self.assertContains(response, 'name="fotos"')
+        self.assertContains(response, "multiple")
+
+    def test_cria_novo_album_e_adiciona_varias_fotos_de_uma_vez(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="gestor_novo_album",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+
+        foto1 = SimpleUploadedFile(
+            "foto-1.jpg",
+            b"imagem-1",
+            content_type="image/jpeg",
+        )
+        foto2 = SimpleUploadedFile(
+            "foto-2.png",
+            b"imagem-2",
+            content_type="image/png",
+        )
+        foto3 = SimpleUploadedFile(
+            "foto-3.webp",
+            b"imagem-3",
+            content_type="image/webp",
+        )
+
+        response = self.client.post(
+            reverse("site_publico:gestao_conteudo_novo", args=["fotos"]),
+            {
+                "novo_album": "Festa Junina 2026",
+                "descricao_album": "Momentos da festa da escola.",
+                "fotos": [foto1, foto2, foto3],
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        album = AlbumGaleria.objects.get(titulo="Festa Junina 2026")
+        self.assertEqual(album.fotos.count(), 3)
+
+        publica = self.client.get(reverse("site_publico:galeria"))
+        self.assertContains(publica, "Festa Junina 2026")
+
+    def test_adiciona_varias_fotos_em_album_existente(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="gestor_album_existente",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+        album = AlbumGaleria.objects.create(titulo="Feira Cultural", ativo=True)
+
+        foto1 = SimpleUploadedFile(
+            "feira-1.jpg",
+            b"imagem-1",
+            content_type="image/jpeg",
+        )
+        foto2 = SimpleUploadedFile(
+            "feira-2.jpg",
+            b"imagem-2",
+            content_type="image/jpeg",
+        )
+
+        response = self.client.post(
+            reverse("site_publico:gestao_conteudo_novo", args=["fotos"]),
+            {
+                "album_existente": str(album.pk),
+                "fotos": [foto1, foto2],
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(FotoGaleria.objects.filter(album=album).count(), 2)
