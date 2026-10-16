@@ -2714,3 +2714,26 @@
     width: 100%;
   }
 }
+
+
+/* Submenu interno de Boletins, separado da Gestão do Site */
+.bulletin-subitem {
+  margin-left: 10px;
+  padding-left: 14px;
+  border-left: 2px solid rgba(255,255,255,.12);
+  border-radius: 8px;
+  font-size: 11px;
+  opacity: .9;
+}
+
+.bulletin-subitem svg {
+  width: 16px;
+  height: 16px;
+}
+
+.bulletin-subitem-active {
+  border-left-color: #f6c84b;
+  background: rgba(255,255,255,.08);
+  color: #fff;
+  opacity: 1;
+}
