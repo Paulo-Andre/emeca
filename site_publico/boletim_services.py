@@ -196,24 +196,37 @@ def consulta_bloqueada(request):
 
 
 def localizar_alunos_por_credenciais(cpf, data_nascimento):
+    from django.db.models import Q
+
     cpf_normalizado = somente_digitos(cpf)
     if len(cpf_normalizado) != 11:
         return []
 
     candidatos = (
         AlunoBoletim.objects
+        .filter(boletins__periodo__publicado=True)
         .filter(
-            data_nascimento=data_nascimento,
-            boletins__periodo__publicado=True,
+            Q(data_nascimento=data_nascimento)
+            | Q(matricula__dataNascimentoAluno=data_nascimento)
         )
+        .select_related("matricula")
         .distinct()
     )
     encontrados = []
     for aluno in candidatos:
-        if cpf_normalizado in {
+        cpfs = {
             somente_digitos(aluno.cpf_mae),
             somente_digitos(aluno.cpf_responsavel),
-        }:
+        }
+        if aluno.matricula_id:
+            cpfs.update({
+                somente_digitos(aluno.matricula.cpfMae),
+                somente_digitos(aluno.matricula.cpfResponsavel),
+            })
+
+        if cpf_normalizado in cpfs:
+            if aluno.matricula_id:
+                aluno = sincronizar_perfil_matricula(aluno.matricula)
             encontrados.append(aluno)
     return encontrados
 
