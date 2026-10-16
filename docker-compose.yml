@@ -11,5 +11,16 @@ services:
     volumes:
       - emeca_data:/data
 
+  whatsapp-worker:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: ["python", "manage.py", "processar_envios_whatsapp"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - emeca_data:/data
+
 volumes:
   emeca_data:
