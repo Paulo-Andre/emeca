@@ -6,39 +6,69 @@
   <div class="page-heading">
     <span class="section-kicker">{{ paginas_site.boletim.rotulo|default:"Acompanhamento escolar" }}</span>
     <h1>{{ paginas_site.boletim.titulo|default:"Boletim" }}</h1>
-    <p>{{ paginas_site.boletim.subtitulo|default:"Consulte informações de desempenho escolar quando o serviço estiver integrado ao sistema." }}</p>
+    <p>{{ paginas_site.boletim.subtitulo|default:"Consulte notas e faltas com segurança usando os dados do responsável e da criança." }}</p>
     {% if paginas_site.boletim.texto_principal %}<div class="page-heading__intro">{{ paginas_site.boletim.texto_principal|linebreaksbr }}</div>{% endif %}
     {% include 'site_publico/includes/capa_pagina.html' with pagina=paginas_site.boletim %}
   </div>
 </section>
 
-<section class="section">
-  <div class="bulletin-shell">
-    <article class="bulletin-card">
-      <span class="bulletin-card__icon"><i data-lucide="file-text"></i></span>
-      <div>
-        <span class="section-kicker">{{ secoes_site.boletim_consulta.rotulo|default:"Boletim online" }}</span>
-        <h2>{{ secoes_site.boletim_consulta.titulo|default:"Consulta de notas e resultados" }}</h2>
-        <p>{{ secoes_site.boletim_consulta.texto|default:"Esta área foi preparada para receber a consulta de boletins. A integração com os dados acadêmicos poderá ser adicionada posteriormente sem alterar o menu ou a identidade visual do site." }}</p>
-        {% if secoes_site.boletim_consulta.imagem %}<img class="editable-public-image" src="{{ secoes_site.boletim_consulta.imagem.url }}" alt="">{% endif %}
-        <div class="bulletin-info">
-          <i data-lucide="info"></i>
-          <span>Por enquanto, este é um modelo de apresentação. Nenhuma nota ou dado pessoal de aluno é exibido nesta página.</span>
+<section class="section bulletin-access-section">
+  <div class="bulletin-access-layout">
+    <article class="bulletin-access-card">
+      <div class="bulletin-access-card__head">
+        <span><i data-lucide="shield-check"></i></span>
+        <div>
+          <span class="section-kicker">Acesso protegido</span>
+          <h2>Consultar boletim do estudante</h2>
+          <p>Informe o CPF da mãe ou do responsável e a data de nascimento da criança.</p>
         </div>
       </div>
+
+      {% if messages %}
+        <div class="bulletin-access-messages">
+          {% for message in messages %}<div>{{ message }}</div>{% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="post" class="bulletin-access-form" autocomplete="off">
+        {% csrf_token %}
+        <div class="bulletin-access-field">
+          <label for="{{ form.cpf.id_for_label }}">{{ form.cpf.label }}</label>
+          {{ form.cpf }}
+          {% for error in form.cpf.errors %}<small class="bulletin-access-error">{{ error }}</small>{% endfor %}
+        </div>
+
+        <div class="bulletin-access-field">
+          <label for="{{ form.data_nascimento.id_for_label }}">{{ form.data_nascimento.label }}</label>
+          {{ form.data_nascimento }}
+          {% for error in form.data_nascimento.errors %}<small class="bulletin-access-error">{{ error }}</small>{% endfor %}
+        </div>
+
+        <div class="bulletin-access-note">
+          <i data-lucide="lock-keyhole"></i>
+          <span>Os dados são usados somente para localizar o boletim correspondente e não ficam expostos nesta página.</span>
+        </div>
+
+        <button class="button button--primary bulletin-access-submit" type="submit" {% if consulta_bloqueada %}disabled{% endif %}>
+          <i data-lucide="search"></i>
+          Consultar boletim
+        </button>
+      </form>
     </article>
 
-    <aside class="bulletin-help">
-      <span><i data-lucide="school"></i></span>
-      {% if secoes_site.boletim_orientacao.imagem %}<img class="editable-public-image" src="{{ secoes_site.boletim_orientacao.imagem.url }}" alt="">{% endif %}
-      <h3>{{ secoes_site.boletim_orientacao.titulo|default:"Precisa de orientação?" }}</h3>
-      <p>{{ secoes_site.boletim_orientacao.texto|default:"Entre em contato com a escola para informações sobre resultados, avaliações e acompanhamento escolar." }}</p>
-      {% if paginas_ativas.contato %}
-        <a class="button button--soft" href="{% url 'site_publico:contato' %}">
-          Falar com a escola
-          <i data-lucide="arrow-right"></i>
-        </a>
-      {% endif %}
+    <aside class="bulletin-access-help">
+      <span class="bulletin-access-help__icon"><i data-lucide="school"></i></span>
+      <h3>Como funciona?</h3>
+      <ol>
+        <li>Digite o CPF da mãe ou do responsável cadastrado na escola.</li>
+        <li>Informe a data de nascimento da criança.</li>
+        <li>Escolha o período disponível e consulte notas e faltas.</li>
+        <li>Use o botão <strong>Baixar PDF</strong> para guardar ou imprimir o boletim.</li>
+      </ol>
+      <div class="bulletin-access-help__privacy">
+        <i data-lucide="shield"></i>
+        <span>Por segurança, o acesso expira automaticamente após alguns minutos.</span>
+      </div>
     </aside>
   </div>
 </section>
