@@ -291,11 +291,24 @@ def boletim(request):
                 token = criar_token_acesso(encontrados)
                 return redirect("site_publico:boletim_acesso", token=token)
 
-            registrar_tentativa(request)
-            messages.error(
-                request,
-                "Não foi possível localizar um boletim com os dados informados. Confira o CPF e a data de nascimento.",
+            # Diferencia credenciais incorretas de um boletim que existe,
+            # mas ainda está em rascunho na gestão.
+            encontrados_nao_publicados = localizar_alunos_por_credenciais(
+                form.cleaned_data["cpf"],
+                form.cleaned_data["data_nascimento"],
+                somente_publicados=False,
             )
+            registrar_tentativa(request)
+            if encontrados_nao_publicados:
+                messages.warning(
+                    request,
+                    "Os dados do estudante foram reconhecidos, mas o boletim ainda não foi publicado pela escola.",
+                )
+            else:
+                messages.error(
+                    request,
+                    "Não foi possível localizar um boletim com os dados informados. Confira o CPF e a data de nascimento.",
+                )
         else:
             registrar_tentativa(request)
 
