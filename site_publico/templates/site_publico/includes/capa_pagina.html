@@ -12,3 +12,26 @@
     <img class="page-hero__image" src="{{ pagina.imagem_capa.url }}" alt="">
   {% endif %}
 {% endif %}
+
+{% with documentos=pagina.arquivos_ativos %}
+  {% if documentos %}
+    <div class="page-attached-documents">
+      <div class="page-attached-documents__heading">
+        <i data-lucide="files"></i>
+        <span>
+          <strong>Documentos da página</strong>
+          <small>{{ documentos|length }} arquivo{{ documentos|length|pluralize }} disponível{{ documentos|length|pluralize:"is" }}</small>
+        </span>
+      </div>
+      <div class="page-attached-documents__list">
+        {% for documento in documentos %}
+          <a href="{{ documento.arquivo.url }}" target="_blank" rel="noopener">
+            <span><i data-lucide="file-text"></i></span>
+            <strong>{{ documento.nome_exibicao }}</strong>
+            <i data-lucide="external-link"></i>
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+{% endwith %}
