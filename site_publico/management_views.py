@@ -115,7 +115,7 @@ def gestao_boletim_importar(request):
     if request.method == "POST" and form.is_valid():
         try:
             dados = ler_planilha_boletim(form.cleaned_data["arquivo"])
-            resultado = importar_dados_boletim(dados, form.cleaned_data)
+            resultado = importar_dados_boletim(dados)
         except (ImportacaoBoletimErro, ValueError) as exc:
             messages.error(request, str(exc))
         except Exception:
@@ -126,7 +126,10 @@ def gestao_boletim_importar(request):
         else:
             messages.success(
                 request,
-                f'{resultado["importados"]} aluno(s) importado(s) para {resultado["periodo"].titulo}.',
+                (
+                    f'{resultado["importados"]} aluno(s) importado(s) para '
+                    f'{resultado["periodo"].titulo}. Revise os dados antes de publicar.'
+                ),
             )
 
     return render(request, "site_publico/gestao/boletim_importar.html", {
@@ -165,20 +168,91 @@ def gestao_boletim_periodo_novo(request):
 
 @login_required
 def gestao_boletim_periodo_editar(request, pk):
-    periodo = get_object_or_404(PeriodoBoletim, pk=pk)
+    periodo = get_object_or_404(
+        PeriodoBoletim.objects.prefetch_related("disciplinas"),
+        pk=pk,
+    )
     form = PeriodoBoletimForm(request.POST or None, instance=periodo)
     if request.method == "POST" and form.is_valid():
         form.save()
-        messages.success(request, "Configuração do período atualizada.")
-        return redirect("site_publico:gestao_boletim_periodo", pk=periodo.pk)
+        messages.success(request, "Dados gerais do boletim atualizados.")
+        return redirect("site_publico:gestao_boletim_periodo_editar", pk=periodo.pk)
 
-    return render(request, "site_publico/gestao/form.html", {
+    return render(request, "site_publico/gestao/boletim_configurar.html", {
         "form": form,
-        "titulo": f"Editar {periodo.titulo}",
-        "descricao": "Altere turma, regente ou disponibilidade pública do boletim.",
-        "voltar_href": reverse("site_publico:gestao_boletim_periodo", args=[periodo.pk]),
-        "voltar": "site_publico:gestao_boletins",
+        "periodo": periodo,
+        "disciplinas": periodo.disciplinas.order_by("ordem", "id"),
     })
+
+
+@require_POST
+@login_required
+def gestao_boletim_disciplina_adicionar(request, periodo_pk):
+    periodo = get_object_or_404(PeriodoBoletim, pk=periodo_pk)
+    nome = " ".join((request.POST.get("nome") or "").split()).strip()
+    if not nome:
+        messages.error(request, "Informe o nome da disciplina.")
+        return redirect("site_publico:gestao_boletim_periodo_editar", pk=periodo.pk)
+
+    if periodo.disciplinas.filter(nome__iexact=nome).exists():
+        messages.error(request, "Essa disciplina já está cadastrada neste período.")
+        return redirect("site_publico:gestao_boletim_periodo_editar", pk=periodo.pk)
+
+    proxima_ordem = (periodo.disciplinas.aggregate(maior=Max("ordem")).get("maior") or -1) + 1
+    DisciplinaBoletim.objects.create(
+        periodo=periodo,
+        nome=nome,
+        ordem=proxima_ordem,
+    )
+    messages.success(request, f'Disciplina "{nome}" adicionada.')
+    return redirect("site_publico:gestao_boletim_periodo_editar", pk=periodo.pk)
+
+
+@require_POST
+@login_required
+def gestao_boletim_disciplina_editar(request, periodo_pk, disciplina_pk):
+    periodo = get_object_or_404(PeriodoBoletim, pk=periodo_pk)
+    disciplina = get_object_or_404(
+        DisciplinaBoletim,
+        pk=disciplina_pk,
+        periodo=periodo,
+    )
+    nome = " ".join((request.POST.get("nome") or "").split()).strip()
+    if not nome:
+        messages.error(request, "O nome da disciplina não pode ficar vazio.")
+        return redirect("site_publico:gestao_boletim_periodo_editar", pk=periodo.pk)
+
+    if (
+        periodo.disciplinas
+        .filter(nome__iexact=nome)
+        .exclude(pk=disciplina.pk)
+        .exists()
+    ):
+        messages.error(request, "Já existe outra disciplina com esse nome.")
+        return redirect("site_publico:gestao_boletim_periodo_editar", pk=periodo.pk)
+
+    disciplina.nome = nome
+    disciplina.save(update_fields=["nome"])
+    messages.success(request, "Nome da disciplina atualizado sem alterar as notas vinculadas.")
+    return redirect("site_publico:gestao_boletim_periodo_editar", pk=periodo.pk)
+
+
+@require_POST
+@login_required
+def gestao_boletim_disciplina_excluir(request, periodo_pk, disciplina_pk):
+    periodo = get_object_or_404(PeriodoBoletim, pk=periodo_pk)
+    disciplina = get_object_or_404(
+        DisciplinaBoletim,
+        pk=disciplina_pk,
+        periodo=periodo,
+    )
+    nome = disciplina.nome
+    disciplina.delete()
+    messages.success(
+        request,
+        f'Disciplina "{nome}" removida. As notas vinculadas a ela também foram removidas.',
+    )
+    return redirect("site_publico:gestao_boletim_periodo_editar", pk=periodo.pk)
 
 
 @login_required
