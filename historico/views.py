@@ -193,7 +193,7 @@ def _anos_editor(aluno=None, post=None):
 
 
 def inicio(request):
-    q = request.GET.get("q", "").strip()[:120]
+    q = (request.POST.get("q") or "").strip()[:120] if request.method == "POST" else ""
     alunos = []
     if q:
         filtro = Q(nome__icontains=q)
@@ -576,11 +576,12 @@ def dados_extras_anuais(request):
 
 
 def relatorios(request):
-    q = (request.GET.get("q") or "").strip()[:120]
-    ano_texto = (request.GET.get("ano") or "").strip()
-    serie_texto = (request.GET.get("serie") or "").strip()
-    turma = (request.GET.get("turma") or "").strip()[:120]
-    status = (request.GET.get("status") or "").strip().lower()
+    dados = request.POST if request.method == "POST" else {}
+    q = (dados.get("q") or "").strip()[:120]
+    ano_texto = (dados.get("ano") or "").strip()
+    serie_texto = (dados.get("serie") or "").strip()
+    turma = (dados.get("turma") or "").strip()[:120]
+    status = (dados.get("status") or "").strip().lower()
     pesquisa_realizada = any(
         [q, ano_texto, serie_texto, turma, status]
     )
