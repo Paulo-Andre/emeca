@@ -244,11 +244,18 @@ def importar_dados_boletim(dados_planilha, dados_periodo=None):
                     declaracoes_mesmo_nome[0],
                 )
 
-        faltas_totais = sum(
-            item["faltas"] or 0
-            for item in linha["resultados"]
-            if item.get("faltas") is not None
-        )
+        faltas_totais = linha.get("faltas_totais")
+        if faltas_totais is None:
+            faltas_informadas = [
+                item["faltas"]
+                for item in linha["resultados"]
+                if item.get("faltas") is not None
+            ]
+            faltas_totais = (
+                sum(faltas_informadas)
+                if faltas_informadas
+                else None
+            )
 
         boletim = BoletimAluno.objects.create(
             periodo=periodo,
@@ -323,39 +330,17 @@ def consulta_bloqueada(request):
     return len(recentes) >= TENTATIVAS_LIMITE
 
 
-def _nomes_autorizados_por_credenciais(cpf_normalizado, data_nascimento):
-    """Resolve os nomes dos estudantes a partir dos dados do responsável."""
-    nomes = {}
-    fontes = []
-
-    for registro in matricula.objects.filter(dataNascimentoAluno=data_nascimento):
-        cpfs = {
-            somente_digitos(registro.cpfMae),
-            somente_digitos(registro.cpfResponsavel),
-        }
-        if cpf_normalizado in cpfs:
-            chave = normalizar_nome(registro.nomeDoAluno)
-            nomes[chave] = registro.nomeDoAluno
-            fontes.append((chave, registro))
-
-    for registro in declaracao.objects.filter(dataNascimentoAluno=data_nascimento):
-        cpfs = {
-            somente_digitos(registro.cpfMae),
-            somente_digitos(registro.cpfResponsavel),
-        }
-        if cpf_normalizado in cpfs:
-            chave = normalizar_nome(registro.nomeDoAluno)
-            nomes[chave] = registro.nomeDoAluno
-            fontes.append((chave, registro))
-
-    return nomes, fontes
-
-
 def localizar_alunos_por_credenciais(
     cpf,
     data_nascimento,
     somente_publicados=True,
 ):
+    """Localiza o boletim combinando os dados conhecidos do mesmo estudante.
+
+    CPF e data podem estar em fontes diferentes (por exemplo, CPF corrigido
+    manualmente no Boletim e nascimento já existente em Declarações). Todas as
+    fontes são cruzadas pelo nome normalizado do aluno antes da autorização.
+    """
     cpf_normalizado = somente_digitos(cpf)
     if len(cpf_normalizado) != 11:
         return []
@@ -366,70 +351,93 @@ def localizar_alunos_por_credenciais(
     else:
         candidatos = candidatos.filter(boletins__isnull=False)
 
-    nomes_autorizados, fontes = _nomes_autorizados_por_credenciais(
-        cpf_normalizado,
-        data_nascimento,
+    # Apenas registros com a data informada entram como fonte auxiliar.
+    # Assim, um CPF de outro aluno com nome semelhante não autoriza o acesso.
+    declaracoes_por_nome = _mapa_declaracoes_por_nome(
+        declaracao.objects.filter(dataNascimentoAluno=data_nascimento)
     )
-    fontes_por_nome = defaultdict(list)
-    for chave, fonte in fontes:
-        fontes_por_nome[chave].append(fonte)
+    matriculas_por_nome = defaultdict(list)
+    for registro in matricula.objects.filter(dataNascimentoAluno=data_nascimento):
+        matriculas_por_nome[normalizar_nome(registro.nomeDoAluno)].append(registro)
 
     encontrados = []
     vistos = set()
 
     for aluno in candidatos:
         chave_nome = normalizar_nome(aluno.nome)
-        autorizado = chave_nome in nomes_autorizados
+        cpfs = {
+            somente_digitos(aluno.cpf_mae),
+            somente_digitos(aluno.cpf_responsavel),
+        }
+        datas = {aluno.data_nascimento} if aluno.data_nascimento else set()
 
-        # Também aceita dados já gravados diretamente no perfil do boletim.
-        if not autorizado:
-            cpfs_perfil = {
-                somente_digitos(aluno.cpf_mae),
-                somente_digitos(aluno.cpf_responsavel),
-            }
-            autorizado = (
-                aluno.data_nascimento == data_nascimento
-                and cpf_normalizado in cpfs_perfil
+        if aluno.matricula_id:
+            cpfs.update(
+                {
+                    somente_digitos(aluno.matricula.cpfMae),
+                    somente_digitos(aluno.matricula.cpfResponsavel),
+                }
             )
+            if aluno.matricula.dataNascimentoAluno:
+                datas.add(aluno.matricula.dataNascimentoAluno)
 
-        # Perfil vinculado à Matrícula continua sendo aceito diretamente.
-        if not autorizado and aluno.matricula_id:
-            cpfs_matricula = {
-                somente_digitos(aluno.matricula.cpfMae),
-                somente_digitos(aluno.matricula.cpfResponsavel),
-            }
-            autorizado = (
-                aluno.matricula.dataNascimentoAluno == data_nascimento
-                and cpf_normalizado in cpfs_matricula
+        declaracoes_nome = declaracoes_por_nome.get(chave_nome, [])
+        for registro in declaracoes_nome:
+            cpfs.update(
+                {
+                    somente_digitos(registro.cpfMae),
+                    somente_digitos(registro.cpfResponsavel),
+                }
             )
+            if registro.dataNascimentoAluno:
+                datas.add(registro.dataNascimentoAluno)
 
-        if not autorizado or aluno.pk in vistos:
+        matriculas_nome = matriculas_por_nome.get(chave_nome, [])
+        for registro in matriculas_nome:
+            cpfs.update(
+                {
+                    somente_digitos(registro.cpfMae),
+                    somente_digitos(registro.cpfResponsavel),
+                }
+            )
+            if registro.dataNascimentoAluno:
+                datas.add(registro.dataNascimentoAluno)
+
+        cpfs.discard("")
+
+        if cpf_normalizado not in cpfs or data_nascimento not in datas:
             continue
 
-        # Se o boletim estava avulso, sincroniza CPF/data a partir da fonte
-        # encontrada, sem obrigar vínculo com Matrículas.
-        fontes_nome = fontes_por_nome.get(chave_nome, [])
-        if fontes_nome:
-            fonte = fontes_nome[0]
-            if hasattr(fonte, "cpfMae") and hasattr(fonte, "cpfResponsavel"):
-                if isinstance(fonte, declaracao):
-                    aluno = sincronizar_perfil_declaracao(aluno, fonte)
-                else:
-                    alterados = []
-                    dados = {
-                        "data_nascimento": fonte.dataNascimentoAluno,
-                        "cpf_mae": fonte.cpfMae or "",
-                        "cpf_responsavel": fonte.cpfResponsavel or "",
-                    }
-                    for campo, valor in dados.items():
-                        if valor and getattr(aluno, campo) != valor:
-                            setattr(aluno, campo, valor)
-                            alterados.append(campo)
-                    if alterados:
-                        aluno.save(update_fields=alterados + ["atualizado_em"])
+        # Completa o perfil do boletim com dados conhecidos, sem alterar
+        # Matrículas ou Declarações.
+        alterados = []
+        if not aluno.data_nascimento:
+            aluno.data_nascimento = data_nascimento
+            alterados.append("data_nascimento")
 
-        encontrados.append(aluno)
-        vistos.add(aluno.pk)
+        if not somente_digitos(aluno.cpf_mae) and not somente_digitos(aluno.cpf_responsavel):
+            # Prioriza a fonte que efetivamente contém o CPF informado.
+            fontes = []
+            if aluno.matricula_id:
+                fontes.append(aluno.matricula)
+            fontes.extend(matriculas_nome)
+            fontes.extend(declaracoes_nome)
+            for fonte in fontes:
+                if somente_digitos(getattr(fonte, "cpfMae", "")) == cpf_normalizado:
+                    aluno.cpf_mae = getattr(fonte, "cpfMae", "") or ""
+                    alterados.append("cpf_mae")
+                    break
+                if somente_digitos(getattr(fonte, "cpfResponsavel", "")) == cpf_normalizado:
+                    aluno.cpf_responsavel = getattr(fonte, "cpfResponsavel", "") or ""
+                    alterados.append("cpf_responsavel")
+                    break
+
+        if alterados:
+            aluno.save(update_fields=list(dict.fromkeys(alterados)) + ["atualizado_em"])
+
+        if aluno.pk not in vistos:
+            encontrados.append(aluno)
+            vistos.add(aluno.pk)
 
     return encontrados
 
