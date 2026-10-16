@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261016-sidebar-collapse-02">
-  <link rel="stylesheet" href="{% static 'site_publico/gestao.css' %}?v=20261016-boletim-menu-11">
+  <link rel="stylesheet" href="{% static 'site_publico/gestao.css' %}?v=20261016-boletim-edit-12">
 </head>
 <body class="secretaria-dashboard site-manager-page">
   <aside class="sidebar" aria-label="Navegação da secretaria">
@@ -37,14 +37,11 @@
 
     {% if request.resolver_match.url_name == 'gestao_boletins' or 'gestao_boletim_' in request.resolver_match.url_name %}
       <div class="nav-section-label">Boletins</div>
-      <a class="nav-item bulletin-subitem{% if request.resolver_match.url_name == 'gestao_boletins' or request.resolver_match.url_name == 'gestao_boletim_periodo' or request.resolver_match.url_name == 'gestao_boletim_periodo_editar' or request.resolver_match.url_name == 'gestao_boletim_aluno_novo' or request.resolver_match.url_name == 'gestao_boletim_aluno_editar' %} bulletin-subitem-active{% endif %}" href="{% url 'site_publico:gestao_boletins' %}">
-        <i data-lucide="layout-dashboard"></i><span>Gerenciar boletins</span>
-      </a>
       <a class="nav-item bulletin-subitem{% if request.resolver_match.url_name == 'gestao_boletim_importar' %} bulletin-subitem-active{% endif %}" href="{% url 'site_publico:gestao_boletim_importar' %}">
         <i data-lucide="file-spreadsheet"></i><span>Importar boletim</span>
       </a>
-      <a class="nav-item bulletin-subitem{% if request.resolver_match.url_name == 'gestao_boletim_periodo_novo' %} bulletin-subitem-active{% endif %}" href="{% url 'site_publico:gestao_boletim_periodo_novo' %}">
-        <i data-lucide="plus-square"></i><span>Cadastrar período</span>
+      <a class="nav-item bulletin-subitem{% if request.resolver_match.url_name != 'gestao_boletim_importar' %} bulletin-subitem-active{% endif %}" href="{% url 'site_publico:gestao_boletins' %}">
+        <i data-lucide="square-pen"></i><span>Editar dados</span>
       </a>
     {% endif %}
 

@@ -81,7 +81,7 @@
   <div class="manager-section__heading">
     <div>
       <span class="manager-kicker">Lançamentos</span>
-      <h2>Notas dos alunos</h2>
+      <h2>Alunos, notas e faltas</h2>
     </div>
   </div>
 
@@ -100,7 +100,7 @@
             {% if linha.acesso_pronto %}Acesso pronto{% else %}Falta CPF/data{% endif %}
           </span>
           <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_boletim_aluno_editar' periodo.pk linha.boletim.pk %}">
-            <i data-lucide="pencil"></i> Editar notas
+            <i data-lucide="pencil"></i> Editar aluno e notas
           </a>
         </article>
       {% endfor %}

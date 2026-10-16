@@ -1,7 +1,7 @@
 {% extends 'site_publico/gestao/base.html' %}
-{% block title %}{% if boletim_obj %}Editar notas{% else %}Adicionar aluno{% endif %}{% endblock %}
+{% block title %}{% if boletim_obj %}Editar aluno e notas{% else %}Adicionar aluno{% endif %}{% endblock %}
 {% block header_icon %}square-pen{% endblock %}
-{% block header_title %}{% if boletim_obj %}Editar notas do aluno{% else %}Adicionar notas do aluno{% endif %}{% endblock %}
+{% block header_title %}{% if boletim_obj %}Editar aluno e notas{% else %}Adicionar aluno manualmente{% endif %}{% endblock %}
 {% block header_subtitle %}{{ periodo.titulo }}{% endblock %}
 
 {% block content %}
@@ -13,16 +13,37 @@
   {% csrf_token %}
   {% if form.non_field_errors %}<div class="manager-form-error">{{ form.non_field_errors }}</div>{% endif %}
 
-  <div class="bulletin-grade-editor__student">
-    <div class="manager-field">
+  <div class="bulletin-grade-editor__student bulletin-grade-editor__student--details">
+    <div class="manager-field manager-field--full">
       <label for="{{ form.aluno.id_for_label }}">{{ form.aluno.label }}</label>
       {{ form.aluno }}
+      <small>Você pode selecionar um aluno já cadastrado ou deixar sem vínculo e preencher os dados manualmente.</small>
       {% for error in form.aluno.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
+    </div>
+    <div class="manager-field manager-field--full">
+      <label for="{{ form.nome_aluno.id_for_label }}">{{ form.nome_aluno.label }}</label>
+      {{ form.nome_aluno }}
+      {% for error in form.nome_aluno.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
     </div>
     <div class="manager-field">
       <label for="{{ form.numero_chamada.id_for_label }}">{{ form.numero_chamada.label }}</label>
       {{ form.numero_chamada }}
       {% for error in form.numero_chamada.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
+    </div>
+    <div class="manager-field">
+      <label for="{{ form.data_nascimento.id_for_label }}">{{ form.data_nascimento.label }}</label>
+      {{ form.data_nascimento }}
+      {% for error in form.data_nascimento.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
+    </div>
+    <div class="manager-field">
+      <label for="{{ form.cpf_mae.id_for_label }}">{{ form.cpf_mae.label }}</label>
+      {{ form.cpf_mae }}
+      {% for error in form.cpf_mae.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
+    </div>
+    <div class="manager-field">
+      <label for="{{ form.cpf_responsavel.id_for_label }}">{{ form.cpf_responsavel.label }}</label>
+      {{ form.cpf_responsavel }}
+      {% for error in form.cpf_responsavel.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
     </div>
   </div>
 
@@ -52,7 +73,7 @@
   </div>
 
   <div class="manager-form-actions">
-    <button class="manager-btn manager-btn--primary" type="submit"><i data-lucide="save"></i> Salvar notas e faltas</button>
+    <button class="manager-btn manager-btn--primary" type="submit"><i data-lucide="save"></i> Salvar aluno, notas e faltas</button>
   </div>
 </form>
 {% endblock %}

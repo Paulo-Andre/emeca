@@ -103,6 +103,96 @@ def _rotulo_disciplina(df, cabecalho_idx, coluna):
     return ""
 
 
+def _nome_disciplina_valido(valor):
+    norm = normalizar(valor)
+    if not norm:
+        return False
+    if norm in {
+        "REGENTE",
+        "NUM",
+        "NUMERO",
+        "NOME",
+        "N",
+        "F",
+        "NOTA",
+        "NOTAS",
+        "FALTA",
+        "FALTAS",
+        "NOTAS E FALTAS",
+    }:
+        return False
+    if norm.startswith("NOTAS E FALTAS"):
+        return False
+    if norm.startswith("E M EGIDIO"):
+        return False
+    if "TRIMESTRE" in norm or "BIMESTRE" in norm or "TURMA" in norm:
+        return False
+    return bool(re.search(r"[A-Za-zÀ-ÿ]", texto(valor)))
+
+
+def _disciplinas_por_rotulos(df, cabecalho_idx, nome_col):
+    """Fallback para XLS do Crystal Reports sem N./F. como células de texto.
+
+    Nesse formato cada disciplina ocupa um par de colunas (nota/falta) e o
+    rótulo normalmente está acima da primeira coluna do par.
+    """
+    candidatos = []
+
+    # Procura rótulos nas linhas imediatamente acima de Num./Nome.
+    inicio = max(0, cabecalho_idx - 8)
+    for col in range(nome_col + 1, len(df.columns)):
+        # A coluna reservada ao professor regente não é disciplina.
+        if any(
+            normalizar(df.iat[linha, col]) == "REGENTE"
+            for linha in range(inicio, cabecalho_idx)
+        ):
+            continue
+
+        encontrado = ""
+        linha_encontrada = None
+        for linha in range(cabecalho_idx - 1, inicio - 1, -1):
+            valor = texto(df.iat[linha, col])
+            if _nome_disciplina_valido(valor):
+                encontrado = re.sub(r"\s+", " ", valor.replace("\n", " ")).strip()
+                linha_encontrada = linha
+                break
+        if encontrado:
+            candidatos.append((col, linha_encontrada, encontrado))
+
+    if not candidatos:
+        return []
+
+    # Em células mescladas o mesmo rótulo pode aparecer em mais de uma coluna.
+    # Mantém apenas a primeira ocorrência próxima e considera o próximo campo
+    # como faltas.
+    itens = []
+    usados = set()
+    ordem = 0
+    for col, _, nome in candidatos:
+        chave = normalizar(nome)
+        if chave in usados:
+            continue
+
+        # Se a coluna anterior já iniciou uma disciplina, esta coluna é o par
+        # de faltas e não uma nova disciplina.
+        if itens and col <= itens[-1]["nota_col"] + 1:
+            continue
+
+        faltas_col = col + 1 if col + 1 < len(df.columns) else None
+        itens.append(
+            {
+                "nome": nome,
+                "nota_col": col,
+                "faltas_col": faltas_col,
+                "ordem": ordem,
+            }
+        )
+        usados.add(chave)
+        ordem += 1
+
+    return itens
+
+
 def _disciplinas(df, cabecalho_idx, nome_col):
     headers = [normalizar(v) for v in df.iloc[cabecalho_idx].tolist()]
     itens = []
@@ -130,11 +220,17 @@ def _disciplinas(df, cabecalho_idx, nome_col):
             continue
         col += 1
 
-    if not itens:
-        raise ImportacaoBoletimErro(
-            "Nenhuma disciplina com colunas de Nota/Falta foi identificada."
-        )
-    return itens
+    if itens:
+        return itens
+
+    itens = _disciplinas_por_rotulos(df, cabecalho_idx, nome_col)
+    if itens:
+        return itens
+
+    raise ImportacaoBoletimErro(
+        "Nenhuma disciplina foi identificada no arquivo. O importador procurou "
+        "tanto cabeçalhos Nota/Falta quanto o formato legado do Crystal Reports."
+    )
 
 
 def _metadados(df):
@@ -171,11 +267,13 @@ def _metadados(df):
             break
 
     regente = ""
+    regente_col = None
     for linha in range(min(len(df.index), 20)):
         valores = [texto(v) for v in df.iloc[linha].tolist()]
         for col, valor in enumerate(valores):
             if normalizar(valor) != "REGENTE":
                 continue
+            regente_col = col
 
             # No modelo usado pela escola, o marcador "REGENTE" fica acima
             # do nome do professor. Por isso procuramos primeiro logo abaixo
@@ -208,6 +306,43 @@ def _metadados(df):
             break
         if regente:
             break
+
+    # Alguns relatórios do Crystal Reports colocam o nome do regente
+    # no rodapé da mesma coluna, depois da lista de alunos.
+    if not regente and regente_col is not None:
+        try:
+            cabecalho_idx = _linha_cabecalho(df)
+            headers = [normalizar(v) for v in df.iloc[cabecalho_idx].tolist()]
+            nome_col = headers.index("NOME")
+            numero_col = next(
+                (i for i, valor in enumerate(headers[: nome_col + 1]) if valor in {"NUM", "NUMERO", "N"}),
+                None,
+            )
+        except (ImportacaoBoletimErro, ValueError):
+            cabecalho_idx = 0
+            nome_col = None
+            numero_col = None
+
+        if regente_col != nome_col:
+            for linha in range(cabecalho_idx + 1, len(df.index)):
+                if numero_col is not None and numero_col < len(df.columns):
+                    if _numero_inteiro(df.iat[linha, numero_col]) is not None:
+                        continue
+                candidato = texto(df.iat[linha, regente_col])
+                norm_candidato = normalizar(candidato)
+                if (
+                    candidato
+                    and len(candidato.split()) >= 2
+                    and _nome_disciplina_valido(candidato)
+                    and norm_candidato not in {"REGENTE"}
+                ):
+                    regente = re.sub(
+                        r"^PROF(?:ESSOR(?:A)?)?\.?\s*",
+                        "",
+                        candidato,
+                        flags=re.I,
+                    ).strip()
+                    break
 
     return {
         "tipo": tipo,

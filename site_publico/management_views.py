@@ -33,6 +33,7 @@ from .models import (
     ArquivoPaginaPublica,
     ConfiguracaoSite,
     FotoGaleria,
+    AlunoBoletim,
     BoletimAluno,
     DisciplinaBoletim,
     NotaBoletim,
@@ -349,6 +350,7 @@ def gestao_boletim_aluno(request, periodo_pk, boletim_pk=None):
     )
     boletim_obj = None
     aluno_fixo = None
+    perfil_fixo = None
     resultados_atuais = {}
 
     if boletim_pk is not None:
@@ -357,38 +359,75 @@ def gestao_boletim_aluno(request, periodo_pk, boletim_pk=None):
             pk=boletim_pk,
             periodo=periodo,
         )
+        perfil_fixo = boletim_obj.aluno
         aluno_fixo = boletim_obj.aluno.matricula
         resultados_atuais = {
             item.disciplina_id: item
             for item in boletim_obj.resultados.select_related("disciplina")
         }
 
+    initial = {
+        "numero_chamada": boletim_obj.numero_chamada if boletim_obj else None,
+    }
+    if boletim_obj is None:
+        matricula_id = request.GET.get("matricula")
+        if matricula_id and matricula_id.isdigit():
+            cadastro = matricula.objects.filter(pk=int(matricula_id)).first()
+            if cadastro:
+                initial.update({
+                    "aluno": cadastro.pk,
+                    "nome_aluno": cadastro.nomeDoAluno,
+                    "data_nascimento": cadastro.dataNascimentoAluno,
+                    "cpf_mae": cadastro.cpfMae or "",
+                    "cpf_responsavel": cadastro.cpfResponsavel or "",
+                })
+
     form = BoletimAlunoManualForm(
         request.POST or None,
         aluno_fixo=aluno_fixo,
-        initial={
-            "numero_chamada": boletim_obj.numero_chamada if boletim_obj else None,
-        },
+        perfil_fixo=perfil_fixo,
+        initial=initial,
     )
 
     if request.method == "POST" and form.is_valid():
         try:
             with transaction.atomic():
-                aluno_matricula = aluno_fixo or form.cleaned_data["aluno"]
-                if aluno_matricula is None:
-                    raise ValueError("O cadastro de matrícula deste aluno não está disponível.")
+                cadastro = aluno_fixo or form.cleaned_data.get("aluno")
 
-                perfil = sincronizar_perfil_matricula(aluno_matricula)
+                if boletim_obj is not None:
+                    perfil = boletim_obj.aluno
+                elif cadastro is not None:
+                    perfil = sincronizar_perfil_matricula(cadastro)
+                else:
+                    perfil = AlunoBoletim.objects.create(
+                        nome=form.cleaned_data["nome_aluno"],
+                        data_nascimento=form.cleaned_data.get("data_nascimento"),
+                        cpf_mae=form.cleaned_data.get("cpf_mae", "").strip(),
+                        cpf_responsavel=form.cleaned_data.get("cpf_responsavel", "").strip(),
+                    )
+
+                # O nome e os dados de acesso do boletim podem ser corrigidos
+                # sem alterar o cadastro mestre de Matrículas.
+                perfil.nome = form.cleaned_data["nome_aluno"]
+                perfil.data_nascimento = form.cleaned_data.get("data_nascimento")
+                perfil.cpf_mae = form.cleaned_data.get("cpf_mae", "").strip()
+                perfil.cpf_responsavel = form.cleaned_data.get("cpf_responsavel", "").strip()
+                if cadastro is not None and perfil.matricula_id is None:
+                    perfil.matricula = cadastro
+                perfil.save()
+
                 if boletim_obj is None:
-                    boletim_obj, _ = BoletimAluno.objects.get_or_create(
+                    boletim_obj, criado = BoletimAluno.objects.get_or_create(
                         periodo=periodo,
                         aluno=perfil,
                         defaults={"numero_chamada": form.cleaned_data["numero_chamada"]},
                     )
+                    if not criado:
+                        boletim_obj.numero_chamada = form.cleaned_data["numero_chamada"]
+                        boletim_obj.save(update_fields=["numero_chamada", "atualizado_em"])
                 else:
-                    boletim_obj.aluno = perfil
                     boletim_obj.numero_chamada = form.cleaned_data["numero_chamada"]
-                    boletim_obj.save(update_fields=["aluno", "numero_chamada", "atualizado_em"])
+                    boletim_obj.save(update_fields=["numero_chamada", "atualizado_em"])
 
                 for disciplina in periodo.disciplinas.all():
                     nota = _decimal_post(request.POST.get(f"nota_{disciplina.pk}"))
@@ -401,7 +440,10 @@ def gestao_boletim_aluno(request, periodo_pk, boletim_pk=None):
         except ValueError as exc:
             messages.error(request, str(exc))
         else:
-            messages.success(request, "Notas e faltas salvas.")
+            messages.success(
+                request,
+                "Nome do aluno, notas e faltas foram salvos.",
+            )
             return redirect("site_publico:gestao_boletim_periodo", pk=periodo.pk)
 
     linhas_notas = []
