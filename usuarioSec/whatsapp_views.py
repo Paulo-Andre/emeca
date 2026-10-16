@@ -410,6 +410,21 @@ def whatsapp_qr(request):
 
 
 def _enfileirar_boletins(request):
+    if not gateway_configurado():
+        messages.error(request, "A integração com o WhatsApp ainda não está configurada.")
+        return redirect("whatsapp")
+
+    try:
+        sessao = obter_sessao()
+        status = str(sessao.get("data", {}).get("status") or "").upper()
+    except WhatsAppGatewayError as exc:
+        messages.error(request, f"Não foi possível verificar o WhatsApp: {exc}")
+        return redirect("whatsapp")
+
+    if status != "CONNECTED":
+        messages.error(request, "Conecte o WhatsApp antes de colocar boletins na fila.")
+        return redirect("whatsapp")
+
     mensagem_pdf = (request.POST.get("mensagem_boletim") or "").strip()
     if len(mensagem_pdf) > 1200:
         messages.error(
