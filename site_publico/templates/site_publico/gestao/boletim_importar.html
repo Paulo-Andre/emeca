@@ -109,18 +109,18 @@
 
   <div class="bulletin-import-result__stats">
     <div><strong>{{ resultado_importacao.importados }}</strong><span>Importados</span></div>
-    <div><strong>{{ resultado_importacao.sem_cadastro|length }}</strong><span>Sem matrícula encontrada</span></div>
-    <div><strong>{{ resultado_importacao.ambiguos|length }}</strong><span>Nomes duplicados</span></div>
+    <div><strong>{{ resultado_importacao.sem_cadastro|length }}</strong><span>Importados sem vínculo</span></div>
+    <div><strong>{{ resultado_importacao.ambiguos|length }}</strong><span>Importados para revisão</span></div>
     <div><strong>{{ resultado_importacao.sem_acesso|length }}</strong><span>Sem CPF/data para acesso</span></div>
   </div>
 
   {% if resultado_importacao.sem_cadastro or resultado_importacao.ambiguos or resultado_importacao.sem_acesso %}
     <div class="bulletin-import-issues">
       {% if resultado_importacao.sem_cadastro %}
-        <article><h3>Sem matrícula correspondente</h3>{% for nome in resultado_importacao.sem_cadastro %}<span>{{ nome }}</span>{% endfor %}</article>
+        <article><h3>Importados sem vínculo com Matrículas</h3><p>As notas foram importadas normalmente. Se necessário, edite o aluno depois.</p>{% for nome in resultado_importacao.sem_cadastro %}<span>{{ nome }}</span>{% endfor %}</article>
       {% endif %}
       {% if resultado_importacao.ambiguos %}
-        <article><h3>Nome encontrado mais de uma vez</h3>{% for nome in resultado_importacao.ambiguos %}<span>{{ nome }}</span>{% endfor %}</article>
+        <article><h3>Nome duplicado em Matrículas</h3><p>O aluno foi importado sem vínculo automático para evitar associação incorreta.</p>{% for nome in resultado_importacao.ambiguos %}<span>{{ nome }}</span>{% endfor %}</article>
       {% endif %}
       {% if resultado_importacao.sem_acesso %}
         <article><h3>Precisam de CPF/data no cadastro</h3>{% for nome in resultado_importacao.sem_acesso %}<span>{{ nome }}</span>{% endfor %}</article>

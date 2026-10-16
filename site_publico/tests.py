@@ -880,6 +880,88 @@ class SitePublicoTests(TestCase):
             ["Língua Portuguesa", "Matemática"],
         )
 
+    def test_importacao_mantem_aluno_sem_correspondencia_em_matriculas(self):
+        dados = {
+            "metadados": {
+                "tipo": "TRIMESTRE",
+                "numero": 2,
+                "ano": 2026,
+                "turma": "1º Tulipa",
+                "regente": "Helena Freitas Oliveira",
+                "titulo_original": "",
+            },
+            "disciplinas": [
+                {"nome": "Língua Portuguesa", "ordem": 0, "nota_col": 2, "faltas_col": 3},
+                {"nome": "Matemática", "ordem": 1, "nota_col": 4, "faltas_col": 5},
+            ],
+            "alunos": [
+                {
+                    "numero_chamada": 7,
+                    "nome": "Aluno Somente da Planilha",
+                    "nome_normalizado": "ALUNO SOMENTE DA PLANILHA",
+                    "resultados": [
+                        {"disciplina": "Língua Portuguesa", "ordem": 0, "nota": Decimal("22.00"), "faltas": 1},
+                        {"disciplina": "Matemática", "ordem": 1, "nota": Decimal("28.50"), "faltas": 0},
+                    ],
+                }
+            ],
+        }
+
+        resultado = importar_dados_boletim(dados)
+
+        self.assertEqual(resultado["importados"], 1)
+        self.assertEqual(resultado["sem_cadastro"], ["Aluno Somente da Planilha"])
+
+        boletim = BoletimAluno.objects.select_related("aluno").get()
+        self.assertEqual(boletim.aluno.nome, "Aluno Somente da Planilha")
+        self.assertIsNone(boletim.aluno.matricula_id)
+        self.assertEqual(boletim.numero_chamada, 7)
+
+        notas = {
+            item.disciplina.nome: (item.nota, item.faltas)
+            for item in boletim.resultados.select_related("disciplina")
+        }
+        self.assertEqual(notas["Língua Portuguesa"], (Decimal("22.00"), 1))
+        self.assertEqual(notas["Matemática"], (Decimal("28.50"), 0))
+
+    def test_importacao_com_nome_duplicado_em_matriculas_importa_sem_vinculo(self):
+        self._matricula_para_boletim(nome="João da Silva")
+        self._matricula_para_boletim(
+            nome="João da Silva",
+            cpf_mae="111.222.333-44",
+        )
+        dados = {
+            "metadados": {
+                "tipo": "TRIMESTRE",
+                "numero": 2,
+                "ano": 2026,
+                "turma": "1º Tulipa",
+                "regente": "",
+                "titulo_original": "",
+            },
+            "disciplinas": [
+                {"nome": "Artes", "ordem": 0, "nota_col": 2, "faltas_col": 3},
+            ],
+            "alunos": [
+                {
+                    "numero_chamada": 8,
+                    "nome": "João da Silva",
+                    "nome_normalizado": "JOAO DA SILVA",
+                    "resultados": [
+                        {"disciplina": "Artes", "ordem": 0, "nota": Decimal("27.00"), "faltas": 0},
+                    ],
+                }
+            ],
+        }
+
+        resultado = importar_dados_boletim(dados)
+
+        self.assertEqual(resultado["importados"], 1)
+        self.assertEqual(resultado["ambiguos"], ["João da Silva"])
+        boletim = BoletimAluno.objects.select_related("aluno").get()
+        self.assertIsNone(boletim.aluno.matricula_id)
+        self.assertEqual(boletim.aluno.nome, "João da Silva")
+
     def test_gestao_de_boletins_exige_login(self):
         response = self.client.get(reverse("site_publico:gestao_boletins"))
         self.assertEqual(response.status_code, 302)
