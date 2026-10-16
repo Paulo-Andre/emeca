@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from .views import AccountCreateView
 from .import views 
+from . import whatsapp_views
 from django.shortcuts import redirect
 
 
@@ -29,6 +30,12 @@ urlpatterns = [
     path('cadastrar_aluno/', views.cadastrar_aluno, name='cadastrar_aluno'),
     path('apagar_todos_alunos/', views.apagar_todos_alunos, name='apagar_todos_alunos'),
     path('apagar_todos_alunos_matricula/', views.apagar_todos_alunos_matricula, name='apagar_todos_alunos_matricula'),
+    path('whatsapp/', whatsapp_views.whatsapp, name='whatsapp'),
+    path('whatsapp/contatos/', whatsapp_views.whatsapp_buscar_contatos, name='whatsapp_buscar_contatos'),
+    path('whatsapp/destinatarios/', whatsapp_views.whatsapp_destinatarios, name='whatsapp_destinatarios'),
+    path('whatsapp/conectar/', whatsapp_views.whatsapp_conectar, name='whatsapp_conectar'),
+    path('whatsapp/qr/', whatsapp_views.whatsapp_qr, name='whatsapp_qr'),
+    path('whatsapp/enviar/', whatsapp_views.whatsapp_enviar, name='whatsapp_enviar'),
 
     
     

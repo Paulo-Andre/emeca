@@ -127,3 +127,10 @@ CSRF_TRUSTED_ORIGINS = [x.strip() for x in os.getenv(
 DATA_UPLOAD_MAX_MEMORY_SIZE = 30 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
+
+# Integração WhatsApp (WA-AKG)
+WA_AKG_BASE_URL = os.getenv("WA_AKG_BASE_URL", "").strip().rstrip("/")
+WA_AKG_API_KEY = os.getenv("WA_AKG_API_KEY", "").strip()
+WA_AKG_SESSION_ID = os.getenv("WA_AKG_SESSION_ID", "emeca-secretaria").strip()
+WA_AKG_TIMEOUT_SECONDS = max(2, int(os.getenv("WA_AKG_TIMEOUT_SECONDS", "8")))
+WA_AKG_BROADCAST_DELAY_MS = max(500, min(60000, int(os.getenv("WA_AKG_BROADCAST_DELAY_MS", "10000"))))
