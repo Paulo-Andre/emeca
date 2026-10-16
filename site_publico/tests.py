@@ -1406,6 +1406,101 @@ class SitePublicoTests(TestCase):
         perfil.refresh_from_db()
         self.assertEqual(perfil.data_nascimento, date(2019, 8, 18))
 
+    @patch("site_publico.boletim_importacao.pd.read_excel")
+    def test_layout_real_alice_usa_falta_total_3_do_campo_geral(self, read_excel):
+        # Espelha as posições do XLS real enviado pela escola:
+        # Regente em G, total de faltas em H e disciplinas iniciando em I.
+        read_excel.return_value = pd.DataFrame([
+            [None] * 34,
+            [None, None, None, None, None, "E.M EGIDIO CORDEIRO AQUINO"] + [None] * 28,
+            [None] * 34,
+            [None, None, None, None, None, "Notas e Faltas do 2º Trimestre - Turma 1º Tulipa - 2026"] + [None] * 28,
+            [None] * 34,
+            [None, None, None, None, None, None, "Regente", None,
+             "LÍNG. PORT.", None, "EXP. LITERÁRIAS", None, "ARTES", None,
+             "EDUCAÇÃO FÍSICA", None, "LEM - INGLES", None, "MATEMÁTICA", None,
+             "CIÊN. NAT.", None, "GEOGRAFIA", None, "HISTORIA", None, "ENS. REL."] + [None] * 7,
+            ["Num.", None, "Nome"] + [None] * 31,
+            [None, None, None, None, None, None, "N.", "F.",
+             "N.", "F.", "N.", "F.", "N.", "F.", "N.", "F.", "N.", "F.",
+             "N.", "F.", "N.", "F.", "N.", "F.", "N.", "F.", "N.", "F."] + [None] * 6,
+            [None] * 34,
+            [1, None, "Alice Vitória Soares Veloso", None, None, None, None, "3",
+             "21,00", None, None, None, "30,00", "0", "29,00", "1",
+             "28,00", "0", "23,00", None, "25,00", None, "28,00", None,
+             "26,00", None, "30,00", "0"] + [None] * 6,
+        ])
+        arquivo = SimpleUploadedFile(
+            "NotaseFaltasdo2TrimestreTurma1Tulipa2026(1).xls",
+            b"xls-real-simulado",
+            content_type="application/vnd.ms-excel",
+        )
+
+        dados = ler_planilha_boletim(arquivo)
+
+        alice = dados["alunos"][0]
+        self.assertEqual(alice["nome"], "Alice Vitória Soares Veloso")
+        self.assertEqual(alice["faltas_totais"], 3)
+        self.assertEqual(alice["resultados"][0]["nota"], Decimal("21.00"))
+
+    def test_consulta_combina_cpf_e_nascimento_mesmo_com_registros_duplicados(self):
+        periodo = PeriodoBoletim.objects.create(
+            tipo="TRIMESTRE",
+            numero=2,
+            ano=2026,
+            turma="1º Tulipa",
+            publicado=True,
+        )
+        perfil = AlunoBoletim.objects.create(nome="Alice Vitória Soares Veloso")
+        BoletimAluno.objects.create(
+            periodo=periodo,
+            aluno=perfil,
+            numero_chamada=1,
+            faltas_totais=3,
+        )
+
+        # Duplicata legada 1: contém o CPF da mãe, mas sem data.
+        matricula.objects.create(
+            nomeDoAluno="Alice Vitória Soares Veloso",
+            cpfMae="138.090.846-97",
+            dataNascimentoAluno=None,
+            temIrmaosEscola="NAO",
+            problemaSaude="NAO",
+            tratamentoSaude="NAO",
+            necessidadeEspecial="NAO",
+            medicamento="NAO",
+            internado="NAO",
+            atendimentoEspecializado="NAO",
+            salaRecurso="NAO",
+            gestacao="NAO",
+            cras="NAO",
+            visitaSocial="NAO",
+            conselhoTutelar="NAO",
+            atendimentoDomiciliar="NAO",
+            trasporteEscolar="NAO",
+        )
+
+        # Duplicata legada 2 / Declarações: contém a data correta.
+        declaracao.objects.create(
+            nomeDoAluno="Alice Vitória Soares Veloso",
+            dataNascimentoAluno=date(2019, 8, 18),
+        )
+
+        response = self.client.post(
+            reverse("site_publico:boletim"),
+            {
+                "cpf": "138.090.846-97",
+                "data_nascimento": "2019-08-18",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/boletim/acesso/", response.url)
+
+        perfil.refresh_from_db()
+        self.assertEqual(perfil.data_nascimento, date(2019, 8, 18))
+        self.assertEqual(perfil.cpf_mae, "138.090.846-97")
+
     def test_menu_boletins_tem_apenas_importar_e_editar_dados(self):
         User = get_user_model()
         usuario = User.objects.create_user(
