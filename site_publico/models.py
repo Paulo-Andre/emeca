@@ -570,6 +570,7 @@ class BoletimAluno(models.Model):
         related_name="boletins",
     )
     numero_chamada = models.PositiveSmallIntegerField(blank=True, null=True)
+    faltas_totais = models.PositiveSmallIntegerField(blank=True, null=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 
     class Meta:
