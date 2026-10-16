@@ -1,4 +1,5 @@
 import time
+from datetime import timedelta
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
@@ -35,21 +36,53 @@ def _legenda(envio, item, escola):
     return modelo
 
 
+def recuperar_lotes_obsoletos():
+    limite = timezone.now() - timedelta(hours=6)
+    obsoletos = EnvioBoletimWhatsApp.objects.filter(
+        status="PROCESSANDO",
+        iniciado_em__lt=limite,
+    )
+    for envio in obsoletos:
+        envio.itens.filter(status="PROCESSANDO").update(
+            status="ERRO",
+            erro="Processamento interrompido há mais de 6 horas.",
+        )
+        EnvioBoletimWhatsApp.objects.filter(
+            pk=envio.pk,
+            status="PROCESSANDO",
+        ).update(status="PENDENTE")
+
+
+def claim_proximo_lote():
+    candidato_id = (
+        EnvioBoletimWhatsApp.objects
+        .filter(status="PENDENTE")
+        .order_by("criado_em")
+        .values_list("pk", flat=True)
+        .first()
+    )
+    if candidato_id is None:
+        return None
+
+    assumido = EnvioBoletimWhatsApp.objects.filter(
+        pk=candidato_id,
+        status="PENDENTE",
+    ).update(
+        status="PROCESSANDO",
+        iniciado_em=timezone.now(),
+    )
+    if assumido != 1:
+        return None
+    return EnvioBoletimWhatsApp.objects.get(pk=candidato_id)
+
+
 class Command(BaseCommand):
     help = "Processa a fila de boletins personalizados enviados pelo WhatsApp."
 
     def handle(self, *args, **options):
-        # Aguarda o container web concluir as migrações quando os dois serviços
-        # sobem juntos pela primeira vez.
         while True:
             try:
-                ItemEnvioBoletimWhatsApp.objects.filter(status="PROCESSANDO").update(
-                    status="ERRO",
-                    erro="Envio interrompido durante o processamento. Reenvie este boletim se necessário.",
-                )
-                EnvioBoletimWhatsApp.objects.filter(status="PROCESSANDO").update(
-                    status="PENDENTE"
-                )
+                recuperar_lotes_obsoletos()
                 break
             except (OperationalError, ProgrammingError):
                 time.sleep(3)
@@ -58,12 +91,7 @@ class Command(BaseCommand):
 
         while True:
             try:
-                envio = (
-                    EnvioBoletimWhatsApp.objects
-                    .filter(status="PENDENTE")
-                    .order_by("criado_em")
-                    .first()
-                )
+                envio = claim_proximo_lote()
             except (OperationalError, ProgrammingError):
                 time.sleep(3)
                 continue
@@ -71,10 +99,6 @@ class Command(BaseCommand):
             if not envio:
                 time.sleep(3)
                 continue
-
-            envio.status = "PROCESSANDO"
-            envio.iniciado_em = timezone.now()
-            envio.save(update_fields=["status", "iniciado_em"])
 
             config = ConfiguracaoSite.objects.first()
             escola = (
