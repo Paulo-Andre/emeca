@@ -8,6 +8,7 @@ from django.views.decorators.http import require_POST
 from .forms import (
     CONTENT_FORMS,
     ConfiguracaoSiteForm,
+    HomePageForm,
     PaginaPublicaForm,
     SecaoPaginaForm,
     get_content_form,
@@ -41,6 +42,34 @@ def gestao_site(request):
 
 
 @login_required
+def gestao_inicio(request):
+    config, _ = ConfiguracaoSite.objects.get_or_create(pk=1)
+    form = HomePageForm(request.POST or None, instance=config)
+
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Página inicial atualizada.")
+        return redirect("site_publico:gestao_inicio")
+
+    secoes = list(SecaoPagina.objects.filter(pagina="home"))
+    tipos_home = []
+    for chave in ("carrossel", "avisos", "noticias", "atividades", "projetos", "eventos", "albuns"):
+        item = CONTENT_FORMS[chave]
+        tipos_home.append({
+            "chave": chave,
+            "label": item["label"],
+            "icon": item["icon"],
+            "total": item["model"].objects.count(),
+        })
+
+    return render(request, "site_publico/gestao/inicio.html", {
+        "form": form,
+        "secoes": secoes,
+        "conteudos_home": tipos_home,
+    })
+
+
+@login_required
 def gestao_secoes(request):
     grupos = []
     for chave_pagina, nome_pagina in SecaoPagina.PAGINAS:
@@ -70,7 +99,7 @@ def gestao_secao_editar(request, chave):
         "descricao": "Edite o conteúdo visual deste bloco. Menus e textos de botões permanecem protegidos.",
         "objeto": secao,
         "imagem_atual": secao.imagem,
-        "voltar": "site_publico:gestao_secoes",
+        "voltar": "site_publico:gestao_inicio" if secao.pagina == "home" else "site_publico:gestao_secoes",
     })
 
 
