@@ -36,6 +36,10 @@ class StyledModelForm(forms.ModelForm):
                 widget.input_type = "datetime-local"
                 widget.format = "%Y-%m-%dT%H:%M"
                 field.input_formats = ["%Y-%m-%dT%H:%M"]
+            elif isinstance(widget, forms.DateInput):
+                widget.input_type = "date"
+                widget.format = "%Y-%m-%d"
+                field.input_formats = ["%Y-%m-%d"]
 
 
 class ConfiguracaoSiteForm(StyledModelForm):
@@ -151,7 +155,14 @@ class FotoGaleriaLoteForm(forms.Form):
     data_evento = forms.DateField(
         required=False,
         label="Data do evento",
-        widget=forms.DateInput(attrs={"type": "date"}),
+        input_formats=["%Y-%m-%d"],
+        widget=forms.DateInput(
+            format="%Y-%m-%d",
+            attrs={
+                "type": "date",
+                "placeholder": "dd/mm/aaaa",
+            },
+        ),
     )
     fotos = MultipleImageField(
         required=True,
