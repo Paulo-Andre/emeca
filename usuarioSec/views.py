@@ -464,6 +464,7 @@ def cadastrar_aluno(request):
                 cpfDoAluno=request.POST.get("cpfDoAluno", "").strip(),
                 nomePai=request.POST.get("nomePai", "").strip(),
                 nomeMae=request.POST.get("nomeMae", "").strip(),
+                nomeResponsavel=request.POST.get("nomeResponsavel", "").strip(),
             )
             aluno.full_clean()
             aluno.save()
