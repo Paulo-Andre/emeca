@@ -2,13 +2,26 @@ import mimetypes
 from pathlib import Path
 
 from django.conf import settings
+from django.core import signing
 from django.contrib import messages
 from django.db.models import Q
 from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.text import slugify
+from django.views.decorators.cache import never_cache
 
 from .services import pagina_publica_required, paginas_ativas_dict
+from .boletim_services import (
+    aplicar_headers_privacidade,
+    consulta_bloqueada,
+    criar_token_acesso,
+    gerar_pdf_boletim,
+    ler_token_acesso,
+    localizar_alunos_por_credenciais,
+    registrar_tentativa,
+)
+from .forms import BoletimConsultaForm
 
 from .models import (
     AlbumGaleria,
@@ -20,6 +33,8 @@ from .models import (
     Evento,
     MensagemContato,
     Noticia,
+    AlunoBoletim,
+    BoletimAluno,
     PerguntaFrequente,
     Projeto,
 )
@@ -254,8 +269,122 @@ def matricula_landing(request):
 
 
 @pagina_publica_required("boletim")
+@never_cache
 def boletim(request):
-    return render(request, "site_publico/boletim.html", _base_context())
+    contexto = _base_context()
+    form = BoletimConsultaForm(request.POST or None)
+    bloqueada = consulta_bloqueada(request)
+
+    if request.method == "POST":
+        if bloqueada:
+            messages.error(
+                request,
+                "Muitas tentativas foram realizadas. Aguarde alguns minutos antes de tentar novamente.",
+            )
+        elif form.is_valid():
+            encontrados = localizar_alunos_por_credenciais(
+                form.cleaned_data["cpf"],
+                form.cleaned_data["data_nascimento"],
+            )
+            if encontrados:
+                registrar_tentativa(request, sucesso=True)
+                token = criar_token_acesso(encontrados)
+                return redirect("site_publico:boletim_acesso", token=token)
+
+            registrar_tentativa(request)
+            messages.error(
+                request,
+                "Não foi possível localizar um boletim com os dados informados. Confira o CPF e a data de nascimento.",
+            )
+        else:
+            registrar_tentativa(request)
+
+    contexto.update({
+        "form": form,
+        "consulta_bloqueada": bloqueada,
+    })
+    response = render(request, "site_publico/boletim.html", contexto)
+    return aplicar_headers_privacidade(response)
+
+
+@pagina_publica_required("boletim")
+@never_cache
+def boletim_acesso(request, token):
+    try:
+        ids = ler_token_acesso(token)
+    except (signing.BadSignature, signing.SignatureExpired, ValueError):
+        messages.error(request, "O acesso ao boletim expirou. Informe os dados novamente.")
+        return redirect("site_publico:boletim")
+
+    alunos = list(
+        AlunoBoletim.objects
+        .filter(pk__in=ids, boletins__periodo__publicado=True)
+        .distinct()
+        .order_by("nome")
+    )
+    if not alunos:
+        messages.error(request, "Nenhum boletim publicado está disponível para este acesso.")
+        return redirect("site_publico:boletim")
+
+    boletins = list(
+        BoletimAluno.objects
+        .filter(aluno_id__in=ids, periodo__publicado=True)
+        .select_related("aluno", "periodo")
+        .prefetch_related("resultados__disciplina")
+        .order_by("-periodo__ano", "-periodo__numero", "aluno__nome")
+    )
+    boletins_por_aluno = {aluno.pk: [] for aluno in alunos}
+    for item in boletins:
+        boletins_por_aluno.setdefault(item.aluno_id, []).append(item)
+
+    solicitado = request.GET.get("boletim")
+    selecionado = None
+    if solicitado and solicitado.isdigit():
+        selecionado = next(
+            (item for item in boletins if item.pk == int(solicitado)),
+            None,
+        )
+    if selecionado is None and boletins:
+        selecionado = boletins[0]
+
+    contexto = _base_context()
+    contexto.update({
+        "token_boletim": token,
+        "alunos_boletim": alunos,
+        "boletins_por_aluno": boletins_por_aluno,
+        "boletins_disponiveis": boletins,
+        "boletim_selecionado": selecionado,
+    })
+    response = render(request, "site_publico/boletim_resultado.html", contexto)
+    return aplicar_headers_privacidade(response)
+
+
+@pagina_publica_required("boletim")
+@never_cache
+def boletim_pdf(request, token, pk):
+    try:
+        ids = ler_token_acesso(token)
+    except (signing.BadSignature, signing.SignatureExpired, ValueError):
+        raise Http404
+
+    boletim_obj = get_object_or_404(
+        BoletimAluno.objects
+        .select_related("aluno", "periodo")
+        .prefetch_related("resultados__disciplina"),
+        pk=pk,
+        aluno_id__in=ids,
+        periodo__publicado=True,
+    )
+    arquivo = gerar_pdf_boletim(boletim_obj, _config())
+    nome = slugify(boletim_obj.aluno.nome) or "aluno"
+    periodo = slugify(boletim_obj.periodo.nome_periodo) or "periodo"
+    response = FileResponse(
+        arquivo,
+        as_attachment=True,
+        filename=f"boletim-{nome}-{periodo}-{boletim_obj.periodo.ano}.pdf",
+        content_type="application/pdf",
+    )
+    return aplicar_headers_privacidade(response)
 
 
 @pagina_publica_required("documentos")
