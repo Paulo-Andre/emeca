@@ -233,6 +233,32 @@ def _disciplinas(df, cabecalho_idx, nome_col):
     )
 
 
+def _coluna_faltas_totais(df, cabecalho_idx, nome_col, componentes):
+    """Localiza a coluna de faltas totais do relatório Crystal.
+
+    No arquivo usado pela escola existe um par N./F. geral antes da primeira
+    disciplina. O valor da coluna F. é o total correto de faltas do período.
+    """
+    if not componentes:
+        return None
+
+    primeira_disciplina = min(item["nota_col"] for item in componentes)
+    inicio_col = nome_col + 1
+    if primeira_disciplina <= inicio_col:
+        return None
+
+    marcadores_falta = {"F", "FALTA", "FALTAS"}
+    candidatos = []
+
+    # O Crystal pode colocar N./F. na própria linha de Num./Nome ou logo abaixo.
+    for linha in range(cabecalho_idx, min(cabecalho_idx + 3, len(df.index))):
+        for col in range(inicio_col, primeira_disciplina):
+            if normalizar(df.iat[linha, col]) in marcadores_falta:
+                candidatos.append(col)
+
+    return candidatos[-1] if candidatos else None
+
+
 def _metadados(df):
     blocos = []
     for linha in range(min(len(df.index), 15)):
@@ -384,6 +410,12 @@ def ler_planilha_boletim(arquivo):
         None,
     )
     componentes = _disciplinas(df, cabecalho_idx, nome_col)
+    faltas_totais_col = _coluna_faltas_totais(
+        df,
+        cabecalho_idx,
+        nome_col,
+        componentes,
+    )
 
     alunos = []
     vazias_seguidas = 0
@@ -431,11 +463,18 @@ def ler_planilha_boletim(arquivo):
                 }
             )
 
+        faltas_totais = (
+            _numero_inteiro(row.iloc[faltas_totais_col])
+            if faltas_totais_col is not None and faltas_totais_col < len(row)
+            else None
+        )
+
         alunos.append(
             {
                 "numero_chamada": numero_chamada,
                 "nome": nome_aluno,
                 "nome_normalizado": normalizar_nome(nome_aluno),
+                "faltas_totais": faltas_totais,
                 "resultados": resultados,
             }
         )
