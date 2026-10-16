@@ -94,6 +94,10 @@ class PaginaPublica(models.Model):
     def capa_e_pdf(self):
         return bool(self.imagem_capa and self.imagem_capa.name.lower().endswith(".pdf"))
 
+    @property
+    def arquivos_ativos(self):
+        return self.arquivos.filter(ativo=True)
+
     class Meta:
         ordering = ["ordem", "nome"]
         verbose_name = "Página pública"
@@ -101,6 +105,34 @@ class PaginaPublica(models.Model):
 
     def __str__(self):
         return self.nome
+
+
+class ArquivoPaginaPublica(models.Model):
+    pagina = models.ForeignKey(
+        PaginaPublica,
+        on_delete=models.CASCADE,
+        related_name="arquivos",
+    )
+    titulo = models.CharField(max_length=180, blank=True)
+    arquivo = models.FileField(
+        upload_to="site_publico/paginas/documentos/",
+        validators=[DOCUMENTO_VALIDATOR],
+    )
+    ativo = models.BooleanField(default=True)
+    ordem = models.PositiveSmallIntegerField(default=0)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["ordem", "id"]
+        verbose_name = "Documento da página"
+        verbose_name_plural = "Documentos da página"
+
+    @property
+    def nome_exibicao(self):
+        return self.titulo or self.arquivo.name.rsplit("/", 1)[-1]
+
+    def __str__(self):
+        return self.nome_exibicao
 
 
 class SecaoPagina(models.Model):
