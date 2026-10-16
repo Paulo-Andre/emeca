@@ -352,6 +352,7 @@ def gestao_conteudo_editar(request, tipo, pk):
         "objeto": obj,
         "imagem_atual": imagem,
         "album_fotos": album_fotos,
+        "mostrar_seletor_capa_album": tipo == "albuns",
         "voltar_url": "site_publico:gestao_conteudo_lista",
         "voltar_tipo": tipo,
     })
