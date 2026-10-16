@@ -1,11 +1,17 @@
+from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from site_publico.models import AlunoBoletim, BoletimAluno, PeriodoBoletim
 
+from .management.commands.processar_envios_whatsapp import (
+    claim_proximo_lote,
+    recuperar_lotes_obsoletos,
+)
 from .models import (
     EnvioBoletimWhatsApp,
     ItemEnvioBoletimWhatsApp,
@@ -235,3 +241,45 @@ class WhatsAppBoletimTests(TestCase):
         item = ItemEnvioBoletimWhatsApp.objects.get(envio=envio)
         self.assertEqual(item.boletim_id, self.boletim_a.pk)
         self.assertEqual(item.jid, "5538999991111@s.whatsapp.net")
+
+
+class WhatsAppWorkerConcorrenciaTests(TestCase):
+    def _envio(self, status="PENDENTE", iniciado_em=None):
+        envio = EnvioBoletimWhatsApp.objects.create(
+            tipo_periodo="TRIMESTRE",
+            numero_periodo=1,
+            ano=2026,
+            modo="todos",
+            status=status,
+        )
+        if iniciado_em is not None:
+            EnvioBoletimWhatsApp.objects.filter(pk=envio.pk).update(
+                iniciado_em=iniciado_em
+            )
+            envio.refresh_from_db()
+        return envio
+
+    def test_claim_condicional_nao_entrega_mesmo_lote_duas_vezes(self):
+        primeiro = self._envio()
+        segundo = self._envio()
+
+        claim_a = claim_proximo_lote()
+        claim_b = claim_proximo_lote()
+
+        self.assertEqual(claim_a.pk, primeiro.pk)
+        self.assertEqual(claim_b.pk, segundo.pk)
+        primeiro.refresh_from_db()
+        segundo.refresh_from_db()
+        self.assertEqual(primeiro.status, "PROCESSANDO")
+        self.assertEqual(segundo.status, "PROCESSANDO")
+
+    def test_recuperacao_nao_toca_lote_processando_recentemente(self):
+        recente = self._envio(
+            status="PROCESSANDO",
+            iniciado_em=timezone.now() - timedelta(minutes=5),
+        )
+
+        recuperar_lotes_obsoletos()
+
+        recente.refresh_from_db()
+        self.assertEqual(recente.status, "PROCESSANDO")

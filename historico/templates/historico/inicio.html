@@ -28,7 +28,8 @@
     </div>
   </div>
 
-  <form method="get" role="search" class="historico-search-form">
+  <form method="post" role="search" class="historico-search-form">
+    {% csrf_token %}
     <div class="historico-search-input-wrap">
       <i data-lucide="search"></i>
       <input

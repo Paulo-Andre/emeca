@@ -1,5 +1,6 @@
 from django import forms
 from django.forms import modelform_factory
+from urllib.parse import urlparse
 
 from cadastro.models import matricula
 
@@ -23,6 +24,19 @@ from .models import (
 
 
 class StyledModelForm(forms.ModelForm):
+    def clean_link(self):
+        link = (self.cleaned_data.get("link") or "").strip()
+        if not link:
+            return ""
+        if link.startswith("/") and not link.startswith("//"):
+            return link
+        scheme = urlparse(link).scheme.lower()
+        if scheme not in {"http", "https"}:
+            raise forms.ValidationError(
+                "Use um endereço interno iniciado por / ou uma URL http/https."
+            )
+        return link
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():

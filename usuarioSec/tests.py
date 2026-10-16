@@ -295,7 +295,7 @@ class ImportacaoDeclaracoesTests(TestCase):
             telefone="(38) 99999-2222",
         )
 
-        response = self.client.get(reverse("apagar_todos_alunos"))
+        response = self.client.post(reverse("apagar_todos_alunos"))
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse("telaDeclaracao"))
@@ -303,7 +303,7 @@ class ImportacaoDeclaracoesTests(TestCase):
         self.assertEqual(TelefoneDeclaracao.objects.count(), 0)
 
     def test_apagar_declaracoes_com_banco_vazio_nao_gera_erro(self):
-        response = self.client.get(reverse("apagar_todos_alunos"), follow=True)
+        response = self.client.post(reverse("apagar_todos_alunos"), follow=True)
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(declaracao.objects.count(), 0)

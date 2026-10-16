@@ -353,97 +353,134 @@ def localizar_alunos_por_credenciais(
     data_nascimento,
     somente_publicados=True,
 ):
-    """Localiza boletins com CPF do responsável + nascimento da criança.
+    """Localiza boletins por dois fatores sem misturar estudantes homônimos.
 
-    Cadastros antigos podem ter informações divididas entre Matrículas,
-    Declarações e o próprio perfil de Boletim. Para o mesmo nome completo,
-    o sistema combina essas fontes e também tolera registros duplicados,
-    desde que o CPF informado e a data informada sejam encontrados entre
-    os registros daquele mesmo estudante.
+    Dados legados podem estar divididos entre Matrículas, Declarações e o
+    perfil de Boletim. A combinação por nome só é permitida quando o nome é
+    inequívoco. Se houver homônimos/duplicidades, apenas fontes diretamente
+    vinculadas ao perfil (ou fontes com CPF de ancoragem em comum) entram na
+    correlação.
     """
     cpf_normalizado = somente_digitos(cpf)
     if len(cpf_normalizado) != 11:
         return []
 
-    candidatos = AlunoBoletim.objects.select_related("matricula").distinct()
+    candidatos_qs = AlunoBoletim.objects.select_related("matricula").distinct()
     if somente_publicados:
-        candidatos = candidatos.filter(boletins__periodo__publicado=True)
+        candidatos_qs = candidatos_qs.filter(boletins__periodo__publicado=True)
     else:
-        candidatos = candidatos.filter(boletins__isnull=False)
+        candidatos_qs = candidatos_qs.filter(boletins__isnull=False)
+    candidatos = list(candidatos_qs)
 
     mapa_matriculas = _mapa_matriculas_por_nome()
     mapa_declaracoes = _mapa_declaracoes_por_nome()
 
+    candidatos_por_nome = defaultdict(list)
+    for candidato in candidatos:
+        candidatos_por_nome[normalizar_nome(candidato.nome)].append(candidato)
+
     encontrados = []
     vistos = set()
+
+    def fonte(data, cpf_mae="", cpf_responsavel="", origem=None):
+        return {
+            "data": data,
+            "cpf_mae": somente_digitos(cpf_mae),
+            "cpf_responsavel": somente_digitos(cpf_responsavel),
+            "origem": origem,
+        }
 
     for aluno in candidatos:
         if aluno.pk in vistos:
             continue
 
         chave_nome = normalizar_nome(aluno.nome)
-        registros = []
-
-        # O próprio perfil do boletim entra como uma fonte.
-        registros.append({
-            "data": aluno.data_nascimento,
-            "cpf_mae": somente_digitos(aluno.cpf_mae),
-            "cpf_responsavel": somente_digitos(aluno.cpf_responsavel),
-            "origem": "boletim",
-        })
+        registros = [
+            fonte(
+                aluno.data_nascimento,
+                aluno.cpf_mae,
+                aluno.cpf_responsavel,
+                "boletim",
+            )
+        ]
 
         if aluno.matricula_id:
-            registros.append({
-                "data": aluno.matricula.dataNascimentoAluno,
-                "cpf_mae": somente_digitos(aluno.matricula.cpfMae),
-                "cpf_responsavel": somente_digitos(aluno.matricula.cpfResponsavel),
-                "origem": aluno.matricula,
-            })
+            registros.append(
+                fonte(
+                    aluno.matricula.dataNascimentoAluno,
+                    aluno.matricula.cpfMae,
+                    aluno.matricula.cpfResponsavel,
+                    aluno.matricula,
+                )
+            )
 
-        # Não exige mais correspondência única por nome. Duplicatas do mesmo
-        # aluno são comuns nos bancos legados; as credenciais informadas é que
-        # determinam qual registro é válido.
-        for registro in mapa_matriculas.get(chave_nome, []):
-            registros.append({
-                "data": registro.dataNascimentoAluno,
-                "cpf_mae": somente_digitos(registro.cpfMae),
-                "cpf_responsavel": somente_digitos(registro.cpfResponsavel),
-                "origem": registro,
-            })
+        cpfs_ancora = {
+            cpf_item
+            for item in registros
+            for cpf_item in (item["cpf_mae"], item["cpf_responsavel"])
+            if cpf_item
+        }
 
-        for registro in mapa_declaracoes.get(chave_nome, []):
-            registros.append({
-                "data": registro.dataNascimentoAluno,
-                "cpf_mae": somente_digitos(registro.cpfMae),
-                "cpf_responsavel": somente_digitos(registro.cpfResponsavel),
-                "origem": registro,
-            })
+        matriculas_nome = mapa_matriculas.get(chave_nome, [])
+        declaracoes_nome = mapa_declaracoes.get(chave_nome, [])
+        nome_ambiguo = (
+            len(candidatos_por_nome.get(chave_nome, [])) > 1
+            or len(matriculas_nome) > 1
+            or len(declaracoes_nome) > 1
+        )
+
+        fontes_externas = []
+        for registro in matriculas_nome:
+            if aluno.matricula_id and registro.pk == aluno.matricula_id:
+                continue
+            fontes_externas.append(
+                fonte(
+                    registro.dataNascimentoAluno,
+                    registro.cpfMae,
+                    registro.cpfResponsavel,
+                    registro,
+                )
+            )
+        for registro in declaracoes_nome:
+            fontes_externas.append(
+                fonte(
+                    registro.dataNascimentoAluno,
+                    registro.cpfMae,
+                    registro.cpfResponsavel,
+                    registro,
+                )
+            )
+
+        if nome_ambiguo:
+            # Para homônimos, o nome nunca é uma chave de identidade suficiente.
+            # Uma fonte externa só pode ser agregada se compartilhar CPF com uma
+            # fonte já diretamente vinculada ao perfil.
+            for item in fontes_externas:
+                cpfs_item = {item["cpf_mae"], item["cpf_responsavel"]} - {""}
+                if cpfs_ancora and cpfs_ancora.intersection(cpfs_item):
+                    registros.append(item)
+        else:
+            registros.extend(fontes_externas)
 
         cpf_matches = [
-            item for item in registros
+            item
+            for item in registros
             if cpf_normalizado in {item["cpf_mae"], item["cpf_responsavel"]}
         ]
         data_matches = [
-            item for item in registros
-            if item["data"] == data_nascimento
+            item for item in registros if item["data"] == data_nascimento
         ]
 
-        # Primeiro tenta a forma mais forte: CPF e nascimento no mesmo registro.
         mesmo_registro = any(
             item["data"] == data_nascimento
             and cpf_normalizado in {item["cpf_mae"], item["cpf_responsavel"]}
             for item in registros
         )
 
-        # Em dados legados, CPF e nascimento podem estar divididos entre
-        # fontes diferentes. Como todas as fontes acima pertencem ao mesmo
-        # nome completo normalizado, a combinação continua identificando o
-        # mesmo estudante sem abrir acesso por apenas um dos fatores.
         if not mesmo_registro and not (cpf_matches and data_matches):
             continue
 
         alterados = []
-
         if aluno.data_nascimento != data_nascimento:
             aluno.data_nascimento = data_nascimento
             alterados.append("data_nascimento")
@@ -454,8 +491,7 @@ def localizar_alunos_por_credenciais(
         }
         if cpf_normalizado not in cpfs_perfil:
             origem_mae = any(
-                item["cpf_mae"] == cpf_normalizado
-                for item in cpf_matches
+                item["cpf_mae"] == cpf_normalizado for item in cpf_matches
             )
             if origem_mae:
                 aluno.cpf_mae = formatar_cpf(cpf)
@@ -472,16 +508,32 @@ def localizar_alunos_por_credenciais(
 
     return encontrados
 
+def conceder_acesso_boletim(request, alunos):
+    """Guarda a autorização no servidor sem colocar credenciais na URL/log."""
+    ids = sorted({int(aluno.pk) for aluno in alunos})
+    request.session.cycle_key()
+    request.session["boletim_acesso_ids"] = ids
+    request.session["boletim_acesso_expira"] = int(time.time()) + TOKEN_MAX_AGE
+    request.session.modified = True
+    return ids
 
-def criar_token_acesso(alunos):
-    ids = sorted({aluno.pk for aluno in alunos})
-    return signing.dumps({"alunos": ids}, salt=TOKEN_SALT, compress=True)
 
+def ler_acesso_boletim(request):
+    expira = int(request.session.get("boletim_acesso_expira") or 0)
+    if not expira or int(time.time()) > expira:
+        request.session.pop("boletim_acesso_ids", None)
+        request.session.pop("boletim_acesso_expira", None)
+        request.session.modified = True
+        return []
 
-def ler_token_acesso(token):
-    dados = signing.loads(token, salt=TOKEN_SALT, max_age=TOKEN_MAX_AGE)
-    ids = dados.get("alunos") or []
-    return [int(pk) for pk in ids]
+    ids = request.session.get("boletim_acesso_ids") or []
+    try:
+        return [int(pk) for pk in ids]
+    except (TypeError, ValueError):
+        request.session.pop("boletim_acesso_ids", None)
+        request.session.pop("boletim_acesso_expira", None)
+        request.session.modified = True
+        return []
 
 
 def aplicar_headers_privacidade(response):

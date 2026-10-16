@@ -24,6 +24,7 @@ from django.db import transaction
 from django.http import HttpResponseForbidden
 from functools import wraps
 from django.utils.decorators import method_decorator
+from django.views.decorators.http import require_POST
 
 User = get_user_model()
 
@@ -350,24 +351,33 @@ def buscar_dados_declaracao(request):
     
     # fallback normal
     return render(request, "declaracoes/telaDeclaracao.html", contexto)
+@require_POST
 def salvar_declaracao(request, id):
-    if request.method == "POST":
-        data = json.loads(request.body)
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"status": "erro", "mensagem": "JSON inválido."}, status=400)
 
-        aluno = declaracao.objects.get(id=id)
+    aluno = get_object_or_404(declaracao, id=id)
 
-        aluno.nomeDoAluno = data.get("nome")
-        aluno.dataNascimentoAluno = data.get("nasc")
-        aluno.natularidadeAluno = data.get("naturalidade")
-        aluno.turmaDoAluno = data.get("serie")
-        aluno.nomeMae = data.get("mae")
-        aluno.nomePai = data.get("pai")
+    aluno.nomeDoAluno = (data.get("nome") or "").strip()
+    aluno.dataNascimentoAluno = data.get("nasc") or None
+    aluno.natularidadeAluno = (data.get("naturalidade") or "").strip()
+    aluno.turmaDoAluno = (data.get("serie") or "").strip()
+    aluno.nomeMae = (data.get("mae") or "").strip()
+    aluno.nomePai = (data.get("pai") or "").strip()
+    aluno.full_clean()
+    aluno.save()
 
-        aluno.save()
+    return JsonResponse({"status": "ok"})
 
-        return JsonResponse({"status": "ok"})
+
+@require_POST
 def imprimirDeclaracao(request, id):
-    data = json.loads(request.body)
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"status": "erro", "mensagem": "JSON inválido."}, status=400)
     tipo = data.get("tipo")
     nasc_str = data.get("nasc")
 
@@ -424,6 +434,8 @@ def imprimirDeclaracao(request, id):
     }
 
     template = mapa_templates.get(tipo)
+    if not template:
+        return JsonResponse({"status": "erro", "mensagem": "Tipo de declaração inválido."}, status=400)
 
     return render(request, template, contexto)
 def deletar_aluno_declaracao(request, id):
@@ -497,7 +509,8 @@ def cadastrar_aluno(request):
 
     messages.success(request, mensagem)
     return redirect("telaDeclaracao")
-@usuario_administrador   
+@require_POST
+@usuario_administrador
 def apagar_todos_alunos(request):
     if not request.user.is_superuser:
         messages.error(request, "Somente um superusuário pode apagar todos os dados de declarações.")
@@ -525,6 +538,7 @@ def apagar_todos_alunos(request):
     return redirect("telaDeclaracao")
 
 
+@require_POST
 @usuario_administrador
 def apagar_todos_alunos_matricula(request):
     if not request.user.is_superuser:

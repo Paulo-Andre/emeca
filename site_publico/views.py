@@ -2,7 +2,6 @@ import mimetypes
 from pathlib import Path
 
 from django.conf import settings
-from django.core import signing
 from django.contrib import messages
 from django.db.models import Q
 from django.http import FileResponse, Http404, JsonResponse
@@ -15,9 +14,9 @@ from .services import pagina_publica_required, paginas_ativas_dict
 from .boletim_services import (
     aplicar_headers_privacidade,
     consulta_bloqueada,
-    criar_token_acesso,
+    conceder_acesso_boletim,
     gerar_pdf_boletim,
-    ler_token_acesso,
+    ler_acesso_boletim,
     localizar_alunos_por_credenciais,
     registrar_tentativa,
 )
@@ -288,8 +287,8 @@ def boletim(request):
             )
             if encontrados:
                 registrar_tentativa(request, sucesso=True)
-                token = criar_token_acesso(encontrados)
-                return redirect("site_publico:boletim_acesso", token=token)
+                conceder_acesso_boletim(request, encontrados)
+                return redirect("site_publico:boletim_acesso")
 
             # Diferencia credenciais incorretas de um boletim que existe,
             # mas ainda está em rascunho na gestão.
@@ -322,10 +321,9 @@ def boletim(request):
 
 @pagina_publica_required("boletim")
 @never_cache
-def boletim_acesso(request, token):
-    try:
-        ids = ler_token_acesso(token)
-    except (signing.BadSignature, signing.SignatureExpired, ValueError):
+def boletim_acesso(request):
+    ids = ler_acesso_boletim(request)
+    if not ids:
         messages.error(request, "O acesso ao boletim expirou. Informe os dados novamente.")
         return redirect("site_publico:boletim")
 
@@ -369,7 +367,6 @@ def boletim_acesso(request, token):
 
     contexto = _base_context()
     contexto.update({
-        "token_boletim": token,
         "alunos_boletim": alunos,
         "alunos_contexto": alunos_contexto,
         "boletins_disponiveis": boletins,
@@ -381,10 +378,9 @@ def boletim_acesso(request, token):
 
 @pagina_publica_required("boletim")
 @never_cache
-def boletim_pdf(request, token, pk):
-    try:
-        ids = ler_token_acesso(token)
-    except (signing.BadSignature, signing.SignatureExpired, ValueError):
+def boletim_pdf(request, pk):
+    ids = ler_acesso_boletim(request)
+    if not ids:
         raise Http404
 
     boletim_obj = get_object_or_404(
