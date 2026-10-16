@@ -16,8 +16,11 @@ class declaracao(models.Model):
     cartaoSusDoAluno = models.CharField(max_length=30, blank=True, null=True)
     cpfDoAluno = models.CharField(max_length=14, blank=True, null=True)
     nomePai = models.CharField(max_length=255, blank=True, null=True)
+    cpfPai = models.CharField(max_length=14, blank=True, null=True)
     nomeMae = models.CharField(max_length=255, blank=True, null=True)
+    cpfMae = models.CharField(max_length=14, blank=True, null=True)
     nomeResponsavel = models.CharField(max_length=255, blank=True, null=True)
+    cpfResponsavel = models.CharField(max_length=14, blank=True, null=True)
     
     criado_em = models.DateTimeField(auto_now_add=True)
 
