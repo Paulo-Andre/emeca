@@ -147,6 +147,13 @@ def importar_dados_boletim(dados_planilha, dados_periodo=None):
         raise ValueError("Nenhuma disciplina foi identificada na planilha.")
 
     mapa_alunos = _mapa_matriculas_por_nome()
+
+    # Perfis sem vínculo com Matrículas são válidos no módulo de Boletins.
+    # Eles permitem importar todos os nomes do arquivo e revisar depois.
+    perfis_avulsos = defaultdict(list)
+    for perfil_existente in AlunoBoletim.objects.filter(matricula__isnull=True):
+        perfis_avulsos[normalizar_nome(perfil_existente.nome)].append(perfil_existente)
+
     importados = 0
     sem_cadastro = []
     ambiguos = []
@@ -154,15 +161,33 @@ def importar_dados_boletim(dados_planilha, dados_periodo=None):
 
     for linha in dados_planilha["alunos"]:
         candidatos = mapa_alunos.get(linha["nome_normalizado"], [])
-        if not candidatos:
-            sem_cadastro.append(linha["nome"])
-            continue
-        if len(candidatos) > 1:
-            ambiguos.append(linha["nome"])
-            continue
+        cadastro = None
 
-        cadastro = candidatos[0]
-        perfil = sincronizar_perfil_matricula(cadastro)
+        if len(candidatos) == 1:
+            cadastro = candidatos[0]
+            perfil = sincronizar_perfil_matricula(cadastro)
+
+            # O boletim deve refletir o nome existente no arquivo importado.
+            # Isso não altera o cadastro mestre de Matrículas.
+            if perfil.nome != linha["nome"]:
+                perfil.nome = linha["nome"]
+                perfil.save(update_fields=["nome", "atualizado_em"])
+        else:
+            if not candidatos:
+                sem_cadastro.append(linha["nome"])
+            else:
+                ambiguos.append(linha["nome"])
+
+            existentes = perfis_avulsos.get(linha["nome_normalizado"], [])
+            if len(existentes) == 1:
+                perfil = existentes[0]
+                if perfil.nome != linha["nome"]:
+                    perfil.nome = linha["nome"]
+                    perfil.save(update_fields=["nome", "atualizado_em"])
+            else:
+                perfil = AlunoBoletim.objects.create(nome=linha["nome"])
+                perfis_avulsos[linha["nome_normalizado"]].append(perfil)
+
         boletim = BoletimAluno.objects.create(
             periodo=periodo,
             aluno=perfil,
