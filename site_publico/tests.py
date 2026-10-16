@@ -805,13 +805,17 @@ class SitePublicoTests(TestCase):
 
     @patch("site_publico.boletim_importacao.pd.read_excel")
     def test_leitor_reconhece_planilha_de_notas_e_faltas_enviada(self, read_excel):
+        # Estrutura equivalente ao XLS usado pela escola:
+        # o nome do regente fica abaixo do marcador REGENTE e as disciplinas
+        # aparecem acima dos pares N./F.
         read_excel.return_value = pd.DataFrame([
-            ["E.M EGIDIO CORDEIRO AQUINO", None, None, None, None, None],
-            ["Notas e Faltas do 2º Trimestre - Turma 1º Tulipa - 2026", None, None, None, None, None],
-            ["Regente", "Helena Freitas Oliveira", "LÍNG. PORT.", None, "MATEMÁTICA", None],
-            ["Num.", "Nome", "N.", "F.", "N.", "F."],
-            [1, "Alice Vitória Soares Veloso", 21.0, 1, 30.0, 0],
-            [2, "Arthur Gabriel Alves Lopes", 18.0, 2, 27.0, 1],
+            ["E.M EGIDIO CORDEIRO AQUINO", None, None, None, None, None, None, None],
+            ["Notas e Faltas do 2º Trimestre - Turma 1º Tulipa - 2026", None, None, None, None, None, None, None],
+            [None, None, "LÍNG. PORT.", None, "REGENTE", None, "MATEMÁTICA", None],
+            [None, None, None, None, "Prof. Helena Freitas Oliveira", None, None, None],
+            ["Num.", "Nome", "N.", "F.", None, None, "N.", "F."],
+            [1, "Alice Vitória Soares Veloso", 21.0, 1, None, None, 30.0, 0],
+            [2, "Arthur Gabriel Alves Lopes", 18.0, 2, None, None, 27.0, 1],
         ])
         arquivo = SimpleUploadedFile(
             "NotaseFaltasdo2TrimestreTurma1Tulipa2026.xls",
@@ -825,7 +829,8 @@ class SitePublicoTests(TestCase):
         self.assertEqual(dados["metadados"]["numero"], 2)
         self.assertEqual(dados["metadados"]["ano"], 2026)
         self.assertIn("Tulipa", dados["metadados"]["turma"])
-        self.assertEqual(len(dados["disciplinas"]), 2)
+        self.assertEqual(dados["metadados"]["regente"], "Helena Freitas Oliveira")
+        self.assertEqual([item["nome"] for item in dados["disciplinas"]], ["LÍNG. PORT.", "MATEMÁTICA"])
         self.assertEqual(dados["alunos"][0]["nome"], "Alice Vitória Soares Veloso")
         self.assertEqual(dados["alunos"][0]["resultados"][0]["nota"], Decimal("21.00"))
         self.assertEqual(dados["alunos"][0]["resultados"][0]["faltas"], 1)
@@ -858,23 +863,22 @@ class SitePublicoTests(TestCase):
             ],
         }
 
-        resultado = importar_dados_boletim(
-            dados,
-            {
-                "tipo": "TRIMESTRE",
-                "numero": 2,
-                "ano": 2026,
-                "turma": "",
-                "regente": "",
-                "publicar": True,
-            },
-        )
+        resultado = importar_dados_boletim(dados)
 
         self.assertEqual(resultado["importados"], 1)
         self.assertEqual(PeriodoBoletim.objects.count(), 1)
         self.assertEqual(BoletimAluno.objects.count(), 1)
         self.assertEqual(NotaBoletim.objects.count(), 2)
-        self.assertTrue(resultado["periodo"].publicado)
+        self.assertFalse(resultado["periodo"].publicado)
+        self.assertEqual(resultado["periodo"].tipo, "TRIMESTRE")
+        self.assertEqual(resultado["periodo"].numero, 2)
+        self.assertEqual(resultado["periodo"].ano, 2026)
+        self.assertEqual(resultado["periodo"].turma, "1º Tulipa")
+        self.assertEqual(resultado["periodo"].regente, "Helena Freitas Oliveira")
+        self.assertEqual(
+            resultado["disciplinas_detectadas"],
+            ["Língua Portuguesa", "Matemática"],
+        )
 
     def test_gestao_de_boletins_exige_login(self):
         response = self.client.get(reverse("site_publico:gestao_boletins"))
@@ -898,9 +902,100 @@ class SitePublicoTests(TestCase):
         self.assertContains(lista, "Bimestre ou trimestre")
         self.assertContains(lista, "Importar planilha")
 
-    def test_formulario_importacao_permite_escolher_bimestre_ou_trimestre(self):
+    def test_formulario_importacao_solicita_somente_o_arquivo(self):
         form = BoletimImportacaoForm()
-        self.assertEqual(
-            list(form.fields["tipo"].choices),
-            [("BIMESTRE", "Bimestre"), ("TRIMESTRE", "Trimestre")],
+        self.assertEqual(list(form.fields.keys()), ["arquivo"])
+        self.assertIn("extraídos automaticamente", form.fields["arquivo"].help_text)
+
+    def test_tela_importacao_informa_quais_dados_serao_extraidos(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="gestor_importacao_auto",
+            password="senha-segura-123",
         )
+        self.client.force_login(usuario)
+
+        response = self.client.get(reverse("site_publico:gestao_boletim_importar"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Não é necessário preencher turma, ano, período")
+        self.assertContains(response, "Organização do ano")
+        self.assertContains(response, "Professor(a) regente")
+        self.assertContains(response, "Disciplinas")
+        self.assertNotContains(response, 'name="tipo"')
+        self.assertNotContains(response, 'name="ano"')
+        self.assertNotContains(response, 'name="turma"')
+
+    def test_gestao_permite_editar_dados_e_disciplinas_sem_perder_notas(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="gestor_dados_boletim",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+
+        _, _, periodo, boletim = self._criar_boletim_publicado()
+        disciplina = periodo.disciplinas.get(nome="Língua Portuguesa")
+        nota = NotaBoletim.objects.get(boletim=boletim, disciplina=disciplina)
+
+        pagina = self.client.get(
+            reverse("site_publico:gestao_boletim_periodo_editar", args=[periodo.pk])
+        )
+        self.assertEqual(pagina.status_code, 200)
+        self.assertContains(pagina, "Dados extraídos do arquivo")
+        self.assertContains(pagina, "Língua Portuguesa")
+        self.assertContains(pagina, "Adicionar disciplina")
+
+        response = self.client.post(
+            reverse(
+                "site_publico:gestao_boletim_disciplina_editar",
+                args=[periodo.pk, disciplina.pk],
+            ),
+            {"nome": "Língua Portuguesa e Produção Textual"},
+        )
+        self.assertEqual(response.status_code, 302)
+
+        disciplina.refresh_from_db()
+        nota.refresh_from_db()
+        self.assertEqual(disciplina.nome, "Língua Portuguesa e Produção Textual")
+        self.assertEqual(nota.disciplina_id, disciplina.pk)
+        self.assertEqual(nota.nota, Decimal("21.00"))
+
+        response = self.client.post(
+            reverse("site_publico:gestao_boletim_disciplina_adicionar", args=[periodo.pk]),
+            {"nome": "Tecnologia e Inovação"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            periodo.disciplinas.filter(nome="Tecnologia e Inovação").exists()
+        )
+
+    def test_gestao_permite_corrigir_turma_ano_periodo_e_regente(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="gestor_correcao_boletim",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+        periodo = self._periodo_publicado()
+
+        response = self.client.post(
+            reverse("site_publico:gestao_boletim_periodo_editar", args=[periodo.pk]),
+            {
+                "tipo": "BIMESTRE",
+                "numero": 1,
+                "ano": 2027,
+                "turma": "2º Girassol",
+                "regente": "Maria Silva",
+                "publicado": "",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        periodo.refresh_from_db()
+        self.assertEqual(periodo.tipo, "BIMESTRE")
+        self.assertEqual(periodo.numero, 1)
+        self.assertEqual(periodo.ano, 2027)
+        self.assertEqual(periodo.turma, "2º Girassol")
+        self.assertEqual(periodo.regente, "Maria Silva")
+        self.assertFalse(periodo.publicado)

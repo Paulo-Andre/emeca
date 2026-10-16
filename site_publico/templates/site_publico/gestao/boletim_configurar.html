@@ -1,0 +1,105 @@
+{% extends 'site_publico/gestao/base.html' %}
+{% block title %}Editar dados do boletim{% endblock %}
+{% block header_icon %}settings-2{% endblock %}
+{% block header_title %}Dados do boletim{% endblock %}
+{% block header_subtitle %}Revise ou corrija as informações extraídas da planilha sem precisar reenviar o arquivo.{% endblock %}
+
+{% block content %}
+<div class="manager-toolbar">
+  <a class="manager-back" href="{% url 'site_publico:gestao_boletim_periodo' periodo.pk %}"><i data-lucide="arrow-left"></i> Voltar ao período</a>
+</div>
+
+<div class="bulletin-config-layout">
+  <form class="manager-form-card bulletin-config-card" method="post">
+    {% csrf_token %}
+    <div class="bulletin-config-heading">
+      <span><i data-lucide="file-spreadsheet"></i></span>
+      <div>
+        <span class="manager-kicker">Dados extraídos do arquivo</span>
+        <h2>Informações gerais</h2>
+        <p>Esses campos foram preenchidos automaticamente na importação. Altere apenas se algum dado precisar de correção.</p>
+      </div>
+    </div>
+
+    <div class="manager-form-grid">
+      {% for field in form %}
+        <div class="manager-field{% if field.name == 'publicado' %} manager-field--check{% endif %}">
+          {% if field.name == 'publicado' %}
+            <label class="manager-check-label" for="{{ field.id_for_label }}">
+              {{ field }}
+              <span>
+                <strong>{{ field.label }}</strong>
+                {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+              </span>
+            </label>
+          {% else %}
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+          {% endif %}
+          {% for error in field.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="manager-form-actions">
+      <button class="manager-btn manager-btn--primary" type="submit"><i data-lucide="save"></i> Salvar dados gerais</button>
+    </div>
+  </form>
+
+  <section class="manager-form-card bulletin-subject-manager">
+    <div class="bulletin-config-heading">
+      <span><i data-lucide="book-open-check"></i></span>
+      <div>
+        <span class="manager-kicker">Componentes curriculares</span>
+        <h2>Disciplinas</h2>
+        <p>As disciplinas também vieram da planilha. Você pode corrigir o nome, adicionar uma nova ou remover uma disciplina.</p>
+      </div>
+    </div>
+
+    <div class="bulletin-subject-editor-list">
+      {% for disciplina in disciplinas %}
+        <article class="bulletin-subject-editor-row">
+          <span class="bulletin-subject-editor-row__number">{{ forloop.counter }}</span>
+          <form method="post" action="{% url 'site_publico:gestao_boletim_disciplina_editar' periodo.pk disciplina.pk %}">
+            {% csrf_token %}
+            <input class="site-manager-input" name="nome" value="{{ disciplina.nome }}" maxlength="160" required>
+            <button class="manager-icon-btn success" type="submit" title="Salvar nome"><i data-lucide="save"></i></button>
+          </form>
+          <form method="post" action="{% url 'site_publico:gestao_boletim_disciplina_excluir' periodo.pk disciplina.pk %}" onsubmit="return confirm('Remover esta disciplina? As notas vinculadas a ela também serão removidas.');">
+            {% csrf_token %}
+            <button class="manager-icon-btn danger" type="submit" title="Remover disciplina"><i data-lucide="trash-2"></i></button>
+          </form>
+        </article>
+      {% empty %}
+        <div class="manager-empty">
+          <i data-lucide="book-x"></i>
+          <strong>Nenhuma disciplina cadastrada</strong>
+        </div>
+      {% endfor %}
+    </div>
+
+    <form class="bulletin-subject-add" method="post" action="{% url 'site_publico:gestao_boletim_disciplina_adicionar' periodo.pk %}">
+      {% csrf_token %}
+      <div class="manager-field">
+        <label for="nova-disciplina">Adicionar disciplina</label>
+        <input id="nova-disciplina" class="site-manager-input" name="nome" maxlength="160" placeholder="Ex.: Tecnologia e Inovação" required>
+      </div>
+      <button class="manager-btn manager-btn--secondary" type="submit"><i data-lucide="plus"></i> Adicionar</button>
+    </form>
+  </section>
+</div>
+
+<section class="bulletin-config-next">
+  <div>
+    <span><i data-lucide="users-round"></i></span>
+    <div>
+      <strong>Alunos, notas e faltas</strong>
+      <small>Para adicionar um aluno ou alterar qualquer nota/falta, use a lista de alunos do período.</small>
+    </div>
+  </div>
+  <a class="manager-btn manager-btn--primary" href="{% url 'site_publico:gestao_boletim_periodo' periodo.pk %}">
+    Gerenciar alunos e notas <i data-lucide="arrow-right"></i>
+  </a>
+</section>
+{% endblock %}

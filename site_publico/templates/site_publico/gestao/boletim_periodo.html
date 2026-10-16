@@ -9,7 +9,7 @@
   <a class="manager-back" href="{% url 'site_publico:gestao_boletins' %}"><i data-lucide="arrow-left"></i> Voltar</a>
   <div class="bulletin-manager-actions">
     <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_boletim_periodo_editar' periodo.pk %}">
-      <i data-lucide="settings-2"></i> Configurar
+      <i data-lucide="settings-2"></i> Editar dados e disciplinas
     </a>
     <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_boletim_aluno_novo' periodo.pk %}">
       <i data-lucide="user-plus"></i> Adicionar aluno
@@ -35,6 +35,33 @@
   <div class="bulletin-period-summary__stats">
     <div><strong>{{ linhas|length }}</strong><span>Alunos</span></div>
     <div><strong>{{ disciplinas|length }}</strong><span>Disciplinas</span></div>
+  </div>
+</section>
+
+<section class="bulletin-period-data">
+  <div>
+    <span>Organização do ano</span>
+    <strong>{{ periodo.get_tipo_display }}</strong>
+  </div>
+  <div>
+    <span>Período</span>
+    <strong>{{ periodo.numero }}º</strong>
+  </div>
+  <div>
+    <span>Ano letivo</span>
+    <strong>{{ periodo.ano }}</strong>
+  </div>
+  <div>
+    <span>Turma</span>
+    <strong>{{ periodo.turma }}</strong>
+  </div>
+  <div>
+    <span>Professor(a) regente</span>
+    <strong>{{ periodo.regente|default:"Não informado" }}</strong>
+  </div>
+  <div>
+    <span>Disciplinas</span>
+    <strong>{{ disciplinas|length }}</strong>
   </div>
 </section>
 

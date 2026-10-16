@@ -2,7 +2,7 @@
 {% block title %}Importar boletim{% endblock %}
 {% block header_icon %}file-spreadsheet{% endblock %}
 {% block header_title %}Importar notas e faltas{% endblock %}
-{% block header_subtitle %}Use a planilha de Notas e Faltas da turma e confirme se o período será Bimestre ou Trimestre.{% endblock %}
+{% block header_subtitle %}Envie a planilha da turma. Os dados do período serão lidos automaticamente do próprio arquivo.{% endblock %}
 
 {% block content %}
 <div class="manager-toolbar">
@@ -17,56 +17,46 @@
     <div class="bulletin-import-step">
       <span>1</span>
       <div>
-        <strong>Selecione a planilha</strong>
-        <small>O modelo enviado pela escola com Num., Nome e pares N./F. por disciplina é reconhecido automaticamente.</small>
+        <strong>Envie a planilha de notas e faltas</strong>
+        <small>Não é necessário preencher turma, ano, período, regente ou disciplinas manualmente.</small>
       </div>
     </div>
+
     <div class="manager-field manager-field--full">
       <label for="{{ form.arquivo.id_for_label }}">{{ form.arquivo.label }}</label>
       {{ form.arquivo }}
-      <small>{{ form.arquivo.help_text }}</small>
+      {% if form.arquivo.help_text %}<small>{{ form.arquivo.help_text }}</small>{% endif %}
       {% for error in form.arquivo.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
     </div>
 
-    <div class="bulletin-import-step">
-      <span>2</span>
-      <div>
-        <strong>Confirme o período</strong>
-        <small>Você escolhe se a escola está trabalhando com bimestre ou trimestre.</small>
+    <div class="bulletin-auto-extract">
+      <div class="bulletin-auto-extract__title">
+        <span><i data-lucide="scan-search"></i></span>
+        <div>
+          <strong>O sistema extrai automaticamente</strong>
+          <small>As informações abaixo serão lidas diretamente do arquivo enviado.</small>
+        </div>
+      </div>
+      <div class="bulletin-auto-extract__grid">
+        <span><i data-lucide="calendar-range"></i> Organização do ano</span>
+        <span><i data-lucide="hash"></i> Período</span>
+        <span><i data-lucide="calendar-days"></i> Ano letivo</span>
+        <span><i data-lucide="users-round"></i> Turma</span>
+        <span><i data-lucide="user-round-check"></i> Professor(a) regente</span>
+        <span><i data-lucide="book-open-check"></i> Disciplinas</span>
+        <span><i data-lucide="list-ordered"></i> Alunos e número da chamada</span>
+        <span><i data-lucide="table-2"></i> Notas e faltas</span>
       </div>
     </div>
 
-    <div class="manager-form-grid">
-      {% for field in form %}
-        {% if field.name != 'arquivo' and field.name != 'publicar' %}
-          <div class="manager-field">
-            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
-            {% for error in field.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
-          </div>
-        {% endif %}
-      {% endfor %}
-    </div>
-
-    <div class="bulletin-import-publish">
-      <label class="manager-check-label" for="{{ form.publicar.id_for_label }}">
-        {{ form.publicar }}
-        <span>
-          <strong>{{ form.publicar.label }}</strong>
-          <small>{{ form.publicar.help_text }}</small>
-        </span>
-      </label>
-    </div>
-
     <div class="bulletin-import-warning">
-      <i data-lucide="triangle-alert"></i>
-      <span>Se já existir o mesmo período para a mesma turma, a nova importação substitui as notas e faltas daquele período.</span>
+      <i data-lucide="shield-check"></i>
+      <span>Depois da importação o período fica como <strong>rascunho</strong>. Revise os dados na Gestão do Boletim e publique somente quando estiver correto.</span>
     </div>
 
     <div class="manager-form-actions">
       <button class="manager-btn manager-btn--primary" type="submit">
-        <i data-lucide="upload"></i> Importar notas e faltas
+        <i data-lucide="upload"></i> Ler arquivo e importar
       </button>
     </div>
   </form>
@@ -74,14 +64,16 @@
   <aside class="bulletin-import-help">
     <span><i data-lucide="table-properties"></i></span>
     <h3>Modelo reconhecido</h3>
-    <p>O importador foi preparado para planilhas como <strong>“Notas e Faltas do 2º Trimestre - Turma 1º Tulipa - 2026”</strong>.</p>
+    <p>O importador foi preparado para a planilha usada pela escola, como <strong>“Notas e Faltas do 2º Trimestre - Turma 1º Tulipa - 2026”</strong>.</p>
     <ul>
+      <li>título com período, turma e ano;</li>
+      <li>campo de professor(a) regente;</li>
       <li>Num. e Nome do aluno;</li>
       <li>disciplinas em colunas;</li>
-      <li>uma coluna de Nota e outra de Falta para cada disciplina;</li>
+      <li>uma coluna de Nota e outra de Falta por disciplina;</li>
       <li>arquivos .xls e .xlsx.</li>
     </ul>
-    <p class="bulletin-import-help__note">Os nomes são associados aos alunos já cadastrados em Matrículas. Alunos não encontrados são informados no resultado da importação.</p>
+    <p class="bulletin-import-help__note">Após importar, você poderá corrigir qualquer dado, adicionar disciplinas, adicionar alunos e editar notas e faltas sem precisar alterar a planilha original.</p>
   </aside>
 </div>
 
@@ -90,13 +82,29 @@
   <div class="bulletin-import-result__head">
     <span><i data-lucide="circle-check-big"></i></span>
     <div>
-      <span class="manager-kicker">Importação concluída</span>
+      <span class="manager-kicker">Arquivo lido com sucesso</span>
       <h2>{{ resultado_importacao.periodo.titulo }}</h2>
-      <p>{{ resultado_importacao.importados }} aluno(s) tiveram notas e faltas importadas.</p>
+      <p>{{ resultado_importacao.importados }} aluno(s) importado(s). O período está em rascunho para revisão.</p>
     </div>
-    <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_boletim_periodo' resultado_importacao.periodo.pk %}">
-      Abrir período <i data-lucide="arrow-right"></i>
+    <a class="manager-btn manager-btn--primary" href="{% url 'site_publico:gestao_boletim_periodo' resultado_importacao.periodo.pk %}">
+      Revisar e editar <i data-lucide="arrow-right"></i>
     </a>
+  </div>
+
+  <div class="bulletin-detected-data">
+    <div><span>Organização do ano</span><strong>{{ resultado_importacao.periodo.get_tipo_display }}</strong></div>
+    <div><span>Período</span><strong>{{ resultado_importacao.periodo.numero }}º</strong></div>
+    <div><span>Ano letivo</span><strong>{{ resultado_importacao.periodo.ano }}</strong></div>
+    <div><span>Turma</span><strong>{{ resultado_importacao.periodo.turma }}</strong></div>
+    <div><span>Professor(a) regente</span><strong>{{ resultado_importacao.periodo.regente|default:"Não identificado" }}</strong></div>
+    <div><span>Disciplinas</span><strong>{{ resultado_importacao.disciplinas_detectadas|length }}</strong></div>
+  </div>
+
+  <div class="bulletin-detected-subjects">
+    <span class="manager-kicker">Disciplinas identificadas no arquivo</span>
+    <div>
+      {% for nome in resultado_importacao.disciplinas_detectadas %}<span>{{ nome }}</span>{% endfor %}
+    </div>
   </div>
 
   <div class="bulletin-import-result__stats">
