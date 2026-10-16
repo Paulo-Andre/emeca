@@ -166,7 +166,7 @@
 
       <section class="importar-card">
         <h3>Enviar planilha</h3>
-        <p>Selecione a planilha com os dados das declarações. O importador identifica o cabeçalho automaticamente, inclusive a coluna RESPONS do modelo antigo da escola, e não altera o layout das declarações impressas.</p>
+        <p>Selecione a planilha com os dados das declarações. O importador identifica automaticamente nomes, CPF, telefones e demais campos do modelo antigo da escola, sem alterar o layout das declarações impressas.</p>
 
         {% if messages %}
           {% for message in messages %}
@@ -181,7 +181,8 @@
               <div class="importar-upload-icon"><i data-lucide="file-spreadsheet"></i></div>
               <div class="importar-upload-text">Clique para selecionar ou arraste o arquivo aqui</div>
               <span class="importar-hint">Formatos aceitos: .xls, .xlsx e .csv</span>
-              <span class="importar-hint">Nome do Responsável (RESPONS) e telefones de Pai, Mãe e Responsável são importados. Telefones repetidos do mesmo vínculo são unidos automaticamente.</span>
+              <span class="importar-hint">São importados Nome e CPF de Pai, Mãe e Responsável, além dos telefones correspondentes. Cabeçalhos como CPF PAI, CPF MÃE e CPF RESPONS. também são reconhecidos.</span>
+              <span class="importar-hint">Telefones repetidos do mesmo vínculo são unidos automaticamente.</span>
               <div class="importar-file-name" id="fileName"></div>
             </div>
             <input type="file" name="arquivo" id="arquivo" accept=".xls,.xlsx,.csv" required>
