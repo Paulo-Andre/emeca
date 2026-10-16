@@ -1063,7 +1063,7 @@ class RelatorioCompletoAlunoTests(TestCase):
         )
 
     def test_central_de_relatorios_localiza_aluno(self):
-        response = self.client.get(
+        response = self.client.post(
             reverse("historico:relatorios"),
             {"q": "RELATORIO COMPLETO"},
         )
@@ -1310,7 +1310,7 @@ class AcessoAutenticadoTests(TestCase):
 
     def test_dashboard_exibe_aluno_somente_apos_pesquisa(self):
         self.client.force_login(self.user)
-        response = self.client.get(
+        response = self.client.post(
             reverse("historico:inicio"),
             {"q": "ALUNO ACESSO AUTENTICADO"},
         )
