@@ -1,0 +1,100 @@
+{% extends 'site_publico/gestao/base.html' %}
+{% block title %}{{ periodo.titulo }}{% endblock %}
+{% block header_icon %}notebook-tabs{% endblock %}
+{% block header_title %}{{ periodo.nome_periodo }}{% endblock %}
+{% block header_subtitle %}{{ periodo.turma }} · {{ periodo.ano }}{% if periodo.regente %} · Regente: {{ periodo.regente }}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="manager-toolbar">
+  <a class="manager-back" href="{% url 'site_publico:gestao_boletins' %}"><i data-lucide="arrow-left"></i> Voltar</a>
+  <div class="bulletin-manager-actions">
+    <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_boletim_periodo_editar' periodo.pk %}">
+      <i data-lucide="settings-2"></i> Configurar
+    </a>
+    <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_boletim_aluno_novo' periodo.pk %}">
+      <i data-lucide="user-plus"></i> Adicionar aluno
+    </a>
+    <form method="post" action="{% url 'site_publico:gestao_boletim_publicar' periodo.pk %}">
+      {% csrf_token %}
+      <button class="manager-btn {% if periodo.publicado %}manager-btn--secondary{% else %}manager-btn--primary{% endif %}" type="submit">
+        <i data-lucide="{% if periodo.publicado %}eye-off{% else %}send{% endif %}"></i>
+        {% if periodo.publicado %}Retirar publicação{% else %}Publicar para os pais{% endif %}
+      </button>
+    </form>
+  </div>
+</div>
+
+<section class="bulletin-period-summary">
+  <div class="bulletin-period-summary__main">
+    <span class="manager-badge {% if periodo.publicado %}is-on{% else %}is-off{% endif %}">
+      {% if periodo.publicado %}Disponível no site{% else %}Ainda não publicado{% endif %}
+    </span>
+    <h2>{{ periodo.titulo }}</h2>
+    <p>Os responsáveis acessam usando CPF da mãe ou do responsável mais a data de nascimento da criança.</p>
+  </div>
+  <div class="bulletin-period-summary__stats">
+    <div><strong>{{ linhas|length }}</strong><span>Alunos</span></div>
+    <div><strong>{{ disciplinas|length }}</strong><span>Disciplinas</span></div>
+  </div>
+</section>
+
+<section class="manager-section">
+  <div class="manager-section__heading">
+    <div>
+      <span class="manager-kicker">Componentes curriculares</span>
+      <h2>Disciplinas deste período</h2>
+    </div>
+  </div>
+  <div class="bulletin-subject-chips">
+    {% for disciplina in disciplinas %}<span>{{ disciplina.nome }}</span>{% empty %}<span>Nenhuma disciplina cadastrada</span>{% endfor %}
+  </div>
+</section>
+
+<section class="manager-section">
+  <div class="manager-section__heading">
+    <div>
+      <span class="manager-kicker">Lançamentos</span>
+      <h2>Notas dos alunos</h2>
+    </div>
+  </div>
+
+  {% if linhas %}
+    <div class="bulletin-student-manager-list">
+      {% for linha in linhas %}
+        <article class="bulletin-student-manager-row">
+          <span class="bulletin-student-manager-row__number">{{ linha.boletim.numero_chamada|default:"—" }}</span>
+          <div>
+            <strong>{{ linha.boletim.aluno.nome }}</strong>
+            <small>
+              {% if linha.boletim.aluno.data_nascimento %}{{ linha.boletim.aluno.data_nascimento|date:"d/m/Y" }}{% else %}Sem data de nascimento{% endif %}
+            </small>
+          </div>
+          <span class="manager-badge {% if linha.acesso_pronto %}is-on{% else %}is-off{% endif %}">
+            {% if linha.acesso_pronto %}Acesso pronto{% else %}Falta CPF/data{% endif %}
+          </span>
+          <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_boletim_aluno_editar' periodo.pk linha.boletim.pk %}">
+            <i data-lucide="pencil"></i> Editar notas
+          </a>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="manager-empty">
+      <i data-lucide="user-round-x"></i>
+      <strong>Nenhum aluno lançado</strong>
+      <p>Importe uma planilha ou adicione um aluno manualmente.</p>
+    </div>
+  {% endif %}
+</section>
+
+<section class="bulletin-danger-zone">
+  <div>
+    <strong>Excluir este período</strong>
+    <small>As notas e faltas vinculadas também serão removidas.</small>
+  </div>
+  <form method="post" action="{% url 'site_publico:gestao_boletim_periodo_excluir' periodo.pk %}" onsubmit="return confirm('Excluir este período e todas as notas?');">
+    {% csrf_token %}
+    <button class="manager-btn bulletin-danger-btn" type="submit"><i data-lucide="trash-2"></i> Excluir período</button>
+  </form>
+</section>
+{% endblock %}

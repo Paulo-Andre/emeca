@@ -1,0 +1,78 @@
+{% extends 'site_publico/gestao/base.html' %}
+{% block title %}Gestão de boletins{% endblock %}
+{% block header_icon %}notebook-tabs{% endblock %}
+{% block header_title %}Gestão de boletins{% endblock %}
+{% block header_subtitle %}Importe notas e faltas por turma, lance dados manualmente e controle o que os responsáveis podem consultar.{% endblock %}
+
+{% block content %}
+<div class="manager-toolbar">
+  <a class="manager-back" href="{% url 'site_publico:gestao_site' %}"><i data-lucide="arrow-left"></i> Voltar</a>
+  <div class="bulletin-manager-actions">
+    <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_boletim_periodo_novo' %}">
+      <i data-lucide="plus"></i> Novo período manual
+    </a>
+    <a class="manager-btn manager-btn--primary" href="{% url 'site_publico:gestao_boletim_importar' %}">
+      <i data-lucide="file-spreadsheet"></i> Importar planilha
+    </a>
+  </div>
+</div>
+
+<section class="bulletin-manager-intro">
+  <div>
+    <span class="manager-kicker">Notas e faltas</span>
+    <h2>Bimestre ou trimestre</h2>
+    <p>Cada turma pode ter seus períodos separados. A publicação só aparece para os responsáveis quando o período estiver marcado como disponível.</p>
+  </div>
+  <div class="bulletin-manager-intro__legend">
+    <span><i data-lucide="file-spreadsheet"></i> .xls / .xlsx</span>
+    <span><i data-lucide="shield-check"></i> Acesso por CPF + nascimento</span>
+    <span><i data-lucide="file-down"></i> PDF para baixar</span>
+  </div>
+</section>
+
+<section class="manager-section">
+  <div class="manager-section__heading">
+    <div>
+      <span class="manager-kicker">Períodos cadastrados</span>
+      <h2>Boletins por turma</h2>
+    </div>
+  </div>
+
+  {% if periodos %}
+    <div class="bulletin-period-grid">
+      {% for periodo in periodos %}
+        <article class="bulletin-manager-period{% if not periodo.publicado %} is-draft{% endif %}">
+          <div class="bulletin-manager-period__top">
+            <span class="bulletin-manager-period__icon"><i data-lucide="notebook-tabs"></i></span>
+            <span class="manager-badge {% if periodo.publicado %}is-on{% else %}is-off{% endif %}">
+              {% if periodo.publicado %}Publicado{% else %}Rascunho{% endif %}
+            </span>
+          </div>
+          <div class="bulletin-manager-period__copy">
+            <span>{{ periodo.ano }} · {{ periodo.get_tipo_display }}</span>
+            <h3>{{ periodo.nome_periodo }}</h3>
+            <p>{{ periodo.turma }}</p>
+            {% if periodo.regente %}<small>Regente: {{ periodo.regente }}</small>{% endif %}
+          </div>
+          <div class="bulletin-manager-period__stats">
+            <span><strong>{{ periodo.boletins.count }}</strong> alunos</span>
+            <span><strong>{{ periodo.disciplinas.count }}</strong> disciplinas</span>
+          </div>
+          <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_boletim_periodo' periodo.pk %}">
+            Abrir período <i data-lucide="arrow-right"></i>
+          </a>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="manager-empty">
+      <i data-lucide="notebook-tabs"></i>
+      <strong>Nenhum boletim cadastrado</strong>
+      <p>Importe a planilha de notas ou crie um período manualmente.</p>
+      <a class="manager-btn manager-btn--primary" href="{% url 'site_publico:gestao_boletim_importar' %}">
+        <i data-lucide="file-spreadsheet"></i> Importar primeira planilha
+      </a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

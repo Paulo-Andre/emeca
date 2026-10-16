@@ -1,3 +1,5 @@
+from decimal import Decimal, InvalidOperation
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
@@ -8,20 +10,33 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
+from cadastro.models import matricula
+
 from .forms import (
     CONTENT_FORMS,
+    BoletimAlunoManualForm,
+    BoletimImportacaoForm,
     ConfiguracaoSiteForm,
     HomePageForm,
     FotoGaleriaLoteForm,
     PaginaPublicaForm,
+    PeriodoBoletimForm,
+    PeriodoBoletimNovoForm,
     SecaoPaginaForm,
     get_content_form,
 )
+from .boletim_importacao import ImportacaoBoletimErro, ler_planilha_boletim
+from .boletim_services import importar_dados_boletim, sincronizar_perfil_matricula
+
 from .models import (
     AlbumGaleria,
     ArquivoPaginaPublica,
     ConfiguracaoSite,
     FotoGaleria,
+    BoletimAluno,
+    DisciplinaBoletim,
+    NotaBoletim,
+    PeriodoBoletim,
     PaginaPublica,
     SecaoPagina,
 )
@@ -77,6 +92,258 @@ def gestao_inicio(request):
         "form": form,
         "secoes": secoes,
         "conteudos_home": tipos_home,
+    })
+
+
+@login_required
+def gestao_boletins(request):
+    periodos = (
+        PeriodoBoletim.objects
+        .prefetch_related("disciplinas", "boletins")
+        .all()
+    )
+    return render(request, "site_publico/gestao/boletins.html", {
+        "periodos": periodos,
+    })
+
+
+@login_required
+def gestao_boletim_importar(request):
+    form = BoletimImportacaoForm(request.POST or None, request.FILES or None)
+    resultado = None
+
+    if request.method == "POST" and form.is_valid():
+        try:
+            dados = ler_planilha_boletim(form.cleaned_data["arquivo"])
+            resultado = importar_dados_boletim(dados, form.cleaned_data)
+        except (ImportacaoBoletimErro, ValueError) as exc:
+            messages.error(request, str(exc))
+        except Exception:
+            messages.error(
+                request,
+                "Não foi possível concluir a importação da planilha. Nenhum dado parcial foi mantido.",
+            )
+        else:
+            messages.success(
+                request,
+                f'{resultado["importados"]} aluno(s) importado(s) para {resultado["periodo"].titulo}.',
+            )
+
+    return render(request, "site_publico/gestao/boletim_importar.html", {
+        "form": form,
+        "resultado_importacao": resultado,
+    })
+
+
+@login_required
+def gestao_boletim_periodo_novo(request):
+    form = PeriodoBoletimNovoForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        with transaction.atomic():
+            periodo = form.save()
+            nomes = []
+            for linha in form.cleaned_data["disciplinas"].splitlines():
+                nome = " ".join(linha.split()).strip()
+                if nome and nome.lower() not in {item.lower() for item in nomes}:
+                    nomes.append(nome)
+            for ordem, nome in enumerate(nomes):
+                DisciplinaBoletim.objects.create(
+                    periodo=periodo,
+                    nome=nome,
+                    ordem=ordem,
+                )
+        messages.success(request, "Período de boletim criado.")
+        return redirect("site_publico:gestao_boletim_periodo", pk=periodo.pk)
+
+    return render(request, "site_publico/gestao/form.html", {
+        "form": form,
+        "titulo": "Novo período de boletim",
+        "descricao": "Escolha Bimestre ou Trimestre, informe o período e as disciplinas.",
+        "voltar": "site_publico:gestao_boletins",
+    })
+
+
+@login_required
+def gestao_boletim_periodo_editar(request, pk):
+    periodo = get_object_or_404(PeriodoBoletim, pk=pk)
+    form = PeriodoBoletimForm(request.POST or None, instance=periodo)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Configuração do período atualizada.")
+        return redirect("site_publico:gestao_boletim_periodo", pk=periodo.pk)
+
+    return render(request, "site_publico/gestao/form.html", {
+        "form": form,
+        "titulo": f"Editar {periodo.titulo}",
+        "descricao": "Altere turma, regente ou disponibilidade pública do boletim.",
+        "voltar_href": reverse("site_publico:gestao_boletim_periodo", args=[periodo.pk]),
+        "voltar": "site_publico:gestao_boletins",
+    })
+
+
+@login_required
+def gestao_boletim_periodo(request, pk):
+    periodo = get_object_or_404(
+        PeriodoBoletim.objects.prefetch_related(
+            "disciplinas",
+            "boletins__aluno",
+            "boletins__resultados",
+        ),
+        pk=pk,
+    )
+    boletins = list(
+        periodo.boletins.select_related("aluno").order_by(
+            "numero_chamada",
+            "aluno__nome",
+        )
+    )
+    linhas = []
+    for boletim_obj in boletins:
+        aluno = boletim_obj.aluno
+        acesso_pronto = bool(
+            aluno.data_nascimento
+            and ((aluno.cpf_mae or "").strip() or (aluno.cpf_responsavel or "").strip())
+        )
+        linhas.append({
+            "boletim": boletim_obj,
+            "acesso_pronto": acesso_pronto,
+        })
+
+    return render(request, "site_publico/gestao/boletim_periodo.html", {
+        "periodo": periodo,
+        "linhas": linhas,
+        "disciplinas": periodo.disciplinas.all(),
+    })
+
+
+@require_POST
+@login_required
+def gestao_boletim_publicar(request, pk):
+    periodo = get_object_or_404(PeriodoBoletim, pk=pk)
+    periodo.publicado = not periodo.publicado
+    periodo.save(update_fields=["publicado", "atualizado_em"])
+    messages.success(
+        request,
+        "Boletim publicado para os responsáveis."
+        if periodo.publicado
+        else "Boletim retirado da consulta pública.",
+    )
+    return redirect("site_publico:gestao_boletim_periodo", pk=periodo.pk)
+
+
+@require_POST
+@login_required
+def gestao_boletim_periodo_excluir(request, pk):
+    periodo = get_object_or_404(PeriodoBoletim, pk=pk)
+    titulo = periodo.titulo
+    periodo.delete()
+    messages.success(request, f'Período "{titulo}" removido.')
+    return redirect("site_publico:gestao_boletins")
+
+
+def _decimal_post(valor):
+    valor = (valor or "").strip().replace(",", ".")
+    if not valor:
+        return None
+    try:
+        numero = Decimal(valor)
+    except InvalidOperation as exc:
+        raise ValueError("Nota inválida.") from exc
+    if numero < 0:
+        raise ValueError("A nota não pode ser negativa.")
+    return numero.quantize(Decimal("0.01"))
+
+
+def _inteiro_post(valor):
+    valor = (valor or "").strip()
+    if not valor:
+        return None
+    try:
+        numero = int(valor)
+    except ValueError as exc:
+        raise ValueError("Faltas devem ser um número inteiro.") from exc
+    if numero < 0:
+        raise ValueError("Faltas não podem ser negativas.")
+    return numero
+
+
+@login_required
+def gestao_boletim_aluno(request, periodo_pk, boletim_pk=None):
+    periodo = get_object_or_404(
+        PeriodoBoletim.objects.prefetch_related("disciplinas"),
+        pk=periodo_pk,
+    )
+    boletim_obj = None
+    aluno_fixo = None
+    resultados_atuais = {}
+
+    if boletim_pk is not None:
+        boletim_obj = get_object_or_404(
+            BoletimAluno.objects.select_related("aluno__matricula"),
+            pk=boletim_pk,
+            periodo=periodo,
+        )
+        aluno_fixo = boletim_obj.aluno.matricula
+        resultados_atuais = {
+            item.disciplina_id: item
+            for item in boletim_obj.resultados.select_related("disciplina")
+        }
+
+    form = BoletimAlunoManualForm(
+        request.POST or None,
+        aluno_fixo=aluno_fixo,
+        initial={
+            "numero_chamada": boletim_obj.numero_chamada if boletim_obj else None,
+        },
+    )
+
+    if request.method == "POST" and form.is_valid():
+        try:
+            with transaction.atomic():
+                aluno_matricula = aluno_fixo or form.cleaned_data["aluno"]
+                if aluno_matricula is None:
+                    raise ValueError("O cadastro de matrícula deste aluno não está disponível.")
+
+                perfil = sincronizar_perfil_matricula(aluno_matricula)
+                if boletim_obj is None:
+                    boletim_obj, _ = BoletimAluno.objects.get_or_create(
+                        periodo=periodo,
+                        aluno=perfil,
+                        defaults={"numero_chamada": form.cleaned_data["numero_chamada"]},
+                    )
+                else:
+                    boletim_obj.aluno = perfil
+                    boletim_obj.numero_chamada = form.cleaned_data["numero_chamada"]
+                    boletim_obj.save(update_fields=["aluno", "numero_chamada", "atualizado_em"])
+
+                for disciplina in periodo.disciplinas.all():
+                    nota = _decimal_post(request.POST.get(f"nota_{disciplina.pk}"))
+                    faltas = _inteiro_post(request.POST.get(f"faltas_{disciplina.pk}"))
+                    NotaBoletim.objects.update_or_create(
+                        boletim=boletim_obj,
+                        disciplina=disciplina,
+                        defaults={"nota": nota, "faltas": faltas},
+                    )
+        except ValueError as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(request, "Notas e faltas salvas.")
+            return redirect("site_publico:gestao_boletim_periodo", pk=periodo.pk)
+
+    linhas_notas = []
+    for disciplina in periodo.disciplinas.all():
+        atual = resultados_atuais.get(disciplina.pk)
+        linhas_notas.append({
+            "disciplina": disciplina,
+            "nota": request.POST.get(f"nota_{disciplina.pk}") if request.method == "POST" else (atual.nota if atual else ""),
+            "faltas": request.POST.get(f"faltas_{disciplina.pk}") if request.method == "POST" else (atual.faltas if atual else ""),
+        })
+
+    return render(request, "site_publico/gestao/boletim_aluno.html", {
+        "periodo": periodo,
+        "boletim_obj": boletim_obj,
+        "form": form,
+        "linhas_notas": linhas_notas,
     })
 
 

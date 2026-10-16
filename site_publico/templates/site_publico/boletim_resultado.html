@@ -1,0 +1,119 @@
+{% extends 'site_publico/base.html' %}
+{% block title %}Boletim do estudante · E. M. Egídio Cordeiro Aquino{% endblock %}
+
+{% block content %}
+<section class="section bulletin-result-section">
+  <div class="bulletin-result-toolbar">
+    <a class="button button--soft" href="{% url 'site_publico:boletim' %}">
+      <i data-lucide="arrow-left"></i> Nova consulta
+    </a>
+    {% if boletim_selecionado %}
+      <a class="button button--primary" href="{% url 'site_publico:boletim_pdf' token_boletim boletim_selecionado.pk %}">
+        <i data-lucide="download"></i> Baixar boletim em PDF
+      </a>
+    {% endif %}
+  </div>
+
+  <div class="bulletin-student-switcher">
+    {% for item in alunos_contexto %}
+      <article class="bulletin-student-card">
+        <span><i data-lucide="user-round"></i></span>
+        <div>
+          <strong>{{ item.aluno.nome }}</strong>
+          <small>
+            {% if item.aluno.data_nascimento %}Nascimento: {{ item.aluno.data_nascimento|date:"d/m/Y" }}{% endif %}
+          </small>
+        </div>
+        <span class="bulletin-student-card__count">{{ item.boletins|length }} período{{ item.boletins|length|pluralize }}</span>
+      </article>
+    {% endfor %}
+  </div>
+
+  <div class="bulletin-result-layout">
+    <aside class="bulletin-period-list">
+      <div class="bulletin-period-list__head">
+        <span class="section-kicker">Períodos disponíveis</span>
+        <h2>Escolha o boletim</h2>
+      </div>
+
+      {% for item in alunos_contexto %}
+        {% if alunos_contexto|length > 1 %}
+          <div class="bulletin-period-student-name">{{ item.aluno.nome }}</div>
+        {% endif %}
+        {% for boletim in item.boletins %}
+          <a class="bulletin-period-link{% if boletim_selecionado.pk == boletim.pk %} is-active{% endif %}" href="?boletim={{ boletim.pk }}">
+            <span><i data-lucide="file-text"></i></span>
+            <div>
+              <strong>{{ boletim.periodo.nome_periodo }}</strong>
+              <small>{{ boletim.periodo.turma }} · {{ boletim.periodo.ano }}</small>
+            </div>
+            <i data-lucide="chevron-right"></i>
+          </a>
+        {% endfor %}
+      {% endfor %}
+    </aside>
+
+    <main class="bulletin-paper-wrap">
+      {% if boletim_selecionado %}
+        <article class="bulletin-paper">
+          <header class="bulletin-paper__header">
+            <div>
+              <span class="bulletin-paper__school">{{ config_site.nome_escola|default:"E. M. Egídio Cordeiro Aquino" }}</span>
+              <h1>Boletim Escolar</h1>
+              <p>{{ boletim_selecionado.periodo.nome_periodo }} · Ano letivo {{ boletim_selecionado.periodo.ano }}</p>
+            </div>
+            <span class="bulletin-paper__seal"><i data-lucide="graduation-cap"></i></span>
+          </header>
+
+          <div class="bulletin-paper__student">
+            <div><span>Aluno(a)</span><strong>{{ boletim_selecionado.aluno.nome }}</strong></div>
+            <div><span>Turma</span><strong>{{ boletim_selecionado.periodo.turma }}</strong></div>
+            <div><span>Nascimento</span><strong>{% if boletim_selecionado.aluno.data_nascimento %}{{ boletim_selecionado.aluno.data_nascimento|date:"d/m/Y" }}{% else %}—{% endif %}</strong></div>
+            <div><span>Nº</span><strong>{{ boletim_selecionado.numero_chamada|default:"—" }}</strong></div>
+            <div class="bulletin-paper__student-wide"><span>Regente</span><strong>{{ boletim_selecionado.periodo.regente|default:"—" }}</strong></div>
+          </div>
+
+          <div class="bulletin-grade-table-wrap">
+            <table class="bulletin-grade-table">
+              <thead>
+                <tr>
+                  <th>Componente curricular</th>
+                  <th>Nota</th>
+                  <th>Faltas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for resultado in boletim_selecionado.resultados.all %}
+                  <tr>
+                    <td>{{ resultado.disciplina.nome }}</td>
+                    <td>{% if resultado.nota != None %}{{ resultado.nota|floatformat:2 }}{% else %}—{% endif %}</td>
+                    <td>{{ resultado.faltas|default_if_none:"—" }}</td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="3">Nenhum lançamento disponível neste período.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="bulletin-paper__signatures">
+            <div><span></span><small>Professor(a) Regente</small></div>
+            <div><span></span><small>Direção / Secretaria Escolar</small></div>
+          </div>
+
+          <footer class="bulletin-paper__footer">
+            <i data-lucide="shield-check"></i>
+            <span>Documento disponibilizado pelo portal da escola. Em caso de dúvida, procure a secretaria.</span>
+          </footer>
+        </article>
+      {% else %}
+        <div class="bulletin-no-result">
+          <i data-lucide="file-x"></i>
+          <strong>Nenhum boletim publicado</strong>
+          <p>Não há períodos disponíveis para este acesso.</p>
+        </div>
+      {% endif %}
+    </main>
+  </div>
+</section>
+{% endblock %}

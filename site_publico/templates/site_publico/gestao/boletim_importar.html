@@ -1,0 +1,124 @@
+{% extends 'site_publico/gestao/base.html' %}
+{% block title %}Importar boletim{% endblock %}
+{% block header_icon %}file-spreadsheet{% endblock %}
+{% block header_title %}Importar notas e faltas{% endblock %}
+{% block header_subtitle %}Use a planilha de Notas e Faltas da turma e confirme se o período será Bimestre ou Trimestre.{% endblock %}
+
+{% block content %}
+<div class="manager-toolbar">
+  <a class="manager-back" href="{% url 'site_publico:gestao_boletins' %}"><i data-lucide="arrow-left"></i> Voltar</a>
+</div>
+
+<div class="bulletin-import-layout">
+  <form class="manager-form-card bulletin-import-form" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="manager-form-error">{{ form.non_field_errors }}</div>{% endif %}
+
+    <div class="bulletin-import-step">
+      <span>1</span>
+      <div>
+        <strong>Selecione a planilha</strong>
+        <small>O modelo enviado pela escola com Num., Nome e pares N./F. por disciplina é reconhecido automaticamente.</small>
+      </div>
+    </div>
+    <div class="manager-field manager-field--full">
+      <label for="{{ form.arquivo.id_for_label }}">{{ form.arquivo.label }}</label>
+      {{ form.arquivo }}
+      <small>{{ form.arquivo.help_text }}</small>
+      {% for error in form.arquivo.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
+    </div>
+
+    <div class="bulletin-import-step">
+      <span>2</span>
+      <div>
+        <strong>Confirme o período</strong>
+        <small>Você escolhe se a escola está trabalhando com bimestre ou trimestre.</small>
+      </div>
+    </div>
+
+    <div class="manager-form-grid">
+      {% for field in form %}
+        {% if field.name != 'arquivo' and field.name != 'publicar' %}
+          <div class="manager-field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+            {% for error in field.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <div class="bulletin-import-publish">
+      <label class="manager-check-label" for="{{ form.publicar.id_for_label }}">
+        {{ form.publicar }}
+        <span>
+          <strong>{{ form.publicar.label }}</strong>
+          <small>{{ form.publicar.help_text }}</small>
+        </span>
+      </label>
+    </div>
+
+    <div class="bulletin-import-warning">
+      <i data-lucide="triangle-alert"></i>
+      <span>Se já existir o mesmo período para a mesma turma, a nova importação substitui as notas e faltas daquele período.</span>
+    </div>
+
+    <div class="manager-form-actions">
+      <button class="manager-btn manager-btn--primary" type="submit">
+        <i data-lucide="upload"></i> Importar notas e faltas
+      </button>
+    </div>
+  </form>
+
+  <aside class="bulletin-import-help">
+    <span><i data-lucide="table-properties"></i></span>
+    <h3>Modelo reconhecido</h3>
+    <p>O importador foi preparado para planilhas como <strong>“Notas e Faltas do 2º Trimestre - Turma 1º Tulipa - 2026”</strong>.</p>
+    <ul>
+      <li>Num. e Nome do aluno;</li>
+      <li>disciplinas em colunas;</li>
+      <li>uma coluna de Nota e outra de Falta para cada disciplina;</li>
+      <li>arquivos .xls e .xlsx.</li>
+    </ul>
+    <p class="bulletin-import-help__note">Os nomes são associados aos alunos já cadastrados em Matrículas. Alunos não encontrados são informados no resultado da importação.</p>
+  </aside>
+</div>
+
+{% if resultado_importacao %}
+<section class="bulletin-import-result">
+  <div class="bulletin-import-result__head">
+    <span><i data-lucide="circle-check-big"></i></span>
+    <div>
+      <span class="manager-kicker">Importação concluída</span>
+      <h2>{{ resultado_importacao.periodo.titulo }}</h2>
+      <p>{{ resultado_importacao.importados }} aluno(s) tiveram notas e faltas importadas.</p>
+    </div>
+    <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_boletim_periodo' resultado_importacao.periodo.pk %}">
+      Abrir período <i data-lucide="arrow-right"></i>
+    </a>
+  </div>
+
+  <div class="bulletin-import-result__stats">
+    <div><strong>{{ resultado_importacao.importados }}</strong><span>Importados</span></div>
+    <div><strong>{{ resultado_importacao.sem_cadastro|length }}</strong><span>Sem matrícula encontrada</span></div>
+    <div><strong>{{ resultado_importacao.ambiguos|length }}</strong><span>Nomes duplicados</span></div>
+    <div><strong>{{ resultado_importacao.sem_acesso|length }}</strong><span>Sem CPF/data para acesso</span></div>
+  </div>
+
+  {% if resultado_importacao.sem_cadastro or resultado_importacao.ambiguos or resultado_importacao.sem_acesso %}
+    <div class="bulletin-import-issues">
+      {% if resultado_importacao.sem_cadastro %}
+        <article><h3>Sem matrícula correspondente</h3>{% for nome in resultado_importacao.sem_cadastro %}<span>{{ nome }}</span>{% endfor %}</article>
+      {% endif %}
+      {% if resultado_importacao.ambiguos %}
+        <article><h3>Nome encontrado mais de uma vez</h3>{% for nome in resultado_importacao.ambiguos %}<span>{{ nome }}</span>{% endfor %}</article>
+      {% endif %}
+      {% if resultado_importacao.sem_acesso %}
+        <article><h3>Precisam de CPF/data no cadastro</h3>{% for nome in resultado_importacao.sem_acesso %}<span>{{ nome }}</span>{% endfor %}</article>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends 'site_publico/gestao/base.html' %}
+{% block title %}{% if boletim_obj %}Editar notas{% else %}Adicionar aluno{% endif %}{% endblock %}
+{% block header_icon %}square-pen{% endblock %}
+{% block header_title %}{% if boletim_obj %}Editar notas do aluno{% else %}Adicionar notas do aluno{% endif %}{% endblock %}
+{% block header_subtitle %}{{ periodo.titulo }}{% endblock %}
+
+{% block content %}
+<div class="manager-toolbar">
+  <a class="manager-back" href="{% url 'site_publico:gestao_boletim_periodo' periodo.pk %}"><i data-lucide="arrow-left"></i> Voltar</a>
+</div>
+
+<form class="manager-form-card bulletin-grade-editor" method="post">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="manager-form-error">{{ form.non_field_errors }}</div>{% endif %}
+
+  <div class="bulletin-grade-editor__student">
+    <div class="manager-field">
+      <label for="{{ form.aluno.id_for_label }}">{{ form.aluno.label }}</label>
+      {{ form.aluno }}
+      {% for error in form.aluno.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
+    </div>
+    <div class="manager-field">
+      <label for="{{ form.numero_chamada.id_for_label }}">{{ form.numero_chamada.label }}</label>
+      {{ form.numero_chamada }}
+      {% for error in form.numero_chamada.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
+    </div>
+  </div>
+
+  <div class="bulletin-grade-editor__heading">
+    <span><i data-lucide="table-2"></i></span>
+    <div>
+      <strong>Notas e faltas</strong>
+      <small>Use vírgula ou ponto para a nota. Faltas devem ser números inteiros.</small>
+    </div>
+  </div>
+
+  <div class="bulletin-grade-editor__table-wrap">
+    <table class="bulletin-grade-editor__table">
+      <thead><tr><th>Disciplina</th><th>Nota</th><th>Faltas</th></tr></thead>
+      <tbody>
+        {% for linha in linhas_notas %}
+          <tr>
+            <td>{{ linha.disciplina.nome }}</td>
+            <td><input class="site-manager-input" name="nota_{{ linha.disciplina.pk }}" value="{{ linha.nota|default_if_none:'' }}" inputmode="decimal" placeholder="—"></td>
+            <td><input class="site-manager-input" name="faltas_{{ linha.disciplina.pk }}" value="{{ linha.faltas|default_if_none:'' }}" inputmode="numeric" type="number" min="0" placeholder="—"></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="3">Este período ainda não possui disciplinas.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="manager-form-actions">
+    <button class="manager-btn manager-btn--primary" type="submit"><i data-lucide="save"></i> Salvar notas e faltas</button>
+  </div>
+</form>
+{% endblock %}
