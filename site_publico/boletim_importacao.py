@@ -242,6 +242,10 @@ def ler_planilha_boletim(arquivo):
             continue
         vazias_seguidas = 0
 
+        # Ignora totais e rodapés numéricos que podem existir depois da turma.
+        if not re.search(r"[A-Za-zÀ-ÿ]", nome_aluno):
+            continue
+
         # Linhas de rodapé/regente não têm número de chamada no modelo enviado.
         if numero_col is not None and numero_chamada is None:
             continue
