@@ -51,6 +51,31 @@ class ConfiguracaoSiteForm(StyledModelForm):
         ]
 
 
+class HomePageForm(StyledModelForm):
+    class Meta:
+        model = ConfiguracaoSite
+        fields = [
+            "home_titulo",
+            "home_texto",
+            "home_pilar1_titulo",
+            "home_pilar1_texto",
+            "home_pilar2_titulo",
+            "home_pilar2_texto",
+            "home_pilar3_titulo",
+            "home_pilar3_texto",
+        ]
+        labels = {
+            "home_titulo": "Título principal da apresentação",
+            "home_texto": "Texto principal da apresentação",
+            "home_pilar1_titulo": "Título do pilar 1",
+            "home_pilar1_texto": "Texto do pilar 1",
+            "home_pilar2_titulo": "Título do pilar 2",
+            "home_pilar2_texto": "Texto do pilar 2",
+            "home_pilar3_titulo": "Título do pilar 3",
+            "home_pilar3_texto": "Texto do pilar 3",
+        }
+
+
 class PaginaPublicaForm(StyledModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
