@@ -885,7 +885,7 @@ class SitePublicoTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn("/login/", response.url)
 
-    def test_usuario_autenticado_ve_opcao_de_boletins_na_gestao(self):
+    def test_boletins_ficam_separados_da_gestao_do_site(self):
         User = get_user_model()
         usuario = User.objects.create_user(
             username="gestor_boletim",
@@ -893,14 +893,38 @@ class SitePublicoTests(TestCase):
         )
         self.client.force_login(usuario)
 
-        response = self.client.get(reverse("site_publico:gestao_site"))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Gerenciar boletins")
+        gestao_site = self.client.get(reverse("site_publico:gestao_site"))
+        self.assertEqual(gestao_site.status_code, 200)
+        self.assertNotContains(gestao_site, "Acompanhamento escolar")
+        self.assertNotContains(gestao_site, "Gerenciar boletins")
 
-        lista = self.client.get(reverse("site_publico:gestao_boletins"))
+        url_boletins = reverse("site_publico:gestao_boletins")
+        self.assertEqual(url_boletins, "/boletins/")
+
+        lista = self.client.get(url_boletins)
         self.assertEqual(lista.status_code, 200)
         self.assertContains(lista, "Bimestre ou trimestre")
         self.assertContains(lista, "Importar planilha")
+        self.assertContains(lista, "Gerenciar boletins")
+        self.assertContains(lista, "Importar boletim")
+
+    def test_gestao_boletins_funciona_mesmo_com_pagina_publica_boletim_desativada(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="gestor_boletim_independente",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+
+        pagina = PaginaPublica.objects.get(chave="boletim")
+        pagina.ativa = False
+        pagina.save(update_fields=["ativa", "atualizado_em"])
+
+        response = self.client.get(reverse("site_publico:gestao_boletins"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Gestão de boletins")
+        self.assertContains(response, "Importar planilha")
 
     def test_formulario_importacao_solicita_somente_o_arquivo(self):
         form = BoletimImportacaoForm()
