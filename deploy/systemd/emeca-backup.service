@@ -6,6 +6,5 @@ Requires=docker.service
 [Service]
 Type=oneshot
 WorkingDirectory=/srv/projetos/emeca
-EnvironmentFile=/srv/projetos/emeca/.env
 EnvironmentFile=/etc/emeca/backup.env
-ExecStart=/usr/bin/docker compose exec -T web python /app/scripts/backup_criptografado.py
+ExecStart=/usr/bin/docker compose exec -T -e EMECA_BACKUP_PASSPHRASE=${EMECA_BACKUP_PASSPHRASE} -e EMECA_BACKUP_RETENTION_DAYS=${EMECA_BACKUP_RETENTION_DAYS} web python /app/scripts/backup_criptografado.py
