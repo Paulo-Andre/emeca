@@ -376,6 +376,198 @@ button.btn-primary:hover {
   box-shadow: var(--school-shadow);
 }
 
+/* ===== Menu lateral retrátil em computadores ===== */
+@media (min-width: 1101px) and (hover: hover) and (pointer: fine) {
+  .sidebar {
+    width: 78px;
+    min-width: 78px;
+    padding-left: 12px;
+    padding-right: 12px;
+    overflow-x: hidden;
+    transition:
+      width .24s ease,
+      min-width .24s ease,
+      padding .24s ease,
+      box-shadow .24s ease;
+  }
+
+  .sidebar:hover,
+  .sidebar:focus-within {
+    width: 282px;
+    min-width: 282px;
+    padding-left: 18px;
+    padding-right: 18px;
+    box-shadow: 10px 0 34px rgba(18,58,74,.14);
+  }
+
+  .sidebar .logo {
+    min-height: 64px;
+    margin-left: 0;
+    margin-right: 0;
+    gap: 0;
+    justify-content: center;
+    transition:
+      gap .2s ease,
+      margin .2s ease,
+      padding .2s ease;
+  }
+
+  .sidebar:hover .logo,
+  .sidebar:focus-within .logo {
+    gap: 12px;
+    justify-content: flex-start;
+    margin-left: 6px;
+    margin-right: 6px;
+  }
+
+  .sidebar .logo__copy,
+  .sidebar .nav-section-label {
+    max-width: 0;
+    opacity: 0;
+    visibility: hidden;
+    overflow: hidden;
+    white-space: nowrap;
+    transform: translateX(-6px);
+    pointer-events: none;
+    transition:
+      max-width .2s ease,
+      opacity .15s ease,
+      transform .2s ease,
+      visibility 0s linear .2s;
+  }
+
+  .sidebar:hover .logo__copy,
+  .sidebar:focus-within .logo__copy {
+    max-width: 190px;
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0);
+    pointer-events: auto;
+    transition-delay: .04s, .04s, .04s, 0s;
+  }
+
+  .sidebar:hover .nav-section-label,
+  .sidebar:focus-within .nav-section-label {
+    max-width: 220px;
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0);
+    pointer-events: auto;
+    transition-delay: .04s, .04s, .04s, 0s;
+  }
+
+  .sidebar .nav-section-label {
+    height: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding: 0;
+    transition:
+      max-width .2s ease,
+      opacity .15s ease,
+      transform .2s ease,
+      height .2s ease,
+      margin .2s ease,
+      visibility 0s linear .2s;
+  }
+
+  .sidebar:hover .nav-section-label,
+  .sidebar:focus-within .nav-section-label {
+    height: 24px;
+    margin: 17px 10px 7px;
+  }
+
+  .sidebar .nav-item {
+    justify-content: center;
+    gap: 0;
+    padding-left: 10px;
+    padding-right: 10px;
+    overflow: hidden;
+    white-space: nowrap;
+    font-size: 0;
+    transition:
+      background .16s ease,
+      color .16s ease,
+      padding .2s ease,
+      gap .2s ease,
+      font-size .12s ease;
+  }
+
+  .sidebar:hover .nav-item,
+  .sidebar:focus-within .nav-item {
+    justify-content: flex-start;
+    gap: 11px;
+    padding-left: 12px;
+    padding-right: 12px;
+    font-size: 13.5px;
+  }
+
+  .sidebar .nav-item > span {
+    max-width: 0;
+    opacity: 0;
+    visibility: hidden;
+    overflow: hidden;
+    white-space: nowrap;
+    transform: translateX(-5px);
+    transition:
+      max-width .2s ease,
+      opacity .15s ease,
+      transform .2s ease,
+      visibility 0s linear .2s;
+  }
+
+  .sidebar:hover .nav-item > span,
+  .sidebar:focus-within .nav-item > span {
+    max-width: 205px;
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0);
+    transition-delay: .04s, .04s, .04s, 0s;
+  }
+
+  .sidebar .nav-item > svg {
+    margin: 0;
+    flex: 0 0 34px;
+  }
+
+  .sidebar .grupo-botoes {
+    min-width: 0;
+  }
+
+  .sidebar .nav-item.nav-logout {
+    padding-top: 10px;
+    border-top-color: transparent;
+  }
+
+  .sidebar:hover .nav-item.nav-logout,
+  .sidebar:focus-within .nav-item.nav-logout {
+    padding-top: 16px;
+    border-top-color: rgba(255,255,255,.1);
+  }
+
+  .sidebar .historico-subitem,
+  .sidebar .bulletin-subitem {
+    margin-left: 0 !important;
+    padding-left: 10px !important;
+    border-left-color: transparent !important;
+  }
+
+  .sidebar:hover .historico-subitem,
+  .sidebar:focus-within .historico-subitem {
+    padding-left: 18px !important;
+  }
+
+  .sidebar:hover .bulletin-subitem,
+  .sidebar:focus-within .bulletin-subitem {
+    margin-left: 10px !important;
+    padding-left: 14px !important;
+  }
+
+  .sidebar:hover .bulletin-subitem-active,
+  .sidebar:focus-within .bulletin-subitem-active {
+    border-left-color: #f6c84b !important;
+  }
+}
+
 /* ===== Login ===== */
 .login-page {
   min-height: 100vh;
