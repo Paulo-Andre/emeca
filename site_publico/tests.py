@@ -1073,6 +1073,7 @@ class SitePublicoTests(TestCase):
                     "numero_chamada": 1,
                     "nome": "Alice Vitória Soares Veloso",
                     "nome_normalizado": "ALICE VITORIA SOARES VELOSO",
+                    "faltas_totais": 3,
                     "resultados": [
                         {"disciplina": "Língua Portuguesa", "ordem": 0, "nota": Decimal("21.00"), "faltas": 1},
                         {"disciplina": "Matemática", "ordem": 1, "nota": Decimal("30.00"), "faltas": 2},
@@ -1345,6 +1346,65 @@ class SitePublicoTests(TestCase):
         self.assertEqual(dados["disciplinas"][1]["faltas_col"], 5)
         self.assertEqual(dados["alunos"][0]["resultados"][0]["nota"], Decimal("21.00"))
         self.assertEqual(dados["alunos"][0]["resultados"][0]["faltas"], 1)
+
+    @patch("site_publico.boletim_importacao.pd.read_excel")
+    def test_leitor_usa_falta_total_do_campo_geral_do_crystal(self, read_excel):
+        read_excel.return_value = pd.DataFrame([
+            ["E.M EGIDIO CORDEIRO AQUINO"] + [None] * 11,
+            ["Notas e Faltas do 2º Trimestre - Turma 1º Tulipa - 2026"] + [None] * 11,
+            [None, None, None, None, None, None, None, None, "LÍNG. PORT.", None, "MATEMÁTICA", None],
+            ["Num.", None, "Nome", None, None, None, None, None, None, None, None, None],
+            [None, None, None, None, None, None, "N.", "F.", "N.", "F.", "N.", "F."],
+            [1, None, "Alice Vitória Soares Veloso", None, None, None, None, "3", "21,00", "0", "30,00", "1"],
+        ])
+        arquivo = SimpleUploadedFile(
+            "NotaseFaltasdo2TrimestreTurma1Tulipa2026.xls",
+            b"xls-crystal-simulado",
+            content_type="application/vnd.ms-excel",
+        )
+
+        dados = ler_planilha_boletim(arquivo)
+
+        self.assertEqual(dados["alunos"][0]["faltas_totais"], 3)
+        self.assertEqual(dados["alunos"][0]["resultados"][0]["faltas"], 0)
+        self.assertEqual(dados["alunos"][0]["resultados"][1]["faltas"], 1)
+
+    def test_consulta_combina_cpf_do_perfil_com_nascimento_de_declaracoes(self):
+        periodo = PeriodoBoletim.objects.create(
+            tipo="TRIMESTRE",
+            numero=2,
+            ano=2026,
+            turma="1º Tulipa",
+            publicado=True,
+        )
+        perfil = AlunoBoletim.objects.create(
+            nome="Alice Vitória Soares Veloso",
+            cpf_mae="138.090.846-97",
+        )
+        BoletimAluno.objects.create(
+            periodo=periodo,
+            aluno=perfil,
+            numero_chamada=1,
+            faltas_totais=3,
+        )
+        declaracao.objects.create(
+            nomeDoAluno="Alice Vitória Soares Veloso",
+            dataNascimentoAluno=date(2019, 8, 18),
+        )
+
+        response = self.client.post(
+            reverse("site_publico:boletim"),
+            {
+                "cpf": "13809084697",
+                "data_nascimento": "2019-08-18",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/boletim/acesso/", response.url)
+
+        perfil.refresh_from_db()
+        self.assertEqual(perfil.data_nascimento, date(2019, 8, 18))
 
     def test_menu_boletins_tem_apenas_importar_e_editar_dados(self):
         User = get_user_model()
