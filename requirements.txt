@@ -12,3 +12,4 @@ pandas>=2.2,<3
 reportlab>=4.2,<5
 
 Pillow>=11,<13
+psycopg[binary]>=3.2,<4
