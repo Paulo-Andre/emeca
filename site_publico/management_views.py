@@ -1,6 +1,8 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.db import transaction
+from django.db.models import Max
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -10,11 +12,19 @@ from .forms import (
     CONTENT_FORMS,
     ConfiguracaoSiteForm,
     HomePageForm,
+    FotoGaleriaLoteForm,
     PaginaPublicaForm,
     SecaoPaginaForm,
     get_content_form,
 )
-from .models import ArquivoPaginaPublica, ConfiguracaoSite, PaginaPublica, SecaoPagina
+from .models import (
+    AlbumGaleria,
+    ArquivoPaginaPublica,
+    ConfiguracaoSite,
+    FotoGaleria,
+    PaginaPublica,
+    SecaoPagina,
+)
 
 
 def _tipo_config(tipo):
@@ -252,6 +262,44 @@ def gestao_conteudo_lista(request, tipo):
 @login_required
 def gestao_conteudo_novo(request, tipo):
     config = _tipo_config(tipo)
+
+    if tipo == "fotos":
+        form = FotoGaleriaLoteForm(request.POST or None, request.FILES or None)
+        if request.method == "POST" and form.is_valid():
+            with transaction.atomic():
+                album = form.cleaned_data["album_existente"]
+                if album is None:
+                    album = AlbumGaleria.objects.create(
+                        titulo=form.cleaned_data["novo_album"].strip(),
+                        descricao=form.cleaned_data.get("descricao_album", ""),
+                        data_evento=form.cleaned_data.get("data_evento"),
+                        ativo=True,
+                    )
+
+                ultima_ordem = (
+                    album.fotos.aggregate(maior=Max("ordem")).get("maior")
+                    or 0
+                )
+                fotos = form.cleaned_data["fotos"]
+                for indice, imagem in enumerate(fotos, start=1):
+                    FotoGaleria.objects.create(
+                        album=album,
+                        imagem=imagem,
+                        ordem=ultima_ordem + indice,
+                    )
+
+            total = len(form.cleaned_data["fotos"])
+            messages.success(
+                request,
+                f'{total} foto{"s" if total != 1 else ""} adicionada{"s" if total != 1 else ""} ao álbum "{album.titulo}".',
+            )
+            return redirect("site_publico:gestao_conteudo_lista", tipo="fotos")
+
+        return render(request, "site_publico/gestao/fotos_lote.html", {
+            "form": form,
+            "config": config,
+        })
+
     FormClass = get_content_form(tipo)
     form = FormClass(request.POST or None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
