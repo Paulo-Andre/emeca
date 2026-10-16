@@ -666,18 +666,19 @@ class SitePublicoTests(TestCase):
             periodo=periodo,
             aluno=perfil,
             numero_chamada=1,
+            faltas_totais=3,
         )
         NotaBoletim.objects.create(
             boletim=boletim,
             disciplina=portugues,
             nota=Decimal("21.00"),
-            faltas=1,
+            faltas=None,
         )
         NotaBoletim.objects.create(
             boletim=boletim,
             disciplina=matematica,
             nota=Decimal("30.00"),
-            faltas=0,
+            faltas=None,
         )
         return cadastro, perfil, periodo, boletim
 
@@ -709,6 +710,9 @@ class SitePublicoTests(TestCase):
         self.assertContains(resultado, "Alice Vitória Soares Veloso")
         self.assertContains(resultado, "Língua Portuguesa")
         self.assertContains(resultado, "21")
+        self.assertContains(resultado, "Faltas totais")
+        self.assertContains(resultado, ">3<", html=True)
+        self.assertNotContains(resultado, "<th>Faltas</th>", html=True)
         self.assertContains(resultado, "Baixar boletim em PDF")
         self.assertEqual(resultado["X-Robots-Tag"], "noindex, nofollow, noarchive")
 
@@ -918,12 +922,14 @@ class SitePublicoTests(TestCase):
         self.assertIsNone(boletim.aluno.matricula_id)
         self.assertEqual(boletim.numero_chamada, 7)
 
+        boletim.refresh_from_db()
+        self.assertEqual(boletim.faltas_totais, 1)
         notas = {
             item.disciplina.nome: (item.nota, item.faltas)
             for item in boletim.resultados.select_related("disciplina")
         }
-        self.assertEqual(notas["Língua Portuguesa"], (Decimal("22.00"), 1))
-        self.assertEqual(notas["Matemática"], (Decimal("28.50"), 0))
+        self.assertEqual(notas["Língua Portuguesa"], (Decimal("22.00"), None))
+        self.assertEqual(notas["Matemática"], (Decimal("28.50"), None))
 
     def test_importacao_com_nome_duplicado_em_matriculas_importa_sem_vinculo(self):
         self._matricula_para_boletim(nome="João da Silva")
@@ -1003,6 +1009,87 @@ class SitePublicoTests(TestCase):
         self.assertEqual(perfil.data_nascimento, date(2019, 8, 18))
         self.assertEqual(perfil.cpf_mae, "138.090.846-97")
         self.assertNotIn(perfil.nome, resultado["sem_acesso"])
+
+    def test_consulta_publica_encontra_boletim_avulso_pelos_dados_da_mae_em_matriculas(self):
+        periodo = PeriodoBoletim.objects.create(
+            tipo="TRIMESTRE",
+            numero=2,
+            ano=2026,
+            turma="1º Tulipa",
+            publicado=True,
+        )
+        disciplina = DisciplinaBoletim.objects.create(
+            periodo=periodo,
+            nome="Matemática",
+            ordem=0,
+        )
+        perfil = AlunoBoletim.objects.create(
+            nome="Alice Vitória Soares Veloso",
+        )
+        boletim = BoletimAluno.objects.create(
+            periodo=periodo,
+            aluno=perfil,
+            numero_chamada=1,
+            faltas_totais=3,
+        )
+        NotaBoletim.objects.create(
+            boletim=boletim,
+            disciplina=disciplina,
+            nota=Decimal("30.00"),
+        )
+        self._matricula_para_boletim(
+            nome="Alice Vitória Soares Veloso",
+            cpf_mae="138.090.846-97",
+        )
+
+        response = self.client.post(
+            reverse("site_publico:boletim"),
+            {
+                "cpf": "138.090.846-97",
+                "data_nascimento": "2017-08-13",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/boletim/acesso/", response.url)
+
+    def test_importacao_soma_as_faltas_e_salva_somente_o_total(self):
+        dados = {
+            "metadados": {
+                "tipo": "TRIMESTRE",
+                "numero": 2,
+                "ano": 2026,
+                "turma": "1º Tulipa",
+                "regente": "",
+                "titulo_original": "",
+            },
+            "disciplinas": [
+                {"nome": "Língua Portuguesa", "ordem": 0, "nota_col": 2, "faltas_col": 3},
+                {"nome": "Matemática", "ordem": 1, "nota_col": 4, "faltas_col": 5},
+                {"nome": "Ciências", "ordem": 2, "nota_col": 6, "faltas_col": 7},
+            ],
+            "alunos": [
+                {
+                    "numero_chamada": 1,
+                    "nome": "Alice Vitória Soares Veloso",
+                    "nome_normalizado": "ALICE VITORIA SOARES VELOSO",
+                    "resultados": [
+                        {"disciplina": "Língua Portuguesa", "ordem": 0, "nota": Decimal("21.00"), "faltas": 1},
+                        {"disciplina": "Matemática", "ordem": 1, "nota": Decimal("30.00"), "faltas": 2},
+                        {"disciplina": "Ciências", "ordem": 2, "nota": Decimal("29.00"), "faltas": 0},
+                    ],
+                }
+            ],
+        }
+
+        resultado = importar_dados_boletim(dados)
+
+        self.assertEqual(resultado["importados"], 1)
+        boletim = BoletimAluno.objects.get()
+        self.assertEqual(boletim.faltas_totais, 3)
+        self.assertFalse(
+            NotaBoletim.objects.filter(boletim=boletim, faltas__isnull=False).exists()
+        )
 
     def test_consulta_publica_usa_dados_existentes_em_declaracoes(self):
         periodo = PeriodoBoletim.objects.create(
@@ -1298,8 +1385,8 @@ class SitePublicoTests(TestCase):
                 "cpf_mae": "123.456.789-09",
                 "cpf_responsavel": "",
                 "numero_chamada": 30,
+                "faltas_totais": "2",
                 f"nota_{disciplina.pk}": "24,50",
-                f"faltas_{disciplina.pk}": "2",
             },
         )
 
@@ -1310,12 +1397,13 @@ class SitePublicoTests(TestCase):
         )
         self.assertIsNone(boletim.aluno.matricula_id)
         self.assertEqual(boletim.numero_chamada, 30)
+        self.assertEqual(boletim.faltas_totais, 2)
         resultado = NotaBoletim.objects.get(
             boletim=boletim,
             disciplina=disciplina,
         )
         self.assertEqual(resultado.nota, Decimal("24.50"))
-        self.assertEqual(resultado.faltas, 2)
+        self.assertIsNone(resultado.faltas)
 
     def test_editar_nome_e_nota_de_aluno_existente_no_boletim(self):
         User = get_user_model()
@@ -1339,8 +1427,8 @@ class SitePublicoTests(TestCase):
                 "cpf_mae": "123.456.789-09",
                 "cpf_responsavel": "",
                 "numero_chamada": 1,
+                "faltas_totais": "3",
                 f"nota_{disciplina.pk}": "25",
-                f"faltas_{disciplina.pk}": "0",
             },
         )
 
@@ -1356,4 +1444,6 @@ class SitePublicoTests(TestCase):
             disciplina=disciplina,
         )
         self.assertEqual(resultado.nota, Decimal("25.00"))
-        self.assertEqual(resultado.faltas, 0)
+        self.assertIsNone(resultado.faltas)
+        boletim.refresh_from_db()
+        self.assertEqual(boletim.faltas_totais, 3)
