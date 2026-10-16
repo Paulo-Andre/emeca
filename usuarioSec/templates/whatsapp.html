@@ -1,0 +1,392 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secretaria Escolar · WhatsApp</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+  <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261016-sidebar-collapse-02">
+  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261016-01">
+</head>
+<body>
+  <aside class="sidebar" aria-label="Navegação da secretaria">
+    <div class="logo">
+      <img class="logo__mark" src="{% static 'imagens/logo.svg' %}" alt="">
+      <span class="logo__copy">
+        <strong>E. M. Egídio Cordeiro Aquino</strong>
+        <span>Secretaria Digital</span>
+      </span>
+    </div>
+
+    <div class="nav-section-label">Atendimento</div>
+    <a class="nav-item" href="{% url 'dashboard' %}">
+      <i data-lucide="users-round"></i><span>Matrículas</span>
+    </a>
+    <a class="nav-item" href="{% url 'telaDeclaracao' %}">
+      <i data-lucide="file-text"></i><span>Declarações</span>
+    </a>
+    <a class="nav-item" href="{% url 'historico:inicio' %}">
+      <i data-lucide="graduation-cap"></i><span>Histórico Escolar</span>
+    </a>
+    <a class="nav-item" href="{% url 'site_publico:gestao_boletins' %}">
+      <i data-lucide="notebook-tabs"></i><span>Boletins</span>
+    </a>
+    <a class="nav-item active" href="{% url 'whatsapp' %}">
+      <i data-lucide="message-circle-more"></i><span>WhatsApp</span>
+    </a>
+
+    <div class="nav-section-label">Site público</div>
+    <a class="nav-item" href="{% url 'site_publico:gestao_site' %}">
+      <i data-lucide="panel-top"></i><span>Gestão do Site</span>
+    </a>
+
+    <a class="nav-item nav-logout" href="{% url 'sair' %}">
+      <i data-lucide="log-out"></i><span>Sair</span>
+    </a>
+  </aside>
+
+  <main class="main whatsapp-main">
+    <header class="header">
+      <div class="header-icon whatsapp-icon"><i data-lucide="message-circle-more"></i></div>
+      <div>
+        <h2>WhatsApp da Secretaria</h2>
+        <p>Envie comunicados para um responsável, para uma turma ou para todos os contatos cadastrados.</p>
+      </div>
+    </header>
+
+    {% if messages %}
+      <div class="flash-stack" aria-live="polite">
+        {% for message in messages %}
+          <div class="flash {{ message.tags|default:'info' }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <section class="connection-card">
+      <div class="connection-copy">
+        <div class="status-line">
+          <span class="status-dot status-{{ gateway_status|lower }}"></span>
+          <strong>
+            {% if gateway_status == "CONNECTED" %}WhatsApp conectado
+            {% elif gateway_status == "SCAN_QR" %}Aguardando leitura do QR
+            {% elif gateway_status == "NAO_CONFIGURADO" %}Integração ainda não configurada
+            {% elif gateway_status == "NAO_CRIADA" %}Sessão pronta para ser criada
+            {% elif gateway_status == "INDISPONIVEL" %}WA-AKG indisponível
+            {% else %}Status: {{ gateway_status }}
+            {% endif %}
+          </strong>
+        </div>
+        <p>
+          O envio usa o WA-AKG no servidor. A chave de API não é exposta no navegador.
+          {% if gateway_status_detalhe %}<br>{{ gateway_status_detalhe }}{% endif %}
+        </p>
+      </div>
+      <div class="connection-actions">
+        {% if gateway_configurado %}
+          <form method="post" action="{% url 'whatsapp_conectar' %}">
+            {% csrf_token %}
+            <button class="btn-secondary" type="submit">
+              <i data-lucide="power"></i>
+              {% if gateway_status == "CONNECTED" %}Reiniciar conexão{% else %}Iniciar conexão{% endif %}
+            </button>
+          </form>
+          <button class="btn-primary" type="button" id="btnQr">
+            <i data-lucide="qr-code"></i> Exibir QR
+          </button>
+        {% endif %}
+      </div>
+    </section>
+
+    <form method="post" action="{% url 'whatsapp_enviar' %}" id="formEnvio" class="send-grid">
+      {% csrf_token %}
+      <section class="card audience-card">
+        <div class="section-heading">
+          <div>
+            <span class="step">1</span>
+            <h3>Escolha os destinatários</h3>
+          </div>
+          <span class="helper">Números repetidos são removidos automaticamente.</span>
+        </div>
+
+        <div class="mode-grid">
+          <label class="mode-option">
+            <input type="radio" name="modo" value="todos" checked>
+            <span class="mode-content">
+              <i data-lucide="users"></i>
+              <strong>Todos</strong>
+              <small>Todos os responsáveis cadastrados</small>
+            </span>
+          </label>
+          <label class="mode-option">
+            <input type="radio" name="modo" value="turma">
+            <span class="mode-content">
+              <i data-lucide="school"></i>
+              <strong>Por turma</strong>
+              <small>Somente os responsáveis de uma turma</small>
+            </span>
+          </label>
+          <label class="mode-option">
+            <input type="radio" name="modo" value="individual">
+            <span class="mode-content">
+              <i data-lucide="user-round"></i>
+              <strong>Individual</strong>
+              <small>Um pai, mãe ou responsável específico</small>
+            </span>
+          </label>
+        </div>
+
+        <div class="field-block" id="campoTurma" hidden>
+          <label for="turma">Turma</label>
+          <select name="turma" id="turma">
+            <option value="">Selecione a turma</option>
+            {% for turma in turmas %}
+              <option value="{{ turma }}">{{ turma }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="field-block" id="campoIndividual" hidden>
+          <label for="buscaContato">Buscar aluno ou responsável</label>
+          <div class="contact-search">
+            <i data-lucide="search"></i>
+            <input id="buscaContato" type="search" placeholder="Digite pelo menos 2 letras" autocomplete="off">
+          </div>
+          <input type="hidden" name="contato_id" id="contatoId">
+          <div id="resultadoContatos" class="contact-results" hidden></div>
+          <div id="contatoSelecionado" class="selected-contact" hidden></div>
+        </div>
+
+        <div class="field-block" id="tiposContato">
+          <label>Quais contatos receberão?</label>
+          <div class="check-grid">
+            <label><input type="checkbox" name="tipos" value="PAI" checked> Pai</label>
+            <label><input type="checkbox" name="tipos" value="MAE" checked> Mãe</label>
+            <label><input type="checkbox" name="tipos" value="RESPONSAVEL" checked> Responsável</label>
+          </div>
+        </div>
+
+        <div class="recipient-preview" id="previewDestinatarios">
+          <div>
+            <span class="preview-number" id="recipientCount">—</span>
+            <span>contatos válidos</span>
+          </div>
+          <small id="recipientHint">Calculando destinatários…</small>
+        </div>
+      </section>
+
+      <section class="card message-card">
+        <div class="section-heading">
+          <div>
+            <span class="step">2</span>
+            <h3>Escreva a mensagem</h3>
+          </div>
+          <span class="helper">O disparo respeita intervalo de {{ delay_segundos }}s + variação do WA-AKG.</span>
+        </div>
+
+        <label for="mensagem">Mensagem</label>
+        <textarea
+          name="mensagem"
+          id="mensagem"
+          maxlength="4000"
+          rows="10"
+          placeholder="Ex.: Prezadas famílias, informamos que..."
+          required
+        ></textarea>
+        <div class="message-meta">
+          <span>Evite enviar informações sensíveis desnecessárias.</span>
+          <span id="charCount">0 / 4000</span>
+        </div>
+
+        <div class="send-warning">
+          <i data-lucide="shield-check"></i>
+          <div>
+            <strong>Confirme antes do envio</strong>
+            <p>Em envios por turma ou para todos, cada número recebe uma conversa individual. Os destinatários não veem os demais contatos.</p>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          class="btn-send"
+          id="btnEnviar"
+          {% if gateway_status != "CONNECTED" %}disabled{% endif %}
+        >
+          <i data-lucide="send"></i>
+          <span>Enviar pelo WhatsApp</span>
+        </button>
+        {% if gateway_status != "CONNECTED" %}
+          <p class="disabled-note">Conecte o WhatsApp antes de realizar disparos.</p>
+        {% endif %}
+      </section>
+    </form>
+  </main>
+
+  <dialog id="qrDialog" class="qr-dialog">
+    <button type="button" class="dialog-close" id="fecharQr" aria-label="Fechar">&times;</button>
+    <div class="qr-content">
+      <i data-lucide="smartphone"></i>
+      <h3>Vincular WhatsApp</h3>
+      <p>No celular, abra WhatsApp → Aparelhos conectados → Conectar aparelho.</p>
+      <div class="qr-frame" id="qrFrame">
+        <span>Carregando QR…</span>
+      </div>
+    </div>
+  </dialog>
+
+  <script>
+    lucide.createIcons();
+
+    const form = document.getElementById("formEnvio");
+    const modos = [...document.querySelectorAll('input[name="modo"]')];
+    const campoTurma = document.getElementById("campoTurma");
+    const campoIndividual = document.getElementById("campoIndividual");
+    const tiposContato = document.getElementById("tiposContato");
+    const turma = document.getElementById("turma");
+    const contatoId = document.getElementById("contatoId");
+    const buscaContato = document.getElementById("buscaContato");
+    const resultados = document.getElementById("resultadoContatos");
+    const selecionado = document.getElementById("contatoSelecionado");
+    const recipientCount = document.getElementById("recipientCount");
+    const recipientHint = document.getElementById("recipientHint");
+    const mensagem = document.getElementById("mensagem");
+    const charCount = document.getElementById("charCount");
+
+    function modoAtual() {
+      return modos.find(el => el.checked)?.value || "todos";
+    }
+
+    function atualizarCampos() {
+      const modo = modoAtual();
+      campoTurma.hidden = modo !== "turma";
+      campoIndividual.hidden = modo !== "individual";
+      tiposContato.hidden = modo === "individual";
+      atualizarPreview();
+    }
+
+    async function atualizarPreview() {
+      const params = new URLSearchParams({modo: modoAtual()});
+      if (modoAtual() === "turma" && turma.value) params.set("turma", turma.value);
+      if (modoAtual() === "individual" && contatoId.value) params.set("contato_id", contatoId.value);
+      if (modoAtual() !== "individual") {
+        document.querySelectorAll('input[name="tipos"]:checked').forEach(el => params.append("tipos", el.value));
+      }
+
+      if ((modoAtual() === "turma" && !turma.value) || (modoAtual() === "individual" && !contatoId.value)) {
+        recipientCount.textContent = "0";
+        recipientHint.textContent = "Complete a seleção para calcular os destinatários.";
+        return;
+      }
+
+      recipientHint.textContent = "Calculando destinatários…";
+      try {
+        const resp = await fetch("{% url 'whatsapp_destinatarios' %}?" + params.toString(), {headers: {"X-Requested-With": "XMLHttpRequest"}});
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) throw new Error(data.erro || "Falha ao calcular.");
+        recipientCount.textContent = data.quantidade;
+        recipientHint.textContent = data.invalidos
+          ? data.invalidos + " telefone(s) sem DDD ou inválido(s) serão ignorados."
+          : "Todos os números encontrados estão em formato utilizável.";
+      } catch (err) {
+        recipientCount.textContent = "—";
+        recipientHint.textContent = err.message;
+      }
+    }
+
+    modos.forEach(el => el.addEventListener("change", atualizarCampos));
+    turma.addEventListener("change", atualizarPreview);
+    document.querySelectorAll('input[name="tipos"]').forEach(el => el.addEventListener("change", atualizarPreview));
+
+    let searchTimer;
+    buscaContato.addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      const q = buscaContato.value.trim();
+      contatoId.value = "";
+      selecionado.hidden = true;
+      if (q.length < 2) {
+        resultados.hidden = true;
+        atualizarPreview();
+        return;
+      }
+      searchTimer = setTimeout(async () => {
+        const resp = await fetch("{% url 'whatsapp_buscar_contatos' %}?q=" + encodeURIComponent(q));
+        const data = await resp.json();
+        resultados.innerHTML = "";
+        data.results.forEach(item => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "contact-result";
+          button.innerHTML = "<strong>" + escapeHtml(item.aluno) + "</strong><span>" +
+            escapeHtml(item.tipo) + " · " + escapeHtml(item.telefone) +
+            (item.turma ? " · " + escapeHtml(item.turma) : "") + "</span>";
+          button.addEventListener("click", () => {
+            contatoId.value = item.id;
+            selecionado.innerHTML = "<strong>" + escapeHtml(item.aluno) + "</strong><span>" +
+              escapeHtml(item.tipo) + " · " + escapeHtml(item.telefone) + "</span>";
+            selecionado.hidden = false;
+            resultados.hidden = true;
+            buscaContato.value = item.aluno;
+            atualizarPreview();
+          });
+          resultados.appendChild(button);
+        });
+        resultados.hidden = !data.results.length;
+      }, 250);
+    });
+
+    mensagem.addEventListener("input", () => {
+      charCount.textContent = mensagem.value.length + " / 4000";
+    });
+
+    form.addEventListener("submit", event => {
+      const quantidade = Number(recipientCount.textContent);
+      if (!quantidade) {
+        event.preventDefault();
+        alert("Selecione pelo menos um destinatário válido.");
+        return;
+      }
+      const alvo = modoAtual() === "todos"
+        ? "todos os " + quantidade + " contatos"
+        : quantidade + " contato(s)";
+      if (!confirm("Confirma o envio desta mensagem para " + alvo + "?")) {
+        event.preventDefault();
+      }
+    });
+
+    function escapeHtml(value) {
+      const div = document.createElement("div");
+      div.textContent = value ?? "";
+      return div.innerHTML;
+    }
+
+    const btnQr = document.getElementById("btnQr");
+    const qrDialog = document.getElementById("qrDialog");
+    const qrFrame = document.getElementById("qrFrame");
+    if (btnQr) {
+      btnQr.addEventListener("click", async () => {
+        qrDialog.showModal();
+        qrFrame.innerHTML = "<span>Carregando QR…</span>";
+        try {
+          const resp = await fetch("{% url 'whatsapp_qr' %}");
+          const data = await resp.json();
+          if (data.connected) {
+            qrFrame.innerHTML = "<div class='qr-connected'>WhatsApp já está conectado.</div>";
+          } else if (resp.ok && data.base64) {
+            qrFrame.innerHTML = "<img src='" + data.base64 + "' alt='QR Code do WhatsApp'>";
+          } else {
+            throw new Error(data.erro || "QR ainda não disponível. Inicie a conexão e tente novamente.");
+          }
+        } catch (err) {
+          qrFrame.innerHTML = "<div class='qr-error'>" + escapeHtml(err.message) + "</div>";
+        }
+      });
+    }
+    document.getElementById("fecharQr").addEventListener("click", () => qrDialog.close());
+
+    atualizarCampos();
+  </script>
+</body>
+</html>
