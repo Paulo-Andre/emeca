@@ -8,7 +8,7 @@
       <i data-lucide="arrow-left"></i> Nova consulta
     </a>
     {% if boletim_selecionado %}
-      <a class="button button--primary" href="{% url 'site_publico:boletim_pdf' token_boletim boletim_selecionado.pk %}">
+      <a class="button button--primary" href="{% url 'site_publico:boletim_pdf' boletim_selecionado.pk %}">
         <i data-lucide="download"></i> Baixar boletim em PDF
       </a>
     {% endif %}
