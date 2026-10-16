@@ -31,6 +31,12 @@
       {% for error in form.numero_chamada.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
     </div>
     <div class="manager-field">
+      <label for="{{ form.faltas_totais.id_for_label }}">{{ form.faltas_totais.label }}</label>
+      {{ form.faltas_totais }}
+      {% if form.faltas_totais.help_text %}<small>{{ form.faltas_totais.help_text }}</small>{% endif %}
+      {% for error in form.faltas_totais.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
+    </div>
+    <div class="manager-field">
       <label for="{{ form.data_nascimento.id_for_label }}">{{ form.data_nascimento.label }}</label>
       {{ form.data_nascimento }}
       {% for error in form.data_nascimento.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
@@ -50,30 +56,29 @@
   <div class="bulletin-grade-editor__heading">
     <span><i data-lucide="table-2"></i></span>
     <div>
-      <strong>Notas e faltas</strong>
-      <small>Use vírgula ou ponto para a nota. Faltas devem ser números inteiros.</small>
+      <strong>Notas por disciplina</strong>
+      <small>As faltas são registradas somente como total do período, no campo acima.</small>
     </div>
   </div>
 
   <div class="bulletin-grade-editor__table-wrap">
     <table class="bulletin-grade-editor__table">
-      <thead><tr><th>Disciplina</th><th>Nota</th><th>Faltas</th></tr></thead>
+      <thead><tr><th>Disciplina</th><th>Nota</th></tr></thead>
       <tbody>
         {% for linha in linhas_notas %}
           <tr>
             <td>{{ linha.disciplina.nome }}</td>
             <td><input class="site-manager-input" name="nota_{{ linha.disciplina.pk }}" value="{{ linha.nota|default_if_none:'' }}" inputmode="decimal" placeholder="—"></td>
-            <td><input class="site-manager-input" name="faltas_{{ linha.disciplina.pk }}" value="{{ linha.faltas|default_if_none:'' }}" inputmode="numeric" type="number" min="0" placeholder="—"></td>
           </tr>
         {% empty %}
-          <tr><td colspan="3">Este período ainda não possui disciplinas.</td></tr>
+          <tr><td colspan="2">Este período ainda não possui disciplinas.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 
   <div class="manager-form-actions">
-    <button class="manager-btn manager-btn--primary" type="submit"><i data-lucide="save"></i> Salvar aluno, notas e faltas</button>
+    <button class="manager-btn manager-btn--primary" type="submit"><i data-lucide="save"></i> Salvar aluno, notas e faltas totais</button>
   </div>
 </form>
 {% endblock %}

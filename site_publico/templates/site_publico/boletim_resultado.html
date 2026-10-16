@@ -70,6 +70,7 @@
             <div><span>Turma</span><strong>{{ boletim_selecionado.periodo.turma }}</strong></div>
             <div><span>Nascimento</span><strong>{% if boletim_selecionado.aluno.data_nascimento %}{{ boletim_selecionado.aluno.data_nascimento|date:"d/m/Y" }}{% else %}—{% endif %}</strong></div>
             <div><span>Nº</span><strong>{{ boletim_selecionado.numero_chamada|default:"—" }}</strong></div>
+            <div><span>Faltas totais</span><strong>{{ boletim_selecionado.faltas_totais|default_if_none:"—" }}</strong></div>
             <div class="bulletin-paper__student-wide"><span>Regente</span><strong>{{ boletim_selecionado.periodo.regente|default:"—" }}</strong></div>
           </div>
 
@@ -79,7 +80,6 @@
                 <tr>
                   <th>Componente curricular</th>
                   <th>Nota</th>
-                  <th>Faltas</th>
                 </tr>
               </thead>
               <tbody>
@@ -87,10 +87,9 @@
                   <tr>
                     <td>{{ resultado.disciplina.nome }}</td>
                     <td>{% if resultado.nota != None %}{{ resultado.nota|floatformat:2 }}{% else %}—{% endif %}</td>
-                    <td>{{ resultado.faltas|default_if_none:"—" }}</td>
                   </tr>
                 {% empty %}
-                  <tr><td colspan="3">Nenhum lançamento disponível neste período.</td></tr>
+                  <tr><td colspan="2">Nenhum lançamento disponível neste período.</td></tr>
                 {% endfor %}
               </tbody>
             </table>

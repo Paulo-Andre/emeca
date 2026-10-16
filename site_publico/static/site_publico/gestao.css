@@ -2335,10 +2335,8 @@
 }
 
 .bulletin-grade-editor__table th:nth-child(2),
-.bulletin-grade-editor__table th:nth-child(3),
-.bulletin-grade-editor__table td:nth-child(2),
-.bulletin-grade-editor__table td:nth-child(3) {
-  width: 150px;
+.bulletin-grade-editor__table td:nth-child(2) {
+  width: 170px;
 }
 
 .bulletin-grade-editor__table td {

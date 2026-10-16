@@ -244,10 +244,17 @@ def importar_dados_boletim(dados_planilha, dados_periodo=None):
                     declaracoes_mesmo_nome[0],
                 )
 
+        faltas_totais = sum(
+            item["faltas"] or 0
+            for item in linha["resultados"]
+            if item.get("faltas") is not None
+        )
+
         boletim = BoletimAluno.objects.create(
             periodo=periodo,
             aluno=perfil,
             numero_chamada=linha["numero_chamada"],
+            faltas_totais=faltas_totais,
         )
 
         resultados = []
@@ -260,7 +267,9 @@ def importar_dados_boletim(dados_planilha, dados_periodo=None):
                     boletim=boletim,
                     disciplina=disciplina,
                     nota=item["nota"],
-                    faltas=item["faltas"],
+                    # As faltas são exibidas e editadas apenas como total do
+                    # período, evitando duplicação por componente curricular.
+                    faltas=None,
                 )
             )
         NotaBoletim.objects.bulk_create(resultados)
@@ -314,6 +323,34 @@ def consulta_bloqueada(request):
     return len(recentes) >= TENTATIVAS_LIMITE
 
 
+def _nomes_autorizados_por_credenciais(cpf_normalizado, data_nascimento):
+    """Resolve os nomes dos estudantes a partir dos dados do responsável."""
+    nomes = {}
+    fontes = []
+
+    for registro in matricula.objects.filter(dataNascimentoAluno=data_nascimento):
+        cpfs = {
+            somente_digitos(registro.cpfMae),
+            somente_digitos(registro.cpfResponsavel),
+        }
+        if cpf_normalizado in cpfs:
+            chave = normalizar_nome(registro.nomeDoAluno)
+            nomes[chave] = registro.nomeDoAluno
+            fontes.append((chave, registro))
+
+    for registro in declaracao.objects.filter(dataNascimentoAluno=data_nascimento):
+        cpfs = {
+            somente_digitos(registro.cpfMae),
+            somente_digitos(registro.cpfResponsavel),
+        }
+        if cpf_normalizado in cpfs:
+            chave = normalizar_nome(registro.nomeDoAluno)
+            nomes[chave] = registro.nomeDoAluno
+            fontes.append((chave, registro))
+
+    return nomes, fontes
+
+
 def localizar_alunos_por_credenciais(
     cpf,
     data_nascimento,
@@ -329,74 +366,70 @@ def localizar_alunos_por_credenciais(
     else:
         candidatos = candidatos.filter(boletins__isnull=False)
 
-    # Consulta Declarações pela mesma data informada para reduzir o conjunto
-    # e permitir que boletins importados sem vínculo com Matrículas tenham
-    # acesso público sem recadastro manual dos dados.
-    declaracoes_data = declaracao.objects.filter(
-        dataNascimentoAluno=data_nascimento,
+    nomes_autorizados, fontes = _nomes_autorizados_por_credenciais(
+        cpf_normalizado,
+        data_nascimento,
     )
-    declaracoes_por_nome = _mapa_declaracoes_por_nome(declaracoes_data)
+    fontes_por_nome = defaultdict(list)
+    for chave, fonte in fontes:
+        fontes_por_nome[chave].append(fonte)
 
     encontrados = []
+    vistos = set()
+
     for aluno in candidatos:
-        fontes = []
+        chave_nome = normalizar_nome(aluno.nome)
+        autorizado = chave_nome in nomes_autorizados
 
-        fontes.append(
-            (
-                aluno.data_nascimento,
-                {
-                    somente_digitos(aluno.cpf_mae),
-                    somente_digitos(aluno.cpf_responsavel),
-                },
-                None,
-            )
-        )
-
-        if aluno.matricula_id:
-            fontes.append(
-                (
-                    aluno.matricula.dataNascimentoAluno,
-                    {
-                        somente_digitos(aluno.matricula.cpfMae),
-                        somente_digitos(aluno.matricula.cpfResponsavel),
-                    },
-                    "matricula",
-                )
+        # Também aceita dados já gravados diretamente no perfil do boletim.
+        if not autorizado:
+            cpfs_perfil = {
+                somente_digitos(aluno.cpf_mae),
+                somente_digitos(aluno.cpf_responsavel),
+            }
+            autorizado = (
+                aluno.data_nascimento == data_nascimento
+                and cpf_normalizado in cpfs_perfil
             )
 
-        for registro in declaracoes_por_nome.get(normalizar_nome(aluno.nome), []):
-            fontes.append(
-                (
-                    registro.dataNascimentoAluno,
-                    {
-                        somente_digitos(registro.cpfMae),
-                        somente_digitos(registro.cpfResponsavel),
-                    },
-                    registro,
-                )
+        # Perfil vinculado à Matrícula continua sendo aceito diretamente.
+        if not autorizado and aluno.matricula_id:
+            cpfs_matricula = {
+                somente_digitos(aluno.matricula.cpfMae),
+                somente_digitos(aluno.matricula.cpfResponsavel),
+            }
+            autorizado = (
+                aluno.matricula.dataNascimentoAluno == data_nascimento
+                and cpf_normalizado in cpfs_matricula
             )
 
-        fonte_correspondente = None
-        for nascimento, cpfs, fonte in fontes:
-            if nascimento == data_nascimento and cpf_normalizado in cpfs:
-                fonte_correspondente = fonte
-                break
-
-        if fonte_correspondente is None and not any(
-            nascimento == data_nascimento and cpf_normalizado in cpfs
-            for nascimento, cpfs, _ in fontes
-        ):
+        if not autorizado or aluno.pk in vistos:
             continue
 
-        if fonte_correspondente == "matricula" and aluno.matricula_id:
-            aluno = sincronizar_perfil_matricula(aluno.matricula)
-        elif fonte_correspondente not in {None, "matricula"}:
-            aluno = sincronizar_perfil_declaracao(
-                aluno,
-                fonte_correspondente,
-            )
+        # Se o boletim estava avulso, sincroniza CPF/data a partir da fonte
+        # encontrada, sem obrigar vínculo com Matrículas.
+        fontes_nome = fontes_por_nome.get(chave_nome, [])
+        if fontes_nome:
+            fonte = fontes_nome[0]
+            if hasattr(fonte, "cpfMae") and hasattr(fonte, "cpfResponsavel"):
+                if isinstance(fonte, declaracao):
+                    aluno = sincronizar_perfil_declaracao(aluno, fonte)
+                else:
+                    alterados = []
+                    dados = {
+                        "data_nascimento": fonte.dataNascimentoAluno,
+                        "cpf_mae": fonte.cpfMae or "",
+                        "cpf_responsavel": fonte.cpfResponsavel or "",
+                    }
+                    for campo, valor in dados.items():
+                        if valor and getattr(aluno, campo) != valor:
+                            setattr(aluno, campo, valor)
+                            alterados.append(campo)
+                    if alterados:
+                        aluno.save(update_fields=alterados + ["atualizado_em"])
 
         encontrados.append(aluno)
+        vistos.add(aluno.pk)
 
     return encontrados
 
@@ -538,8 +571,14 @@ def gerar_pdf_boletim(boletim, config_site=None):
         [
             Paragraph("<b>Regente</b>", normal),
             Paragraph(escape(boletim.periodo.regente or "—"), normal),
+            Paragraph("<b>Faltas totais</b>", normal),
+            Paragraph(_pdf_texto(boletim.faltas_totais), normal),
+        ],
+        [
             Paragraph("<b>Município</b>", normal),
             Paragraph(escape(cidade), normal),
+            Paragraph("", normal),
+            Paragraph("", normal),
         ],
     ]
     info = Table(dados, colWidths=[27 * mm, 72 * mm, 24 * mm, 55 * mm])
@@ -559,17 +598,16 @@ def gerar_pdf_boletim(boletim, config_site=None):
     )
     story.extend([info, Spacer(1, 8 * mm)])
 
-    linhas = [["Componente curricular", "Nota", "Faltas"]]
+    linhas = [["Componente curricular", "Nota"]]
     for resultado in boletim.resultados.select_related("disciplina").all():
         nota = (
             f"{resultado.nota:.2f}".replace(".", ",")
             if resultado.nota is not None
             else "—"
         )
-        faltas = _pdf_texto(resultado.faltas)
-        linhas.append([resultado.disciplina.nome, nota, faltas])
+        linhas.append([resultado.disciplina.nome, nota])
 
-    tabela = Table(linhas, colWidths=[118 * mm, 30 * mm, 30 * mm], repeatRows=1)
+    tabela = Table(linhas, colWidths=[148 * mm, 30 * mm], repeatRows=1)
     tabela.setStyle(
         TableStyle(
             [
@@ -577,7 +615,7 @@ def gerar_pdf_boletim(boletim, config_site=None):
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                 ("FONTSIZE", (0, 0), (-1, -1), 9),
-                ("ALIGN", (1, 1), (-1, -1), "CENTER"),
+                ("ALIGN", (1, 1), (1, -1), "CENTER"),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                 ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#ccd6ce")),
                 ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8faf7")]),

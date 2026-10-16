@@ -368,6 +368,7 @@ def gestao_boletim_aluno(request, periodo_pk, boletim_pk=None):
 
     initial = {
         "numero_chamada": boletim_obj.numero_chamada if boletim_obj else None,
+        "faltas_totais": boletim_obj.faltas_totais if boletim_obj else None,
     }
     if boletim_obj is None:
         matricula_id = request.GET.get("matricula")
@@ -420,29 +421,45 @@ def gestao_boletim_aluno(request, periodo_pk, boletim_pk=None):
                     boletim_obj, criado = BoletimAluno.objects.get_or_create(
                         periodo=periodo,
                         aluno=perfil,
-                        defaults={"numero_chamada": form.cleaned_data["numero_chamada"]},
+                        defaults={
+                            "numero_chamada": form.cleaned_data["numero_chamada"],
+                            "faltas_totais": form.cleaned_data.get("faltas_totais"),
+                        },
                     )
                     if not criado:
                         boletim_obj.numero_chamada = form.cleaned_data["numero_chamada"]
-                        boletim_obj.save(update_fields=["numero_chamada", "atualizado_em"])
+                        boletim_obj.faltas_totais = form.cleaned_data.get("faltas_totais")
+                        boletim_obj.save(
+                            update_fields=[
+                                "numero_chamada",
+                                "faltas_totais",
+                                "atualizado_em",
+                            ]
+                        )
                 else:
                     boletim_obj.numero_chamada = form.cleaned_data["numero_chamada"]
-                    boletim_obj.save(update_fields=["numero_chamada", "atualizado_em"])
+                    boletim_obj.faltas_totais = form.cleaned_data.get("faltas_totais")
+                    boletim_obj.save(
+                        update_fields=[
+                            "numero_chamada",
+                            "faltas_totais",
+                            "atualizado_em",
+                        ]
+                    )
 
                 for disciplina in periodo.disciplinas.all():
                     nota = _decimal_post(request.POST.get(f"nota_{disciplina.pk}"))
-                    faltas = _inteiro_post(request.POST.get(f"faltas_{disciplina.pk}"))
                     NotaBoletim.objects.update_or_create(
                         boletim=boletim_obj,
                         disciplina=disciplina,
-                        defaults={"nota": nota, "faltas": faltas},
+                        defaults={"nota": nota, "faltas": None},
                     )
         except ValueError as exc:
             messages.error(request, str(exc))
         else:
             messages.success(
                 request,
-                "Nome do aluno, notas e faltas foram salvos.",
+                "Nome do aluno, notas e faltas totais foram salvos.",
             )
             return redirect("site_publico:gestao_boletim_periodo", pk=periodo.pk)
 
@@ -452,7 +469,6 @@ def gestao_boletim_aluno(request, periodo_pk, boletim_pk=None):
         linhas_notas.append({
             "disciplina": disciplina,
             "nota": request.POST.get(f"nota_{disciplina.pk}") if request.method == "POST" else (atual.nota if atual else ""),
-            "faltas": request.POST.get(f"faltas_{disciplina.pk}") if request.method == "POST" else (atual.faltas if atual else ""),
         })
 
     return render(request, "site_publico/gestao/boletim_aluno.html", {
