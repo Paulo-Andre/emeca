@@ -3,7 +3,7 @@ import hmac
 from datetime import timedelta
 
 from django.conf import settings
-from django.db import IntegrityError, transaction
+from django.db import DatabaseError, IntegrityError, transaction
 from django.utils import timezone
 
 from .models import SecurityRateLimit
@@ -102,7 +102,11 @@ def consumir_limite(bucket, identidade, limite, janela_segundos):
         except IntegrityError:
             if tentativa == 0:
                 continue
-            raise
+            return False, janela_segundos
+        except DatabaseError:
+            # Falha fechada: em contenção/falha do banco, não libera uma
+            # sequência de tentativas potencialmente abusiva.
+            return False, janela_segundos
 
     return False, janela_segundos
 
