@@ -450,6 +450,15 @@ class BoletimAlunoManualForm(forms.Form):
         label="Número da chamada",
         widget=forms.NumberInput(attrs={"class": "site-manager-input", "min": 1}),
     )
+    faltas_totais = forms.IntegerField(
+        required=False,
+        min_value=0,
+        label="Faltas totais no período",
+        widget=forms.NumberInput(
+            attrs={"class": "site-manager-input", "min": 0, "inputmode": "numeric"}
+        ),
+        help_text="Informe somente o total de faltas do aluno neste bimestre/trimestre.",
+    )
 
     def __init__(self, *args, **kwargs):
         aluno_fixo = kwargs.pop("aluno_fixo", None)
