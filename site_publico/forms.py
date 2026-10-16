@@ -10,6 +10,7 @@ from .models import (
     DocumentoPublico,
     Evento,
     FotoGaleria,
+    IMAGEM_VALIDATOR,
     Noticia,
     PaginaPublica,
     PerguntaFrequente,
@@ -108,6 +109,85 @@ class SecaoPaginaForm(StyledModelForm):
             "rotulo": "É o texto menor que aparece acima do título em alguns blocos.",
             "imagem": "Opcional. Quando o layout do bloco aceitar imagem, ela será exibida sem alterar menus ou botões.",
         }
+
+
+class MultipleImageInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class MultipleImageField(forms.FileField):
+    widget = MultipleImageInput
+
+    def clean(self, data, initial=None):
+        if not data and self.required:
+            raise forms.ValidationError("Selecione pelo menos uma foto.")
+        arquivos = data if isinstance(data, (list, tuple)) else [data]
+        limpos = []
+        for arquivo in arquivos:
+            if arquivo:
+                limpos.append(super().clean(arquivo, initial))
+        return limpos
+
+
+class FotoGaleriaLoteForm(forms.Form):
+    album_existente = forms.ModelChoiceField(
+        queryset=AlbumGaleria.objects.none(),
+        required=False,
+        label="Usar álbum existente",
+        empty_label="Selecione um álbum já criado",
+    )
+    novo_album = forms.CharField(
+        max_length=180,
+        required=False,
+        label="Nome do novo álbum",
+        widget=forms.TextInput(attrs={"placeholder": "Ex.: Festa Junina 2026"}),
+    )
+    descricao_album = forms.CharField(
+        max_length=360,
+        required=False,
+        label="Descrição do novo álbum",
+        widget=forms.Textarea(attrs={"rows": 3, "placeholder": "Opcional"}),
+    )
+    data_evento = forms.DateField(
+        required=False,
+        label="Data do evento",
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
+    fotos = MultipleImageField(
+        required=True,
+        label="Fotos",
+        validators=[IMAGEM_VALIDATOR],
+        widget=MultipleImageInput(attrs={
+            "accept": "image/jpeg,image/png,image/webp",
+            "multiple": True,
+        }),
+        help_text="Selecione várias fotos de uma vez. Formatos: JPG, JPEG, PNG ou WEBP.",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["album_existente"].queryset = AlbumGaleria.objects.all()
+        for field in self.fields.values():
+            widget = field.widget
+            if isinstance(widget, forms.Textarea):
+                widget.attrs["class"] = "site-manager-input site-manager-textarea"
+            else:
+                widget.attrs["class"] = "site-manager-input"
+
+    def clean(self):
+        cleaned = super().clean()
+        album_existente = cleaned.get("album_existente")
+        novo_album = (cleaned.get("novo_album") or "").strip()
+
+        if album_existente and novo_album:
+            raise forms.ValidationError(
+                "Escolha um álbum existente ou informe o nome de um novo álbum, não os dois."
+            )
+        if not album_existente and not novo_album:
+            raise forms.ValidationError(
+                "Selecione um álbum existente ou escreva o nome de um novo álbum."
+            )
+        return cleaned
 
 
 CONTENT_FORMS = {

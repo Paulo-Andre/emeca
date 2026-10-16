@@ -1,0 +1,171 @@
+{% extends 'site_publico/gestao/base.html' %}
+{% block title %}Adicionar fotos{% endblock %}
+{% block header_icon %}images{% endblock %}
+{% block header_title %}Adicionar fotos à galeria{% endblock %}
+{% block header_subtitle %}Crie um novo álbum ou escolha um existente e envie várias fotos de uma só vez.{% endblock %}
+
+{% block content %}
+<div class="manager-toolbar">
+  <a class="manager-back" href="{% url 'site_publico:gestao_conteudo_lista' 'fotos' %}">
+    <i data-lucide="arrow-left"></i> Voltar
+  </a>
+  <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_conteudo_lista' 'albuns' %}">
+    <i data-lucide="folder-open"></i> Ver álbuns
+  </a>
+</div>
+
+<form class="gallery-batch-card" method="post" enctype="multipart/form-data" data-gallery-batch-form>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="manager-form-error gallery-batch-error">
+      {% for error in form.non_field_errors %}<span>{{ error }}</span>{% endfor %}
+    </div>
+  {% endif %}
+
+  <section class="gallery-batch-step">
+    <div class="gallery-batch-step__head">
+      <span>1</span>
+      <div>
+        <h2>Escolha o álbum</h2>
+        <p>Use um álbum que já existe ou escreva o nome de um novo álbum.</p>
+      </div>
+    </div>
+
+    <div class="gallery-album-choice">
+      <article class="gallery-album-option">
+        <div class="gallery-album-option__title">
+          <i data-lucide="folder-open"></i>
+          <div>
+            <strong>Usar álbum existente</strong>
+            <small>Adicione novas fotos a um álbum já criado.</small>
+          </div>
+        </div>
+        <label for="{{ form.album_existente.id_for_label }}">{{ form.album_existente.label }}</label>
+        {{ form.album_existente }}
+        {% for error in form.album_existente.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
+      </article>
+
+      <div class="gallery-choice-or">ou</div>
+
+      <article class="gallery-album-option gallery-album-option--new">
+        <div class="gallery-album-option__title">
+          <i data-lucide="folder-plus"></i>
+          <div>
+            <strong>Criar novo álbum</strong>
+            <small>Digite o nome que aparecerá na galeria pública.</small>
+          </div>
+        </div>
+
+        <div class="manager-field">
+          <label for="{{ form.novo_album.id_for_label }}">{{ form.novo_album.label }}</label>
+          {{ form.novo_album }}
+          {% for error in form.novo_album.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
+        </div>
+
+        <div class="gallery-new-album-details">
+          <div class="manager-field">
+            <label for="{{ form.descricao_album.id_for_label }}">{{ form.descricao_album.label }}</label>
+            {{ form.descricao_album }}
+            {% for error in form.descricao_album.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
+          </div>
+          <div class="manager-field">
+            <label for="{{ form.data_evento.id_for_label }}">{{ form.data_evento.label }}</label>
+            {{ form.data_evento }}
+            {% for error in form.data_evento.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="gallery-batch-step">
+    <div class="gallery-batch-step__head">
+      <span>2</span>
+      <div>
+        <h2>Selecione as fotos</h2>
+        <p>Você pode selecionar várias imagens na mesma janela.</p>
+      </div>
+    </div>
+
+    <div class="gallery-multi-upload">
+      <label class="gallery-multi-upload__drop" for="{{ form.fotos.id_for_label }}">
+        <span><i data-lucide="images"></i></span>
+        <strong>Escolher várias fotos</strong>
+        <small>JPG, JPEG, PNG ou WEBP</small>
+        <em data-photo-count>Nenhuma foto selecionada</em>
+      </label>
+      {{ form.fotos }}
+      {% if form.fotos.help_text %}<small class="gallery-upload-help">{{ form.fotos.help_text }}</small>{% endif %}
+      {% for error in form.fotos.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
+    </div>
+  </section>
+
+  <div class="gallery-batch-actions">
+    <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_conteudo_lista' 'fotos' %}">Cancelar</a>
+    <button class="manager-btn manager-btn--primary" type="submit">
+      <i data-lucide="upload"></i> Criar álbum e enviar fotos
+    </button>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const form = document.querySelector('[data-gallery-batch-form]');
+  if (!form) return;
+
+  const existing = form.querySelector('#{{ form.album_existente.id_for_label }}');
+  const newName = form.querySelector('#{{ form.novo_album.id_for_label }}');
+  const newDescription = form.querySelector('#{{ form.descricao_album.id_for_label }}');
+  const newDate = form.querySelector('#{{ form.data_evento.id_for_label }}');
+  const photos = form.querySelector('#{{ form.fotos.id_for_label }}');
+  const counter = form.querySelector('[data-photo-count]');
+  const submit = form.querySelector('button[type="submit"]');
+
+  function syncAlbumChoice() {
+    const hasExisting = existing && existing.value;
+    const hasNew = newName && newName.value.trim();
+
+    if (hasExisting) {
+      newName.disabled = true;
+      newDescription.disabled = true;
+      newDate.disabled = true;
+    } else {
+      newName.disabled = false;
+      newDescription.disabled = false;
+      newDate.disabled = false;
+    }
+
+    if (hasNew) {
+      existing.disabled = true;
+    } else {
+      existing.disabled = false;
+    }
+
+    if (submit) {
+      submit.innerHTML = hasExisting
+        ? '<i data-lucide="upload"></i> Adicionar fotos ao álbum'
+        : '<i data-lucide="folder-plus"></i> Criar álbum e enviar fotos';
+      if (window.lucide) window.lucide.createIcons();
+    }
+  }
+
+  function syncCount() {
+    const total = photos && photos.files ? photos.files.length : 0;
+    if (!counter) return;
+    counter.textContent = total
+      ? total + (total === 1 ? ' foto selecionada' : ' fotos selecionadas')
+      : 'Nenhuma foto selecionada';
+  }
+
+  if (existing) existing.addEventListener('change', syncAlbumChoice);
+  if (newName) newName.addEventListener('input', syncAlbumChoice);
+  if (photos) photos.addEventListener('change', syncCount);
+
+  syncAlbumChoice();
+  syncCount();
+})();
+</script>
+{% endblock %}
