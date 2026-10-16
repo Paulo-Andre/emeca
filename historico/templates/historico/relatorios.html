@@ -13,7 +13,8 @@
 </section>
 
 <section class="card report-filter-card">
-  <form method="get" class="report-filter-grid">
+  <form method="post" class="report-filter-grid">
+    {% csrf_token %}
     <label class="filter-field filter-field--wide">
       <span>Aluno</span>
       <input type="search" name="q" value="{{ q }}" placeholder="Nome, código ou matrícula">
