@@ -500,11 +500,13 @@ def _pdf_texto(valor):
 
 def gerar_pdf_boletim(boletim, config_site=None):
     from reportlab.lib import colors
-    from reportlab.lib.enums import TA_CENTER, TA_LEFT
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import mm
     from reportlab.platypus import (
+        Image,
+        KeepTogether,
         Paragraph,
         SimpleDocTemplate,
         Spacer,
@@ -516,57 +518,110 @@ def gerar_pdf_boletim(boletim, config_site=None):
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
-        rightMargin=16 * mm,
-        leftMargin=16 * mm,
-        topMargin=14 * mm,
-        bottomMargin=14 * mm,
+        rightMargin=15 * mm,
+        leftMargin=15 * mm,
+        topMargin=13 * mm,
+        bottomMargin=16 * mm,
         title=f"Boletim - {boletim.aluno.nome}",
-        author=(config_site.nome_escola if config_site else "E. M. Egídio Cordeiro Aquino"),
+        author=(
+            config_site.nome_escola
+            if config_site and config_site.nome_escola
+            else "E. M. Egídio Cordeiro Aquino"
+        ),
     )
+
+    verde = colors.HexColor("#14532d")
+    verde_medio = colors.HexColor("#15803d")
+    verde_claro = colors.HexColor("#f0fdf4")
+    azul = colors.HexColor("#1d4ed8")
+    azul_claro = colors.HexColor("#eff6ff")
+    cinza_texto = colors.HexColor("#475569")
+    cinza_borda = colors.HexColor("#dbe4dc")
+    cinza_fundo = colors.HexColor("#f8fafc")
 
     styles = getSampleStyleSheet()
     escola_style = ParagraphStyle(
-        "Escola",
-        parent=styles["Heading2"],
-        alignment=TA_CENTER,
+        "EscolaBoletim",
+        parent=styles["Normal"],
+        alignment=TA_LEFT,
         fontName="Helvetica-Bold",
-        fontSize=13,
+        fontSize=13.5,
         leading=16,
-        textColor=colors.HexColor("#0d3f22"),
+        textColor=verde,
         spaceAfter=2,
+    )
+    institucional_style = ParagraphStyle(
+        "Institucional",
+        parent=styles["Normal"],
+        alignment=TA_LEFT,
+        fontSize=7.5,
+        leading=9.5,
+        textColor=cinza_texto,
     )
     titulo_style = ParagraphStyle(
         "TituloBoletim",
         parent=styles["Heading1"],
         alignment=TA_CENTER,
         fontName="Helvetica-Bold",
-        fontSize=16,
-        leading=19,
-        textColor=colors.HexColor("#17251b"),
-        spaceAfter=3,
+        fontSize=18,
+        leading=21,
+        textColor=colors.HexColor("#0f172a"),
+        spaceAfter=2,
     )
     subtitulo_style = ParagraphStyle(
-        "Subtitulo",
+        "SubtituloBoletim",
         parent=styles["Normal"],
         alignment=TA_CENTER,
         fontSize=9,
-        textColor=colors.HexColor("#59665c"),
-        spaceAfter=10,
+        leading=12,
+        textColor=cinza_texto,
+    )
+    label = ParagraphStyle(
+        "LabelBoletim",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=7.5,
+        leading=9,
+        textColor=colors.HexColor("#64748b"),
+    )
+    valor = ParagraphStyle(
+        "ValorBoletim",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=9,
+        leading=11,
+        textColor=colors.HexColor("#17251b"),
     )
     normal = ParagraphStyle(
         "NormalBoletim",
         parent=styles["Normal"],
         alignment=TA_LEFT,
+        fontSize=8.5,
+        leading=11,
+        textColor=colors.HexColor("#1f2937"),
+    )
+    nota_style = ParagraphStyle(
+        "NotaBoletim",
+        parent=normal,
+        alignment=TA_CENTER,
+        fontName="Helvetica-Bold",
         fontSize=9,
-        leading=12,
     )
     pequeno = ParagraphStyle(
-        "Pequeno",
+        "PequenoBoletim",
         parent=styles["Normal"],
         alignment=TA_CENTER,
-        fontSize=7.5,
-        leading=10,
-        textColor=colors.HexColor("#6b746d"),
+        fontSize=7.3,
+        leading=9.5,
+        textColor=colors.HexColor("#64748b"),
+    )
+    rodape_style = ParagraphStyle(
+        "RodapeBoletim",
+        parent=styles["Normal"],
+        alignment=TA_RIGHT,
+        fontSize=7,
+        leading=9,
+        textColor=colors.HexColor("#64748b"),
     )
 
     escola = (
@@ -579,130 +634,287 @@ def gerar_pdf_boletim(boletim, config_site=None):
         if config_site and config_site.cidade
         else "Montes Claros/MG"
     )
+    endereco = (
+        config_site.endereco
+        if config_site and getattr(config_site, "endereco", "")
+        else ""
+    )
+    telefone = (
+        config_site.telefone
+        if config_site and getattr(config_site, "telefone", "")
+        else ""
+    )
 
-    story = [
-        Paragraph(escape(escola), escola_style),
-        Paragraph("BOLETIM ESCOLAR", titulo_style),
-        Paragraph(
-            escape(f"{boletim.periodo.nome_periodo} · Ano letivo {boletim.periodo.ano}"),
-            subtitulo_style,
-        ),
-    ]
+    logo = None
+    if config_site and getattr(config_site, "logo_site", None):
+        try:
+            config_site.logo_site.open("rb")
+            logo_bytes = config_site.logo_site.read()
+            config_site.logo_site.close()
+            if logo_bytes:
+                logo = Image(BytesIO(logo_bytes), width=22 * mm, height=22 * mm)
+                logo._restrictSize(22 * mm, 22 * mm)
+        except Exception:
+            logo = None
 
-    dados = [
+    contato_linhas = [cidade]
+    if endereco:
+        contato_linhas.append(endereco)
+    if telefone:
+        contato_linhas.append(f"Telefone: {telefone}")
+    contato = " · ".join(item for item in contato_linhas if item)
+
+    identidade = Table(
         [
-            Paragraph("<b>Aluno(a)</b>", normal),
-            Paragraph(escape(boletim.aluno.nome), normal),
-            Paragraph("<b>Turma</b>", normal),
-            Paragraph(escape(boletim.periodo.turma), normal),
+            [
+                logo or Paragraph("<b>EMECA</b>", ParagraphStyle(
+                    "Selo",
+                    parent=styles["Normal"],
+                    alignment=TA_CENTER,
+                    fontName="Helvetica-Bold",
+                    fontSize=10,
+                    textColor=colors.white,
+                )),
+                [
+                    Paragraph(escape(escola), escola_style),
+                    Paragraph(escape(contato), institucional_style),
+                ],
+                Paragraph(
+                    "<b>DOCUMENTO ESCOLAR</b><br/>Acompanhamento de aprendizagem",
+                    ParagraphStyle(
+                        "DocLabel",
+                        parent=styles["Normal"],
+                        alignment=TA_RIGHT,
+                        fontName="Helvetica-Bold",
+                        fontSize=7.5,
+                        leading=10,
+                        textColor=verde,
+                    ),
+                ),
+            ]
         ],
-        [
-            Paragraph("<b>Nascimento</b>", normal),
-            Paragraph(
-                boletim.aluno.data_nascimento.strftime("%d/%m/%Y")
-                if boletim.aluno.data_nascimento
-                else "—",
-                normal,
-            ),
-            Paragraph("<b>Nº</b>", normal),
-            Paragraph(_pdf_texto(boletim.numero_chamada), normal),
-        ],
-        [
-            Paragraph("<b>Regente</b>", normal),
-            Paragraph(escape(boletim.periodo.regente or "—"), normal),
-            Paragraph("<b>Faltas totais</b>", normal),
-            Paragraph(_pdf_texto(boletim.faltas_totais), normal),
-        ],
-        [
-            Paragraph("<b>Município</b>", normal),
-            Paragraph(escape(cidade), normal),
-            Paragraph("", normal),
-            Paragraph("", normal),
-        ],
-    ]
-    info = Table(dados, colWidths=[27 * mm, 72 * mm, 24 * mm, 55 * mm])
-    info.setStyle(
+        colWidths=[25 * mm, 103 * mm, 49 * mm],
+        rowHeights=[27 * mm],
+    )
+    identidade.setStyle(
         TableStyle(
             [
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cfd9d1")),
-                ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f0f5ee")),
-                ("BACKGROUND", (2, 0), (2, -1), colors.HexColor("#f0f5ee")),
+                ("BACKGROUND", (0, 0), (0, 0), verde_medio if logo is None else colors.white),
+                ("BOX", (0, 0), (-1, -1), 0.7, colors.HexColor("#b7cabc")),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 6),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-                ("TOPPADDING", (0, 0), (-1, -1), 6),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("LEFTPADDING", (0, 0), (-1, -1), 7),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
             ]
         )
     )
-    story.extend([info, Spacer(1, 8 * mm)])
 
-    linhas = [["Componente curricular", "Nota"]]
+    titulo_bloco = Table(
+        [
+            [Paragraph("BOLETIM ESCOLAR", titulo_style)],
+            [
+                Paragraph(
+                    escape(
+                        f"{boletim.periodo.nome_periodo} · Ano letivo {boletim.periodo.ano}"
+                    ),
+                    subtitulo_style,
+                )
+            ],
+        ],
+        colWidths=[177 * mm],
+    )
+    titulo_bloco.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), cinza_fundo),
+                ("BOX", (0, 0), (-1, -1), 0.6, cinza_borda),
+                ("TOPPADDING", (0, 0), (-1, 0), 9),
+                ("BOTTOMPADDING", (0, 1), (-1, 1), 8),
+            ]
+        )
+    )
+
+    dados = [
+        [
+            [Paragraph("ALUNO(A)", label), Paragraph(escape(boletim.aluno.nome), valor)],
+            [Paragraph("TURMA", label), Paragraph(escape(boletim.periodo.turma), valor)],
+        ],
+        [
+            [
+                Paragraph("PROFESSOR(A) REGENTE", label),
+                Paragraph(escape(boletim.periodo.regente or "Não informado"), valor),
+            ],
+            [
+                Paragraph("Nº DE CHAMADA", label),
+                Paragraph(_pdf_texto(boletim.numero_chamada), valor),
+            ],
+        ],
+    ]
+    dados_table = Table(dados, colWidths=[119 * mm, 58 * mm])
+    dados_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), colors.white),
+                ("BOX", (0, 0), (-1, -1), 0.6, cinza_borda),
+                ("INNERGRID", (0, 0), (-1, -1), 0.4, cinza_borda),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 7),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+            ]
+        )
+    )
+
+    nascimento = (
+        boletim.aluno.data_nascimento.strftime("%d/%m/%Y")
+        if boletim.aluno.data_nascimento
+        else "Não informado"
+    )
+    resumo = Table(
+        [
+            [
+                [
+                    Paragraph("DATA DE NASCIMENTO", label),
+                    Paragraph(escape(nascimento), valor),
+                ],
+                [
+                    Paragraph("FALTAS NO PERÍODO", label),
+                    Paragraph(_pdf_texto(boletim.faltas_totais), ParagraphStyle(
+                        "FaltasValor",
+                        parent=valor,
+                        fontSize=12,
+                        textColor=azul,
+                    )),
+                ],
+                [
+                    Paragraph("PERÍODO", label),
+                    Paragraph(escape(boletim.periodo.nome_periodo), valor),
+                ],
+            ]
+        ],
+        colWidths=[59 * mm, 59 * mm, 59 * mm],
+    )
+    resumo.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (0, 0), verde_claro),
+                ("BACKGROUND", (1, 0), (1, 0), azul_claro),
+                ("BACKGROUND", (2, 0), (2, 0), verde_claro),
+                ("BOX", (0, 0), (-1, -1), 0.6, cinza_borda),
+                ("INNERGRID", (0, 0), (-1, -1), 0.4, cinza_borda),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 7),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+            ]
+        )
+    )
+
+    linhas = [
+        [
+            Paragraph("<b>COMPONENTE CURRICULAR</b>", normal),
+            Paragraph("<b>NOTA</b>", nota_style),
+        ]
+    ]
     for resultado in boletim.resultados.select_related("disciplina").all():
         nota = (
             f"{resultado.nota:.2f}".replace(".", ",")
             if resultado.nota is not None
             else "—"
         )
-        linhas.append([resultado.disciplina.nome, nota])
+        linhas.append(
+            [
+                Paragraph(escape(resultado.disciplina.nome), normal),
+                Paragraph(escape(nota), nota_style),
+            ]
+        )
 
-    tabela = Table(linhas, colWidths=[148 * mm, 30 * mm], repeatRows=1)
+    tabela = Table(linhas, colWidths=[145 * mm, 32 * mm], repeatRows=1)
     tabela.setStyle(
         TableStyle(
             [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f5a2b")),
+                ("BACKGROUND", (0, 0), (-1, 0), verde),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, -1), 9),
                 ("ALIGN", (1, 1), (1, -1), "CENTER"),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#ccd6ce")),
-                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8faf7")]),
-                ("TOPPADDING", (0, 0), (-1, -1), 6),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("GRID", (0, 0), (-1, -1), 0.5, cinza_borda),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, cinza_fundo]),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 7),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
             ]
         )
     )
-    story.extend([tabela, Spacer(1, 14 * mm)])
 
     assinaturas = Table(
         [
             ["____________________________________", "____________________________________"],
             ["Professor(a) Regente", "Direção / Secretaria Escolar"],
         ],
-        colWidths=[89 * mm, 89 * mm],
+        colWidths=[88.5 * mm, 88.5 * mm],
     )
     assinaturas.setStyle(
         TableStyle(
             [
                 ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                 ("FONTSIZE", (0, 0), (-1, -1), 8),
-                ("TEXTCOLOR", (0, 1), (-1, 1), colors.HexColor("#5c675f")),
+                ("TEXTCOLOR", (0, 1), (-1, 1), cinza_texto),
+                ("TOPPADDING", (0, 0), (-1, 0), 8),
             ]
         )
     )
-    story.extend(
-        [
-            assinaturas,
-            Spacer(1, 8 * mm),
-            Paragraph(
-                "Boletim emitido pelo portal da escola. Confira os dados e, em caso de dúvida, entre em contato com a secretaria.",
-                pequeno,
-            ),
-        ]
-    )
 
-    def rodape(canvas, documento):
+    story = [
+        identidade,
+        Spacer(1, 6 * mm),
+        titulo_bloco,
+        Spacer(1, 6 * mm),
+        dados_table,
+        Spacer(1, 4 * mm),
+        resumo,
+        Spacer(1, 7 * mm),
+        tabela,
+        Spacer(1, 11 * mm),
+        KeepTogether(
+            [
+                assinaturas,
+                Spacer(1, 6 * mm),
+                Paragraph(
+                    "Este boletim apresenta os resultados do período informado. "
+                    "Em caso de dúvida sobre notas ou frequência, procure a secretaria escolar.",
+                    pequeno,
+                ),
+            ]
+        ),
+    ]
+
+    def pagina(canvas, documento):
         canvas.saveState()
+        largura, altura = A4
+        canvas.setFillColor(verde)
+        canvas.rect(0, altura - 4 * mm, largura, 4 * mm, fill=1, stroke=0)
+        canvas.setStrokeColor(colors.HexColor("#d7e1da"))
+        canvas.line(15 * mm, 12 * mm, largura - 15 * mm, 12 * mm)
         canvas.setFont("Helvetica", 7)
-        canvas.setFillColor(colors.HexColor("#778078"))
-        canvas.drawCentredString(
-            A4[0] / 2,
-            8 * mm,
-            f"{escola} · {boletim.periodo.titulo}",
+        canvas.setFillColor(colors.HexColor("#64748b"))
+        canvas.drawString(
+            15 * mm,
+            7.7 * mm,
+            f"{escola} · {boletim.periodo.nome_periodo} · {boletim.periodo.ano}",
+        )
+        canvas.drawRightString(
+            largura - 15 * mm,
+            7.7 * mm,
+            f"Página {documento.page}",
         )
         canvas.restoreState()
 
-    doc.build(story, onFirstPage=rodape, onLaterPages=rodape)
+    doc.build(story, onFirstPage=pagina, onLaterPages=pagina)
     buffer.seek(0)
     return buffer
+

@@ -1,4 +1,5 @@
 import json
+import uuid
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
@@ -105,4 +106,86 @@ def enviar_broadcast(recipients, message):
             "message": message,
             "delay": settings.WA_AKG_BROADCAST_DELAY_MS,
         },
+    )
+
+
+def _request_multipart(path, fields, filename, content_type, content):
+    if not configurado():
+        raise WhatsAppGatewayError(
+            "A integração com o WhatsApp ainda não foi configurada no servidor."
+        )
+
+    boundary = f"----emeca-{uuid.uuid4().hex}"
+    chunks = []
+
+    for nome, valor in fields.items():
+        chunks.extend(
+            [
+                f"--{boundary}\r\n".encode("utf-8"),
+                f'Content-Disposition: form-data; name="{nome}"\r\n\r\n'.encode("utf-8"),
+                str(valor).encode("utf-8"),
+                b"\r\n",
+            ]
+        )
+
+    chunks.extend(
+        [
+            f"--{boundary}\r\n".encode("utf-8"),
+            (
+                f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'
+            ).encode("utf-8"),
+            f"Content-Type: {content_type}\r\n\r\n".encode("utf-8"),
+            content,
+            b"\r\n",
+            f"--{boundary}--\r\n".encode("utf-8"),
+        ]
+    )
+
+    base_url = settings.WA_AKG_BASE_URL.rstrip("/")
+    url = f"{base_url}/{path.lstrip('/')}"
+    request = Request(
+        url,
+        data=b"".join(chunks),
+        headers={
+            "Accept": "application/json",
+            "X-API-Key": settings.WA_AKG_API_KEY,
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+        },
+        method="POST",
+    )
+
+    try:
+        with urlopen(request, timeout=max(settings.WA_AKG_TIMEOUT_SECONDS, 30)) as response:
+            raw = response.read().decode("utf-8")
+            return json.loads(raw) if raw else {}
+    except HTTPError as exc:
+        raw = exc.read().decode("utf-8", errors="replace")
+        try:
+            data = json.loads(raw) if raw else {}
+        except json.JSONDecodeError:
+            data = {}
+        message = (
+            data.get("message")
+            or data.get("error")
+            or f"WA-AKG respondeu com HTTP {exc.code}."
+        )
+        raise WhatsAppGatewayError(str(message), exc.code, data) from exc
+    except URLError as exc:
+        raise WhatsAppGatewayError(
+            "Não foi possível conectar ao serviço WA-AKG."
+        ) from exc
+
+
+def enviar_documento(jid, conteudo_pdf, nome_arquivo, legenda=""):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    return _request_multipart(
+        f"messages/{session_id}/{jid_codificado}/media",
+        {
+            "type": "document",
+            "caption": legenda,
+        },
+        nome_arquivo,
+        "application/pdf",
+        conteudo_pdf,
     )

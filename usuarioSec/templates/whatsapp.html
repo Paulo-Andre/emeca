@@ -191,30 +191,113 @@
         <div class="section-heading">
           <div>
             <span class="step">2</span>
-            <h3>Escreva a mensagem</h3>
+            <h3>Escolha o conteúdo</h3>
           </div>
-          <span class="helper">O disparo respeita intervalo de {{ delay_segundos }}s + variação do WA-AKG.</span>
+          <span class="helper">Mensagem comum ou boletim escolar personalizado em PDF.</span>
         </div>
 
-        <label for="mensagem">Mensagem</label>
-        <textarea
-          name="mensagem"
-          id="mensagem"
-          maxlength="4000"
-          rows="10"
-          placeholder="Ex.: Prezadas famílias, informamos que..."
-          required
-        ></textarea>
-        <div class="message-meta">
-          <span>Evite enviar informações sensíveis desnecessárias.</span>
-          <span id="charCount">0 / 4000</span>
+        <div class="content-mode-grid">
+          <label class="content-option">
+            <input type="radio" name="conteudo" value="mensagem" checked>
+            <span>
+              <i data-lucide="message-square-text"></i>
+              <strong>Mensagem</strong>
+              <small>Texto para os contatos selecionados</small>
+            </span>
+          </label>
+          <label class="content-option">
+            <input type="radio" name="conteudo" value="boletim">
+            <span>
+              <i data-lucide="file-chart-column"></i>
+              <strong>Boletim em PDF</strong>
+              <small>Um PDF personalizado para cada aluno</small>
+            </span>
+          </label>
+        </div>
+
+        <div id="painelMensagem">
+          <label for="mensagem">Mensagem</label>
+          <textarea
+            name="mensagem"
+            id="mensagem"
+            maxlength="4000"
+            rows="10"
+            placeholder="Ex.: Prezadas famílias, informamos que..."
+            required
+          ></textarea>
+          <div class="message-meta">
+            <span>Evite enviar informações sensíveis desnecessárias.</span>
+            <span id="charCount">0 / 4000</span>
+          </div>
+        </div>
+
+        <div id="painelBoletim" hidden>
+          <div class="bulletin-title">
+            <div>
+              <span class="bulletin-kicker">Documento individual</span>
+              <h4>Boletim escolar personalizado</h4>
+            </div>
+            <i data-lucide="file-text"></i>
+          </div>
+
+          <div class="bulletin-period-grid">
+            <div class="field-block">
+              <label for="boletimAno">Ano letivo</label>
+              <select name="boletim_ano" id="boletimAno">
+                <option value="">Selecione</option>
+                {% for ano in anos_boletim %}
+                  <option value="{{ ano }}">{{ ano }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="field-block">
+              <label for="boletimTipo">Organização</label>
+              <select name="boletim_tipo" id="boletimTipo">
+                <option value="TRIMESTRE">Trimestre</option>
+                <option value="BIMESTRE">Bimestre</option>
+              </select>
+            </div>
+            <div class="field-block">
+              <label for="boletimNumero">Período</label>
+              <select name="boletim_numero" id="boletimNumero"></select>
+            </div>
+          </div>
+
+          <div class="bulletin-note">
+            <i data-lucide="shield-check"></i>
+            <div>
+              <strong>Somente boletins publicados</strong>
+              <p>O envio usa as mesmas notas e faltas revisadas no módulo de Boletins. Cada família recebe apenas o PDF do respectivo aluno.</p>
+            </div>
+          </div>
+
+          <div class="bulletin-preview" id="boletimPreview">
+            <div>
+              <strong id="boletimCount">—</strong>
+              <span>PDF(s) para envio</span>
+            </div>
+            <p id="boletimHint">Selecione o período para conferir os boletins disponíveis.</p>
+          </div>
+
+          <label for="mensagemBoletim">Mensagem que acompanha o PDF</label>
+          <textarea
+            name="mensagem_boletim"
+            id="mensagemBoletim"
+            maxlength="1200"
+            rows="5"
+            placeholder="Opcional. Ex.: Olá! Segue o boletim escolar de {aluno}, referente ao {periodo} de {ano}."
+          ></textarea>
+          <div class="message-meta">
+            <span>Você pode usar {aluno}, {periodo}, {ano}, {turma} e {escola}.</span>
+            <span id="boletimCharCount">0 / 1200</span>
+          </div>
         </div>
 
         <div class="send-warning">
           <i data-lucide="shield-check"></i>
           <div>
             <strong>Confirme antes do envio</strong>
-            <p>Em envios por turma ou para todos, cada número recebe uma conversa individual. Os destinatários não veem os demais contatos.</p>
+            <p id="sendWarningText">Em envios por turma ou para todos, cada número recebe uma conversa individual. Os destinatários não veem os demais contatos.</p>
           </div>
         </div>
 
@@ -225,13 +308,44 @@
           {% if gateway_status != "CONNECTED" %}disabled{% endif %}
         >
           <i data-lucide="send"></i>
-          <span>Enviar pelo WhatsApp</span>
+          <span id="btnEnviarTexto">Enviar pelo WhatsApp</span>
         </button>
         {% if gateway_status != "CONNECTED" %}
           <p class="disabled-note">Conecte o WhatsApp antes de realizar disparos.</p>
         {% endif %}
       </section>
     </form>
+
+    {% if envios_boletim %}
+      <section class="card bulletin-history">
+        <div class="section-heading">
+          <div>
+            <span class="step"><i data-lucide="history"></i></span>
+            <h3>Envios recentes de boletins</h3>
+          </div>
+          <span class="helper">Atualize a página para acompanhar o processamento.</span>
+        </div>
+        <div class="history-list">
+          {% for envio in envios_boletim %}
+            <div class="history-item">
+              <div>
+                <strong>{{ envio.periodo_rotulo }} · {{ envio.ano }}</strong>
+                <span>
+                  {{ envio.total }} PDF(s)
+                  {% if envio.turma %} · {{ envio.turma }}{% endif %}
+                  {% if envio.usuario %} · {{ envio.usuario.username }}{% endif %}
+                </span>
+              </div>
+              <div class="history-numbers">
+                <span class="history-status status-job-{{ envio.status|lower }}">{{ envio.get_status_display }}</span>
+                <small>{{ envio.enviados }} enviados · {{ envio.falhas }} falhas</small>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+
   </main>
 
   <dialog id="qrDialog" class="qr-dialog">
@@ -263,9 +377,96 @@
     const recipientHint = document.getElementById("recipientHint");
     const mensagem = document.getElementById("mensagem");
     const charCount = document.getElementById("charCount");
+    const conteudos = [...document.querySelectorAll('input[name="conteudo"]')];
+    const painelMensagem = document.getElementById("painelMensagem");
+    const painelBoletim = document.getElementById("painelBoletim");
+    const boletimAno = document.getElementById("boletimAno");
+    const boletimTipo = document.getElementById("boletimTipo");
+    const boletimNumero = document.getElementById("boletimNumero");
+    const boletimCount = document.getElementById("boletimCount");
+    const boletimHint = document.getElementById("boletimHint");
+    const mensagemBoletim = document.getElementById("mensagemBoletim");
+    const boletimCharCount = document.getElementById("boletimCharCount");
+    const btnEnviarTexto = document.getElementById("btnEnviarTexto");
+    const sendWarningText = document.getElementById("sendWarningText");
 
     function modoAtual() {
       return modos.find(el => el.checked)?.value || "todos";
+    }
+
+    function conteudoAtual() {
+      return conteudos.find(el => el.checked)?.value || "mensagem";
+    }
+
+    function atualizarNumerosPeriodo() {
+      const limite = boletimTipo.value === "BIMESTRE" ? 4 : 3;
+      const atual = Number(boletimNumero.value) || 1;
+      boletimNumero.innerHTML = "";
+      for (let numero = 1; numero <= limite; numero++) {
+        const option = document.createElement("option");
+        option.value = numero;
+        option.textContent = numero + "º";
+        if (numero === Math.min(atual, limite)) option.selected = true;
+        boletimNumero.appendChild(option);
+      }
+    }
+
+    async function atualizarPreviewBoletim() {
+      if (conteudoAtual() !== "boletim") return;
+      if (!boletimAno.value) {
+        boletimCount.textContent = "0";
+        boletimHint.textContent = "Selecione o ano letivo.";
+        return;
+      }
+      if ((modoAtual() === "turma" && !turma.value) || (modoAtual() === "individual" && !contatoId.value)) {
+        boletimCount.textContent = "0";
+        boletimHint.textContent = "Complete a seleção dos destinatários.";
+        return;
+      }
+
+      const params = new URLSearchParams({
+        modo: modoAtual(),
+        boletim_ano: boletimAno.value,
+        boletim_tipo: boletimTipo.value,
+        boletim_numero: boletimNumero.value,
+      });
+      if (modoAtual() === "turma") params.set("turma", turma.value);
+      if (modoAtual() === "individual") params.set("contato_id", contatoId.value);
+      if (modoAtual() !== "individual") {
+        document.querySelectorAll('input[name="tipos"]:checked').forEach(el => params.append("tipos", el.value));
+      }
+
+      boletimHint.textContent = "Conferindo boletins publicados…";
+      try {
+        const resp = await fetch("{% url 'whatsapp_boletins_preview' %}?" + params.toString(), {headers: {"X-Requested-With": "XMLHttpRequest"}});
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) throw new Error(data.erro || "Falha ao consultar os boletins.");
+        boletimCount.textContent = data.quantidade;
+        const avisos = [];
+        if (data.alunos) avisos.push(data.alunos + " aluno(s)");
+        if (data.sem_boletim) avisos.push(data.sem_boletim + " sem boletim publicado");
+        if (data.invalidos) avisos.push(data.invalidos + " telefone(s) inválido(s)");
+        if (data.ambiguos) avisos.push(data.ambiguos + " cadastro(s) ambíguo(s)");
+        boletimHint.textContent = avisos.length ? avisos.join(" · ") : "Nenhum boletim disponível.";
+      } catch (err) {
+        boletimCount.textContent = "—";
+        boletimHint.textContent = err.message;
+      }
+    }
+
+    function atualizarConteudo() {
+      const boletim = conteudoAtual() === "boletim";
+      painelMensagem.hidden = boletim;
+      painelBoletim.hidden = !boletim;
+      mensagem.required = !boletim;
+      boletimAno.required = boletim;
+      boletimTipo.required = boletim;
+      boletimNumero.required = boletim;
+      btnEnviarTexto.textContent = boletim ? "Enviar boletins em PDF" : "Enviar pelo WhatsApp";
+      sendWarningText.textContent = boletim
+        ? "Cada responsável receberá individualmente o PDF do aluno correspondente. Telefones compartilhados por irmãos recebem um boletim de cada aluno."
+        : "Em envios por turma ou para todos, cada número recebe uma conversa individual. Os destinatários não veem os demais contatos.";
+      if (boletim) atualizarPreviewBoletim();
     }
 
     function atualizarCampos() {
@@ -274,6 +475,7 @@
       campoIndividual.hidden = modo !== "individual";
       tiposContato.hidden = modo === "individual";
       atualizarPreview();
+      atualizarPreviewBoletim();
     }
 
     async function atualizarPreview() {
@@ -306,8 +508,21 @@
     }
 
     modos.forEach(el => el.addEventListener("change", atualizarCampos));
-    turma.addEventListener("change", atualizarPreview);
-    document.querySelectorAll('input[name="tipos"]').forEach(el => el.addEventListener("change", atualizarPreview));
+    turma.addEventListener("change", () => {
+      atualizarPreview();
+      atualizarPreviewBoletim();
+    });
+    document.querySelectorAll('input[name="tipos"]').forEach(el => el.addEventListener("change", () => {
+      atualizarPreview();
+      atualizarPreviewBoletim();
+    }));
+    conteudos.forEach(el => el.addEventListener("change", atualizarConteudo));
+    boletimAno.addEventListener("change", atualizarPreviewBoletim);
+    boletimTipo.addEventListener("change", () => {
+      atualizarNumerosPeriodo();
+      atualizarPreviewBoletim();
+    });
+    boletimNumero.addEventListener("change", atualizarPreviewBoletim);
 
     let searchTimer;
     buscaContato.addEventListener("input", () => {
@@ -318,6 +533,7 @@
       if (q.length < 2) {
         resultados.hidden = true;
         atualizarPreview();
+        atualizarPreviewBoletim();
         return;
       }
       searchTimer = setTimeout(async () => {
@@ -339,6 +555,7 @@
             resultados.hidden = true;
             buscaContato.value = item.aluno;
             atualizarPreview();
+            atualizarPreviewBoletim();
           });
           resultados.appendChild(button);
         });
@@ -349,8 +566,24 @@
     mensagem.addEventListener("input", () => {
       charCount.textContent = mensagem.value.length + " / 4000";
     });
+    mensagemBoletim.addEventListener("input", () => {
+      boletimCharCount.textContent = mensagemBoletim.value.length + " / 1200";
+    });
 
     form.addEventListener("submit", event => {
+      if (conteudoAtual() === "boletim") {
+        const quantidade = Number(boletimCount.textContent);
+        if (!quantidade) {
+          event.preventDefault();
+          alert("Nenhum boletim publicado foi encontrado para essa seleção.");
+          return;
+        }
+        if (!confirm("Confirma o envio de " + quantidade + " PDF(s) de boletim personalizado?")) {
+          event.preventDefault();
+        }
+        return;
+      }
+
       const quantidade = Number(recipientCount.textContent);
       if (!quantidade) {
         event.preventDefault();
@@ -395,7 +628,9 @@
     }
     document.getElementById("fecharQr").addEventListener("click", () => qrDialog.close());
 
+    atualizarNumerosPeriodo();
     atualizarCampos();
+    atualizarConteudo();
   </script>
 </body>
 </html>
