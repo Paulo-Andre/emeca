@@ -21,6 +21,29 @@ CAMPOS_ALIASES = {
         "NOME DO RESPONSAVEL",
         "RESPONSAVEL LEGAL",
     },
+    "cpf_aluno": {
+        "CPF ALUNO",
+        "CPF DO ALUNO",
+        "CPF ESTUDANTE",
+        "CPF DO ESTUDANTE",
+    },
+    "cpf_pai": {
+        "CPF PAI",
+        "CPF DO PAI",
+        "CPF PATERNO",
+    },
+    "cpf_mae": {
+        "CPF MAE",
+        "CPF DA MAE",
+        "CPF MATERNO",
+    },
+    "cpf_responsavel": {
+        "CPF RESPONS",
+        "CPF RESPONSAVEL",
+        "CPF DO RESPONSAVEL",
+        "CPF RESPONS LEGAL",
+        "CPF RESPONSAVEL LEGAL",
+    },
     "nascimento": {"NASCIMENTO", "DATA NASCIMENTO", "DATA DE NASCIMENTO"},
     "naturalidade": {"NATURALIDADE"},
     "nacionalidade": {"NACIONALIDADE", "NACIONALIDAD"},
@@ -54,6 +77,25 @@ def texto_celula(valor):
         return str(int(valor))
 
     return str(valor).strip()
+
+
+def normalizar_cpf(valor):
+    bruto = texto_celula(valor)
+    if not bruto:
+        return ""
+
+    digitos = re.sub(r"\D", "", bruto)
+
+    # Excel antigo às vezes salva CPF como número e remove o zero inicial.
+    if len(digitos) == 10:
+        digitos = digitos.zfill(11)
+
+    if len(digitos) == 11:
+        return f"{digitos[:3]}.{digitos[3:6]}.{digitos[6:9]}-{digitos[9:]}"
+
+    # Não descarta um valor legado fora do padrão; apenas limita ao tamanho
+    # suportado pelo banco para permitir posterior correção manual.
+    return bruto[:14]
 
 
 def _cabecalho_corresponde(cabecalho, aliases):
@@ -134,6 +176,19 @@ def mapear_colunas(headers):
             telefones["RESPONSAVEL"].append(indice)
 
     mapa["telefones"] = telefones
+
+    # Reforço para cabeçalhos antigos/abreviados de CPF.
+    for indice, header in enumerate(headers):
+        if "CPF" not in header:
+            continue
+        if "PAI" in header:
+            mapa["cpf_pai"] = indice
+        elif "MAE" in header:
+            mapa["cpf_mae"] = indice
+        elif "RESP" in header:
+            mapa["cpf_responsavel"] = indice
+        elif "ALUNO" in header or "ESTUDANTE" in header:
+            mapa["cpf_aluno"] = indice
 
     if mapa["nome"] is None:
         raise ImportacaoDeclaracaoErro("A coluna NOME não foi encontrada.")
@@ -339,8 +394,12 @@ def ler_planilha(arquivo):
             {
                 "nomeDoAluno": nome,
                 "nomeMae": _valor_linha(row, mapa["mae"]),
+                "cpfMae": normalizar_cpf(_valor_linha(row, mapa["cpf_mae"])),
                 "nomePai": _valor_linha(row, mapa["pai"]),
+                "cpfPai": normalizar_cpf(_valor_linha(row, mapa["cpf_pai"])),
                 "nomeResponsavel": _valor_linha(row, mapa["responsavel"]),
+                "cpfResponsavel": normalizar_cpf(_valor_linha(row, mapa["cpf_responsavel"])),
+                "cpfDoAluno": normalizar_cpf(_valor_linha(row, mapa["cpf_aluno"])),
                 "dataNascimentoAluno": converter_data(nascimento_raw),
                 "natularidadeAluno": _valor_linha(row, mapa["naturalidade"]),
                 "nacionaliadeAluno": _valor_linha(row, mapa["nacionalidade"]),

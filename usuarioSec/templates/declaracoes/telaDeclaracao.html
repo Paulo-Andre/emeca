@@ -722,8 +722,8 @@
           </div>
 
           <div class="input-group">
-            <label>CPF</label>
-            <input name="cpfDoAluno" inputmode="numeric" placeholder="000.000.000-00">
+            <label>CPF do Aluno</label>
+            <input name="cpfDoAluno" inputmode="numeric" maxlength="14" placeholder="000.000.000-00">
           </div>
         </div>
       </section>
@@ -733,7 +733,7 @@
           <span>2</span>
           <div>
             <strong>Filiação e responsável</strong>
-            <small>Os nomes de Mãe, Pai e Responsável correspondem às colunas da planilha.</small>
+            <small>Nome e CPF de Mãe, Pai e Responsável correspondem aos dados da planilha.</small>
           </div>
         </div>
 
@@ -744,13 +744,28 @@
           </div>
 
           <div class="input-group half-width">
+            <label>CPF da Mãe</label>
+            <input name="cpfMae" inputmode="numeric" maxlength="14" placeholder="000.000.000-00">
+          </div>
+
+          <div class="input-group half-width">
             <label>Nome do Pai</label>
             <input name="nomePai">
           </div>
 
-          <div class="input-group full-width">
+          <div class="input-group half-width">
+            <label>CPF do Pai</label>
+            <input name="cpfPai" inputmode="numeric" maxlength="14" placeholder="000.000.000-00">
+          </div>
+
+          <div class="input-group half-width">
             <label>Nome do Responsável</label>
             <input name="nomeResponsavel" placeholder="Nome informado na coluna RESPONS da planilha">
+          </div>
+
+          <div class="input-group half-width">
+            <label>CPF do Responsável</label>
+            <input name="cpfResponsavel" inputmode="numeric" maxlength="14" placeholder="000.000.000-00">
           </div>
         </div>
       </section>

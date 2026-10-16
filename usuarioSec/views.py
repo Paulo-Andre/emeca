@@ -15,6 +15,7 @@ from .importacao_declaracoes import (
     ImportacaoDeclaracaoErro,
     deduplicar_telefones,
     ler_planilha,
+    normalizar_cpf,
 )
 from django.http import JsonResponse
 import json
@@ -461,10 +462,13 @@ def cadastrar_aluno(request):
                 sexoDoAluno=request.POST.get("sexoDoAluno", "").strip(),
                 turmaDoAluno=request.POST.get("turmaDoAluno", "").strip(),
                 cartaoSusDoAluno=request.POST.get("cartaoSusDoAluno", "").strip(),
-                cpfDoAluno=request.POST.get("cpfDoAluno", "").strip(),
+                cpfDoAluno=normalizar_cpf(request.POST.get("cpfDoAluno", "")),
                 nomePai=request.POST.get("nomePai", "").strip(),
+                cpfPai=normalizar_cpf(request.POST.get("cpfPai", "")),
                 nomeMae=request.POST.get("nomeMae", "").strip(),
+                cpfMae=normalizar_cpf(request.POST.get("cpfMae", "")),
                 nomeResponsavel=request.POST.get("nomeResponsavel", "").strip(),
+                cpfResponsavel=normalizar_cpf(request.POST.get("cpfResponsavel", "")),
             )
             aluno.full_clean()
             aluno.save()
