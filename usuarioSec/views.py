@@ -6,6 +6,7 @@ from django.contrib.auth.hashers import make_password
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from .forms import AccountSignupForm
+from .access_control import atribuir_perfis
 from cadastro.models import matricula
 from django.contrib.auth import logout
 import re
@@ -44,13 +45,15 @@ class AccountCreateView(CreateView):
     model = User
     template_name = 'registration/signup_form.html'
     form_class = AccountSignupForm
-    success_url = reverse_lazy('login')
+    success_url = reverse_lazy('dashboard')
     success_message = 'Funcionário cadastrado com sucesso!'
 
     def form_valid(self, form) -> HttpResponse:
         form.instance.password = make_password(form.instance.password)
+        response = super().form_valid(form)
+        atribuir_perfis(self.object, form.cleaned_data["perfis"])
         messages.success(self.request, self.success_message)
-        return super().form_valid(form)
+        return response
     
 def dashboard(request):
     return render(request, "dashboard.html", {
