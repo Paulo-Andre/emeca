@@ -233,6 +233,34 @@ def _disciplinas(df, cabecalho_idx, nome_col):
     )
 
 
+def _coluna_faltas_totais(df, cabecalho_idx, nome_col, componentes):
+    """Localiza a coluna de faltas totais do relatório.
+
+    No XLS do Crystal Reports usado pela escola existe um par N./F. antes da
+    primeira disciplina. O campo F. desse par representa as faltas totais do
+    aluno no período (ex.: Alice = 3), enquanto os demais F. pertencem às
+    disciplinas e não devem ser exibidos como faltas separadas.
+    """
+    if not componentes:
+        return None
+
+    primeira_nota = min(item["nota_col"] for item in componentes)
+    inicio_col = nome_col + 1
+
+    # O Crystal Reports costuma colocar N./F. uma linha abaixo de Num./Nome.
+    for linha in range(cabecalho_idx, min(cabecalho_idx + 4, len(df.index))):
+        valores = [normalizar(v) for v in df.iloc[linha].tolist()]
+        candidatos = [
+            col
+            for col in range(inicio_col, min(primeira_nota, len(valores)))
+            if valores[col] in {"F", "FALTA", "FALTAS"}
+        ]
+        if candidatos:
+            return candidatos[-1]
+
+    return None
+
+
 def _metadados(df):
     blocos = []
     for linha in range(min(len(df.index), 15)):
@@ -384,6 +412,12 @@ def ler_planilha_boletim(arquivo):
         None,
     )
     componentes = _disciplinas(df, cabecalho_idx, nome_col)
+    faltas_totais_col = _coluna_faltas_totais(
+        df,
+        cabecalho_idx,
+        nome_col,
+        componentes,
+    )
 
     alunos = []
     vazias_seguidas = 0
@@ -431,11 +465,27 @@ def ler_planilha_boletim(arquivo):
                 }
             )
 
+        faltas_totais = None
+        if faltas_totais_col is not None and faltas_totais_col < len(row):
+            faltas_totais = _numero_inteiro(row.iloc[faltas_totais_col])
+
+        # Compatibilidade com outros modelos: se não existir uma coluna de
+        # total, calcula o total a partir das faltas por disciplina.
+        if faltas_totais is None:
+            faltas_informadas = [
+                item["faltas"]
+                for item in resultados
+                if item["faltas"] is not None
+            ]
+            if faltas_informadas:
+                faltas_totais = sum(faltas_informadas)
+
         alunos.append(
             {
                 "numero_chamada": numero_chamada,
                 "nome": nome_aluno,
                 "nome_normalizado": normalizar_nome(nome_aluno),
+                "faltas_totais": faltas_totais,
                 "resultados": resultados,
             }
         )
@@ -446,5 +496,6 @@ def ler_planilha_boletim(arquivo):
     return {
         "metadados": _metadados(df),
         "disciplinas": componentes,
+        "faltas_totais_col": faltas_totais_col,
         "alunos": alunos,
     }
