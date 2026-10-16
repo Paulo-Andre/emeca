@@ -1357,6 +1357,34 @@ class SitePublicoTests(TestCase):
 
 
     @patch("site_publico.boletim_importacao.pd.read_excel")
+    def test_xls_real_da_escola_le_faltas_totais_da_coluna_antes_das_disciplinas(self, read_excel):
+        read_excel.return_value = pd.DataFrame([
+            [None] * 28,
+            [None, None, None, None, None, "E.M EGIDIO CORDEIRO AQUINO"] + [None] * 22,
+            [None] * 28,
+            [None, None, None, None, None, "Notas e Faltas do 2º Trimestre - Turma 1° Tulipa - 2026"] + [None] * 22,
+            [None] * 28,
+            [None, None, None, None, None, None, "Regente", None, "LÍNG. PORT.", None, "EXP. LITERÁRIAS", None, "ARTES", None, "EDUCAÇÃO FÍSICA", None, "LEM - INGLES", None, "MATEMÁTICA", None, "CIÊN. NAT.", None, "GEOGRAFIA", None, "HISTORIA", None, "ENS. REL.", None],
+            ["Num.", None, "Nome"] + [None] * 25,
+            [None, None, None, None, None, None, "N.", "F.", "N.", "F.", "N.", "F.", "N.", "F.", "N.", "F.", "N.", "F.", "N.", "F.", "N.", "F.", "N.", "F.", "N.", "F.", "N.", "F."],
+            [None] * 28,
+            [1, None, "Alice Vitória Soares Veloso", None, None, None, None, 3, "21,00", None, None, None, "30,00", 0, "29,00", 1, "28,00", 0, "23,00", None, "25,00", None, "28,00", None, "26,00", None, "30,00", 0],
+        ])
+        arquivo = SimpleUploadedFile(
+            "NotaseFaltasdo2TrimestreTurma1Tulipa2026(1).xls",
+            b"xls-real-simulado",
+            content_type="application/vnd.ms-excel",
+        )
+
+        dados = ler_planilha_boletim(arquivo)
+
+        self.assertEqual(dados["faltas_totais_col"], 7)
+        self.assertEqual(dados["alunos"][0]["nome"], "Alice Vitória Soares Veloso")
+        self.assertEqual(dados["alunos"][0]["faltas_totais"], 3)
+        self.assertEqual(dados["alunos"][0]["resultados"][0]["disciplina"], "LÍNG. PORT.")
+        self.assertEqual(dados["alunos"][0]["resultados"][0]["nota"], Decimal("21.00"))
+
+    @patch("site_publico.boletim_importacao.pd.read_excel")
     def test_leitor_reconhece_xls_crystal_e_faltas_totais(self, read_excel):
         # Replica a estrutura real do XLS enviado: existe um N./F. geral
         # antes das disciplinas. O F. geral é a falta total do período.
