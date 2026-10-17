@@ -48,6 +48,13 @@ urlpatterns = [
     path('whatsapp/foto-api/', whatsapp_views.whatsapp_foto_api, name='whatsapp_foto_api'),
     path('whatsapp/midia-api/', whatsapp_views.whatsapp_enviar_midia_api, name='whatsapp_enviar_midia_api'),
     path('whatsapp/responder-api/', whatsapp_views.whatsapp_responder_api, name='whatsapp_responder_api'),
+    path('whatsapp/buscar-mensagens/', whatsapp_views.whatsapp_buscar_mensagens_api, name='whatsapp_buscar_mensagens_api'),
+    path('whatsapp/acao-mensagem/', whatsapp_views.whatsapp_acao_mensagem_api, name='whatsapp_acao_mensagem_api'),
+    path('whatsapp/encaminhar/', whatsapp_views.whatsapp_encaminhar_api, name='whatsapp_encaminhar_api'),
+    path('whatsapp/bloqueio/', whatsapp_views.whatsapp_bloqueio_api, name='whatsapp_bloqueio_api'),
+    path('whatsapp/presenca/', whatsapp_views.whatsapp_presenca_api, name='whatsapp_presenca_api'),
+    path('whatsapp/etiquetas/', whatsapp_views.whatsapp_etiquetas_api, name='whatsapp_etiquetas_api'),
+    path('whatsapp/etiquetas/atualizar/', whatsapp_views.whatsapp_etiquetas_atualizar_api, name='whatsapp_etiquetas_atualizar_api'),
 
     
     
