@@ -230,3 +230,18 @@ def status_sessao():
     else:
         bruto = resposta.get("status") if isinstance(resposta, dict) else ""
     return str(bruto or "").upper()
+
+
+def listar_contatos():
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    return _request("GET", f"contacts/{session_id}?limit=all")
+
+
+def obter_foto_perfil(jid):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    return _request(
+        "POST",
+        f"chat/{session_id}/{jid_codificado}/profile-picture",
+        {},
+    )

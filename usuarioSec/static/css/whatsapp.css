@@ -195,3 +195,64 @@
   .wa-message{max-width:88%}
   .wa-live-badge{display:none}
 }
+
+
+/* Correções de contatos/fotos/rolagem da caixa de mensagens */
+.wa-chat-list,
+.wa-message-thread {
+  scrollbar-width: auto;
+  scrollbar-color: #94a3b8 #e2e8f0;
+}
+
+.wa-chat-list::-webkit-scrollbar,
+.wa-message-thread::-webkit-scrollbar {
+  width: 11px;
+}
+
+.wa-chat-list::-webkit-scrollbar-track,
+.wa-message-thread::-webkit-scrollbar-track {
+  background: #e2e8f0;
+}
+
+.wa-chat-list::-webkit-scrollbar-thumb,
+.wa-message-thread::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border: 2px solid #e2e8f0;
+  border-radius: 999px;
+}
+
+.wa-chat-list::-webkit-scrollbar-thumb:hover,
+.wa-message-thread::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+.wa-chat-avatar,
+.wa-contact-avatar {
+  overflow: hidden;
+}
+
+.wa-chat-avatar img,
+.wa-contact-avatar img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+.wa-chat-list-panel,
+.wa-conversation-panel,
+.wa-conversation,
+.wa-message-thread {
+  min-height: 0;
+}
+
+.wa-chat-list {
+  overflow-y: scroll;
+  overscroll-behavior: contain;
+}
+
+.wa-message-thread {
+  overflow-y: scroll;
+  overscroll-behavior: contain;
+}
