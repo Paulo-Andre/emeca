@@ -28,6 +28,7 @@ from .models import (
     EnvioBoletimWhatsApp,
     ContatoAgendaWhatsApp,
     EstadoConversaWhatsApp,
+    EtiquetaConversaWhatsApp,
     ItemEnvioBoletimWhatsApp,
     IdentidadeContatoWhatsApp,
     LeituraChatWhatsApp,
@@ -1221,11 +1222,70 @@ def _enriquecer_chats(chats):
         item["silenciado"] = bool(estado and estado.silenciado)
         item["arquivado"] = bool(estado and estado.arquivado)
         item["bloqueado"] = bool(estado and estado.bloqueado)
+
+    # Uma consulta para todas as etiquetas, sem executar 1.500 requisições
+    # remotas por atualização. O WA-AKG permanece a fonte das atribuições.
+    jids = [item["jid"] for item in resultado]
+    etiquetas_por_jid = defaultdict(list)
+    for etiqueta in EtiquetaConversaWhatsApp.objects.filter(
+        sessao=sessao_atual_id(), jid__in=jids
+    ).order_by("nome").values("jid", "etiqueta_id", "nome", "cor"):
+        etiquetas_por_jid[etiqueta["jid"]].append({
+            "id": etiqueta["etiqueta_id"],
+            "name": etiqueta["nome"],
+            "colorHex": etiqueta["cor"],
+        })
+    for item in resultado:
+        item["etiquetas"] = etiquetas_por_jid.get(item["jid"], [])
+    # Fixadas aparecem no topo, mesmo quando recebem mensagens outras contas.
     resultado.sort(
-        key=lambda item: str((item.get("lastMessage") or {}).get("timestamp") or ""),
+        key=lambda item: (
+            bool(item["fixado"]),
+            str((item.get("lastMessage") or {}).get("timestamp") or ""),
+        ),
         reverse=True,
     )
     return resultado
+
+
+def _etiquetas_visiveis_da_conversa(jid):
+    return list(
+        EtiquetaConversaWhatsApp.objects.filter(
+            sessao=sessao_atual_id(), jid=jid
+        ).order_by("nome").values("etiqueta_id", "nome", "cor")
+    )
+
+
+def _sincronizar_etiquetas_wa(jid, etiquetas):
+    """Atualiza cache local SOMENTE após confirmação do WA-AKG.
+
+    A resposta da edição de etiquetas usa 'success:true' e uma lista no
+    nível raiz; a consulta usa 'status:true' e 'data.labels'.
+    """
+    if not isinstance(etiquetas, list):
+        raise WhatsAppGatewayError("WA-AKG não devolveu a lista de etiquetas.")
+    ids = set()
+    with transaction.atomic():
+        for item in etiquetas:
+            if not isinstance(item, dict) or not str(item.get("id") or "").strip():
+                continue
+            label_id = str(item["id"])
+            ids.add(label_id)
+            EtiquetaConversaWhatsApp.objects.update_or_create(
+                sessao=sessao_atual_id(), jid=jid, etiqueta_id=label_id,
+                defaults={
+                    "nome": str(item.get("name") or "Etiqueta")[:100],
+                    "cor": str(item.get("colorHex") or "#94a3b8")[:16],
+                }
+            )
+        base = EtiquetaConversaWhatsApp.objects.filter(
+            sessao=sessao_atual_id(), jid=jid
+        )
+        if ids:
+            base.exclude(etiqueta_id__in=ids).delete()
+        else:
+            base.delete()
+    return _etiquetas_visiveis_da_conversa(jid)
 
 
 def _instante_mensagem_whatsapp(valor):
@@ -2049,6 +2109,9 @@ def whatsapp_etiquetas_api(request):
                 if payload.get("status") is False:
                     raise WhatsAppGatewayError(str(payload.get("message") or "Erro ao consultar etiquetas da conversa."))
                 atuais = payload.get("data", {}).get("labels", []) or payload.get("labels", []) or []
+        # Reconciliar a apresentação do EMECA com a lista confirmada pelo WA.
+        if jid:
+            _sincronizar_etiquetas_wa(jid, atuais)
         return JsonResponse({"ok": True, "etiquetas": todas, "atuais": atuais})
     except WhatsAppGatewayError as exc:
         return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
@@ -2069,10 +2132,30 @@ def whatsapp_etiquetas_criar_api(request):
     if not 1 <= len(nome) <= 50 or not 0 <= cor <= 19:
         return JsonResponse({"ok": False, "erro": "Informe nome (até 50 caracteres) e cor válida."}, status=400)
     try:
+        jid = (request.POST.get("jid") or "").strip()
+        if not jid or len(jid) > 120:
+            return JsonResponse({"ok": False, "erro": "Selecione uma conversa."}, status=400)
         resposta = criar_etiqueta(nome, cor)
+        etiqueta = (resposta.get("data") or {}).get("label")
+        if not isinstance(etiqueta, dict) or not etiqueta.get("id"):
+            raise WhatsAppGatewayError("WA-AKG criou etiqueta sem retornar identificador.")
+        # Criar etiqueta dentro da conversa deve também aplicá-la imediatamente.
+        try:
+            atribuicao = atualizar_etiquetas_chat(jid, [str(etiqueta["id"])], "add")
+        except WhatsAppGatewayError as exc:
+            return JsonResponse({
+                "ok": False,
+                "erro": "Etiqueta criada, mas não associada à conversa: " + str(exc),
+                "etiqueta_criada": True,
+            }, status=502)
+        etiquetas_atualizadas = atribuicao.get("labels")
+        if not isinstance(etiquetas_atualizadas, list):
+            raise WhatsAppGatewayError("WA-AKG não confirmou as etiquetas da conversa.")
+        visiveis = _sincronizar_etiquetas_wa(jid, etiquetas_atualizadas)
         return JsonResponse({
             "ok": True,
-            "etiqueta": (resposta.get("data") or {}).get("label"),
+            "etiqueta": etiqueta,
+            "etiquetas_conversa": visiveis,
         })
     except WhatsAppGatewayError as exc:
         return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
@@ -2091,7 +2174,9 @@ def whatsapp_etiquetas_atualizar_api(request):
         return JsonResponse({"ok": False, "erro": "Dados de etiqueta inválidos."}, status=400)
     try:
         resposta = atualizar_etiquetas_chat(jid, label_ids, action)
-        return JsonResponse({"ok": True, "resposta": resposta})
+        atuais = resposta.get("labels") if isinstance(resposta, dict) else None
+        visiveis = _sincronizar_etiquetas_wa(jid, atuais)
+        return JsonResponse({"ok": True, "resposta": resposta, "etiquetas_conversa": visiveis})
     except WhatsAppGatewayError as exc:
         return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
 
