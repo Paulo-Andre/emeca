@@ -10,7 +10,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
   <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-unified-05">
-  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-delete-chat-20">
+  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-groups-21">
 </head>
 <body>
   {% include 'includes/sidebar.html' %}
@@ -69,6 +69,12 @@
         <div class="wa-chat-search">
           <i data-lucide="search"></i>
           <input id="chatSearch" type="search" placeholder="Buscar conversa" autocomplete="off">
+        </div>
+        <div class="wa-chat-filter-row">
+          <button type="button" class="wa-chat-filter active" id="filterAllChats" aria-pressed="true">Todas</button>
+          <button type="button" class="wa-chat-filter" id="filterGroupChats" aria-pressed="false">
+            <i data-lucide="users"></i> Grupos <span id="groupChatsCount"></span>
+          </button>
         </div>
 
         <div class="wa-chat-list" id="chatList">
@@ -335,6 +341,20 @@
     const initialChats = JSON.parse(document.getElementById("wa-chats-iniciais").textContent || "[]");
     const chatList = document.getElementById("chatList");
     const chatSearch = document.getElementById("chatSearch");
+    const filterAllChats = document.getElementById("filterAllChats");
+    const filterGroupChats = document.getElementById("filterGroupChats");
+    const groupChatsCount = document.getElementById("groupChatsCount");
+    let groupFilterEnabled = false;
+    function setGroupFilter(enabled) {
+      groupFilterEnabled = Boolean(enabled);
+      filterAllChats.classList.toggle("active", !groupFilterEnabled);
+      filterGroupChats.classList.toggle("active", groupFilterEnabled);
+      filterAllChats.setAttribute("aria-pressed", String(!groupFilterEnabled));
+      filterGroupChats.setAttribute("aria-pressed", String(groupFilterEnabled));
+      renderChats();
+    }
+    filterAllChats.addEventListener("click", () => setGroupFilter(false));
+    filterGroupChats.addEventListener("click", () => setGroupFilter(true));
     const chatCount = document.getElementById("chatCount");
     const conversation = document.getElementById("conversation");
     const conversationEmpty = document.getElementById("conversationEmpty");
@@ -821,10 +841,16 @@
     function renderChats() {
       sortChats();
       const q = chatSearch.value.trim().toLowerCase();
-      const filtered = chats.filter(chat => !q || [
-        chatDisplayName(chat), chat.phoneJid, realPhone(chat), previewText(chat),
-        ...(chat.etiquetas || []).map(label => label.name || "")
-      ].join(" ").toLowerCase().includes(q));
+      groupChatsCount.textContent = String(chats.filter(chat =>
+        String(chat.jid || "").endsWith("@g.us")
+      ).length);
+      const filtered = chats.filter(chat =>
+        (!groupFilterEnabled || String(chat.jid || "").endsWith("@g.us")) &&
+        (!q || [
+          chatDisplayName(chat), chat.phoneJid, realPhone(chat), previewText(chat),
+          ...(chat.etiquetas || []).map(label => label.name || "")
+        ].join(" ").toLowerCase().includes(q))
+      );
       const oldScroll = chatList.scrollTop;
       const atTop = oldScroll < 40;
       const visibleJids = new Set(filtered.map(chat => chat.jid));
@@ -1901,6 +1927,9 @@
     });
 
     chatSearch.addEventListener("input", renderChats);
+    if (new URLSearchParams(window.location.search).get("grupos") === "1") {
+      setGroupFilter(true);
+    }
     document.getElementById("refreshChats").addEventListener("click", () => refreshChats(true));
 
     replyMessage.addEventListener("input", () => {
