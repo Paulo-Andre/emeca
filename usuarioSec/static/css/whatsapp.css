@@ -1117,3 +1117,33 @@ textarea.wa-new-chat-input{resize:vertical;min-height:94px}
 .wa-chat-item.is-pinned{border-left:3px solid #16a34a;background:#f1fbf5}
 .wa-chat-list .wa-chat-item{flex-shrink:0}
 .wa-chat-list{overflow-anchor:none}
+
+
+/* Tons de fundo por etiqueta ou azul institucional em TODO o cartão.
+   Deixar estas regras por último sobrepõe os estilos antigos verde/has-unread. */
+.wa-chat-list .wa-chat-item,
+.wa-chat-list .wa-chat-item.has-unread,
+.wa-chat-list .wa-chat-item.is-pinned {
+  background:var(--wa-chat-bg,#f0f6fe);
+  border-left:3px solid transparent;
+  transition:background-color .18s ease;
+}
+.wa-chat-list .wa-chat-item.has-label-color,
+.wa-chat-list .wa-chat-item.is-pinned {
+  border-left-color:var(--wa-chat-accent,#2879c8);
+}
+.wa-chat-list .wa-chat-item:hover,
+.wa-chat-list .wa-chat-item.has-unread:hover,
+.wa-chat-list .wa-chat-item.is-pinned:hover {
+  background:var(--wa-chat-hover,#e4effd);
+}
+.wa-chat-list .wa-chat-item.active,
+.wa-chat-list .wa-chat-item.has-unread.active,
+.wa-chat-list .wa-chat-item.is-pinned.active {
+  background:var(--wa-chat-selected,#d7eafa);
+  box-shadow:inset 3px 0 var(--wa-chat-accent,#2879c8);
+  border-left-color:var(--wa-chat-accent,#2879c8);
+}
+.wa-chat-list .wa-chat-item.has-unread .wa-chat-item-row strong{
+  color:#152f43;
+}
