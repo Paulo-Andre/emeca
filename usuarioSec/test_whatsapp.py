@@ -1202,6 +1202,7 @@ class WhatsAppDesconexaoTests(TestCase):
             username="administrador_desconexao_wa",
             password="SenhaDeTeste-local",
             is_staff=True,
+            is_superuser=True,
         )
         self.client.force_login(self.usuario)
         self.url = reverse("whatsapp_desconectar")
@@ -1263,6 +1264,27 @@ class WhatsAppDesconexaoTests(TestCase):
 
     def test_desconexao_usa_post(self):
         self.assertEqual(self.client.get(self.url).status_code, 405)
+
+    @patch("usuarioSec.whatsapp_views.pausar_sessao", return_value={"status": True})
+    @patch("usuarioSec.whatsapp_views.obter_sessao",
+           return_value={"data": {"status": "CONNECTED"}})
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
+    def test_administrador_emeca_sem_is_staff_pode_gerenciar(
+        self, _config, _sessao, pausar
+    ):
+        from django.contrib.auth.models import Group
+        from .access_control import GRUPO_ADMIN
+        admin_grupo = get_user_model().objects.create_user(
+            username="grupo_administracao_sem_staff"
+        )
+        grupo, _ = Group.objects.get_or_create(name=GRUPO_ADMIN)
+        admin_grupo.groups.add(grupo)
+        self.client.force_login(admin_grupo)
+        resposta = self.client.get(reverse("whatsapp"))
+        self.assertContains(resposta, "Desvincular número")
+        post = self.client.post(self.url, {"acao": "pausar"})
+        self.assertEqual(post.status_code, 302)
+        pausar.assert_called_once_with()
 
     @patch("usuarioSec.whatsapp_views.obter_sessao",
            return_value={"data": {"status": "CONNECTED"}})
