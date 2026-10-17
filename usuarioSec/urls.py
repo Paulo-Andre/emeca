@@ -43,6 +43,7 @@ urlpatterns = [
     path('whatsapp/gerenciamento/', whatsapp_views.whatsapp_gerenciamento, name='whatsapp_gerenciamento'),
     path('whatsapp/chats-api/', whatsapp_views.whatsapp_chats_api, name='whatsapp_chats_api'),
     path('whatsapp/chat-api/', whatsapp_views.whatsapp_chat_api, name='whatsapp_chat_api'),
+    path('whatsapp/identificar-contato/', whatsapp_views.whatsapp_identificar_contato_api, name='whatsapp_identificar_contato_api'),
     path('whatsapp/contatos-wa/', whatsapp_views.whatsapp_buscar_contatos_wa, name='whatsapp_buscar_contatos_wa'),
     path('whatsapp/nova-conversa/', whatsapp_views.whatsapp_nova_conversa_api, name='whatsapp_nova_conversa_api'),
     path('whatsapp/gerenciar-chat/', whatsapp_views.whatsapp_gerenciar_chat_api, name='whatsapp_gerenciar_chat_api'),
