@@ -100,25 +100,4 @@
     </button>
   </form>
 </aside>
-
-<script>
-(() => {
-  const sidebar = document.querySelector(".sidebar");
-  const button = sidebar?.querySelector(".sidebar-toggle");
-  if (!sidebar || !button) return;
-  const key = "emeca-sidebar-collapsed";
-  const apply = (collapsed) => {
-    sidebar.classList.toggle("is-collapsed", collapsed);
-    button.setAttribute("aria-label", collapsed ? "Expandir menu" : "Recolher menu");
-    const icon = button.querySelector("svg");
-    if (icon) icon.setAttribute("data-lucide", collapsed ? "panel-left-open" : "panel-left-close");
-    if (window.lucide) window.lucide.createIcons();
-  };
-  apply(localStorage.getItem(key) === "1");
-  button.addEventListener("click", () => {
-    const collapsed = !sidebar.classList.contains("is-collapsed");
-    localStorage.setItem(key, collapsed ? "1" : "0");
-    apply(collapsed);
-  });
-})();
-</script>
+<script src="{% static 'js/sidebar.js' %}?v=20261017-02" defer></script>
