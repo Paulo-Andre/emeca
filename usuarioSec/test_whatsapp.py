@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils import timezone
 
@@ -521,3 +522,82 @@ class WhatsAppAtendimentoCompletoTests(TestCase):
             "archive",
             True,
         )
+
+
+
+class WhatsAppAliasMidiaTests(TestCase):
+    def setUp(self):
+        self.usuario = get_user_model().objects.create_user(
+            username="whatsapp_alias_midia",
+            password="Senha-Sintetica-2026!",
+        )
+        self.client.force_login(self.usuario)
+
+    @patch("usuarioSec.whatsapp_views.listar_contatos")
+    @patch("usuarioSec.whatsapp_views.obter_mensagens_chat")
+    @patch("usuarioSec.whatsapp_views.marcar_chat_como_lido")
+    def test_chat_busca_mensagens_em_todos_os_aliases(
+        self,
+        marcar_lido_mock,
+        obter_mensagens_mock,
+        listar_contatos_mock,
+    ):
+        listar_contatos_mock.return_value = {
+            "data": [{
+                "jid": "123456789012345@lid",
+                "lid": "123456789012345@lid",
+                "remoteJidAlt": "5538999990000@s.whatsapp.net",
+                "name": "Responsável Alias",
+            }]
+        }
+
+        def mensagens_por_alias(jid):
+            if jid.endswith("@lid"):
+                return {"data": []}
+            return {
+                "data": [{
+                    "keyId": "msg-real-1",
+                    "fromMe": False,
+                    "pushName": "Responsável Alias",
+                    "content": "Mensagem encontrada pelo número real.",
+                    "timestamp": "2026-10-17T03:00:00.000Z",
+                }]
+            }
+
+        obter_mensagens_mock.side_effect = mensagens_por_alias
+
+        response = self.client.get(
+            reverse("whatsapp_chat_api"),
+            {"jid": "123456789012345@lid"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        self.assertEqual(
+            response.json()["mensagens"][0]["content"],
+            "Mensagem encontrada pelo número real.",
+        )
+        self.assertEqual(response.json()["nome"], "Responsável Alias")
+
+    @patch("usuarioSec.whatsapp_views.enviar_midia")
+    def test_envio_de_imagem_pela_conversa(self, enviar_midia_mock):
+        enviar_midia_mock.return_value = {"status": True}
+        arquivo = SimpleUploadedFile(
+            "foto.jpg",
+            b"imagem-sintetica",
+            content_type="image/jpeg",
+        )
+
+        response = self.client.post(
+            reverse("whatsapp_enviar_midia_api"),
+            {
+                "jid": "5538999990000@s.whatsapp.net",
+                "legenda": "Foto da atividade",
+                "arquivo": arquivo,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        self.assertEqual(response.json()["tipo"], "image")
+        enviar_midia_mock.assert_called_once()

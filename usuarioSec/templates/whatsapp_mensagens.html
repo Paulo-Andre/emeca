@@ -9,8 +9,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
-  <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-unified-03">
-  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-inbox-03">
+  <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-unified-04">
+  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-inbox-04">
 </head>
 <body>
   {% include 'includes/sidebar.html' %}
@@ -110,6 +110,10 @@
           <form class="wa-reply-form" id="replyForm">
             {% csrf_token %}
             <input type="hidden" id="replyJid" name="jid">
+            <input type="file" id="replyFile" hidden accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.odt,.ods,.zip">
+            <button type="button" class="wa-attach-button" id="attachButton" aria-label="Anexar arquivo" title="Anexar imagem, vídeo, áudio ou documento">
+              <i data-lucide="paperclip"></i>
+            </button>
             <textarea id="replyMessage" name="mensagem" rows="1" maxlength="4000" placeholder="Digite uma mensagem…" aria-label="Mensagem"></textarea>
             <button type="submit" class="wa-send-reply" id="sendReply" aria-label="Enviar mensagem">
               <i data-lucide="send"></i>
@@ -169,6 +173,8 @@
     const replyForm = document.getElementById("replyForm");
     const replyJid = document.getElementById("replyJid");
     const replyMessage = document.getElementById("replyMessage");
+    const replyFile = document.getElementById("replyFile");
+    const attachButton = document.getElementById("attachButton");
     const replyStatus = document.getElementById("replyStatus");
     const contactName = document.getElementById("contactName");
     const contactNumber = document.getElementById("contactNumber");
@@ -416,6 +422,11 @@
         const data = await resp.json();
         if (!resp.ok || !data.ok) throw new Error(data.erro || "Não foi possível carregar a conversa.");
         renderMessages(data.mensagens);
+        if (data.nome && (!chat.name || chat.name === "Contato WhatsApp")) {
+          chat.name = data.nome;
+          contactName.textContent = data.nome;
+          renderChats();
+        }
         if (!quiet) replyStatus.textContent = "";
       } catch (err) {
         if (!quiet) {
@@ -567,6 +578,60 @@
     replyMessage.addEventListener("input", () => {
       replyMessage.style.height = "auto";
       replyMessage.style.height = Math.min(replyMessage.scrollHeight, 140) + "px";
+    });
+
+
+    attachButton.addEventListener("click", () => {
+      if (!activeJid) {
+        replyStatus.textContent = "Selecione uma conversa antes de anexar.";
+        replyStatus.className = "wa-reply-status error";
+        return;
+      }
+      replyFile.click();
+    });
+
+    replyFile.addEventListener("change", async () => {
+      const file = replyFile.files?.[0];
+      if (!file || !activeJid) return;
+
+      if (file.size > 25 * 1024 * 1024) {
+        replyStatus.textContent = "O arquivo deve ter no máximo 25 MB.";
+        replyStatus.className = "wa-reply-status error";
+        replyFile.value = "";
+        return;
+      }
+
+      const body = new FormData();
+      body.append("jid", activeJid);
+      body.append("arquivo", file);
+      body.append("legenda", replyMessage.value.trim());
+      body.append("csrfmiddlewaretoken", csrfToken());
+
+      attachButton.disabled = true;
+      replyStatus.textContent = "Enviando " + file.name + "…";
+      replyStatus.className = "wa-reply-status";
+
+      try {
+        const resp = await fetch("{% url 'whatsapp_enviar_midia_api' %}", {
+          method: "POST",
+          body,
+          headers: {"X-CSRFToken": csrfToken()}
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) throw new Error(data.erro || "Não foi possível enviar o arquivo.");
+        replyStatus.textContent = "Arquivo enviado.";
+        replyStatus.className = "wa-reply-status success";
+        replyMessage.value = "";
+        replyMessage.style.height = "auto";
+        const current = chats.find(item => item.jid === activeJid) || {jid: activeJid};
+        setTimeout(() => openChat(current, true), 700);
+      } catch (err) {
+        replyStatus.textContent = err.message;
+        replyStatus.className = "wa-reply-status error";
+      } finally {
+        attachButton.disabled = false;
+        replyFile.value = "";
+      }
     });
 
     replyForm.addEventListener("submit", async (event) => {
