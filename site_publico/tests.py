@@ -688,6 +688,14 @@ class SitePublicoTests(TestCase):
         self.assertContains(response, "Consultar boletim")
         self.assertIn("no-store", response["Cache-Control"])
 
+    def test_campo_cpf_do_boletim_tem_mascara_visual(self):
+        response = self.client.get(reverse("site_publico:boletim"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-cpf-mask="true"')
+        self.assertContains(response, 'maxlength="14"')
+        self.assertContains(response, 'placeholder="000.000.000-00"')
+
     def test_responsavel_acessa_boletim_com_cpf_da_mae_e_nascimento(self):
         self._criar_boletim_publicado()
 
