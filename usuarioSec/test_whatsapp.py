@@ -1221,19 +1221,26 @@ class WhatsAppDesconexaoTests(TestCase):
         self.assertRedirects(result, reverse("whatsapp"), fetch_redirect_response=False)
         pausar.assert_called_once_with()
 
+    @patch("usuarioSec.whatsapp_views.excluir_historico_sessao",
+           return_value={"status": True, "data": {"messages": 12, "mediaErrors": 0}})
     @patch("usuarioSec.whatsapp_views.desvincular_sessao", return_value={"status": True})
     @patch("usuarioSec.whatsapp_views.obter_sessao",
            return_value={"data": {"status": "CONNECTED"}})
     @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
-    def test_desvinculacao_confirmada(self, _config, _sessao, desvincular):
+    def test_desvinculacao_confirmada(self, _config, _sessao, desvincular, limpar):
+        from .sessao_whatsapp import sessao_atual_id
+        sessao_anterior = sessao_atual_id()
         result = self.client.post(self.url, {
             "acao": "desvincular", "confirmacao": "DESVINCULAR",
+            "confirmar_exclusao": "APAGAR_HISTORICO",
             "origem": "mensagens",
         })
         self.assertRedirects(
             result, reverse("whatsapp_mensagens"), fetch_redirect_response=False
         )
         desvincular.assert_called_once_with()
+        limpar.assert_called_once_with(sessao_anterior)
+        self.assertNotEqual(sessao_atual_id(), sessao_anterior)
 
     @patch("usuarioSec.whatsapp_views.desvincular_sessao")
     @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
@@ -1250,7 +1257,8 @@ class WhatsAppDesconexaoTests(TestCase):
         self, _config, _sessao, desvincular
     ):
         result = self.client.post(self.url, {
-            "acao": "desvincular", "confirmacao": "DESVINCULAR"
+            "acao": "desvincular", "confirmacao": "DESVINCULAR",
+            "confirmar_exclusao": "APAGAR_HISTORICO",
         })
         self.assertEqual(result.status_code, 302)
         desvincular.assert_not_called()
