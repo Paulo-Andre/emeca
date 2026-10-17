@@ -552,9 +552,8 @@
           alert("Nenhum boletim publicado foi encontrado para essa seleção.");
           return;
         }
-        if (!confirm("Confirma o envio de " + quantidade + " PDF(s) de boletim personalizado?")) {
-          event.preventDefault();
-        }
+        document.getElementById("btnEnviar").disabled = true;
+        btnEnviarTexto.textContent = "Enviando…";
         return;
       }
 
@@ -564,12 +563,8 @@
         alert("Selecione pelo menos um destinatário válido.");
         return;
       }
-      const alvo = modoAtual() === "todos"
-        ? "todos os " + quantidade + " contatos"
-        : quantidade + " contato(s)";
-      if (!confirm("Confirma o envio desta mensagem para " + alvo + "?")) {
-        event.preventDefault();
-      }
+      document.getElementById("btnEnviar").disabled = true;
+      btnEnviarTexto.textContent = "Enviando…";
     });
 
     function escapeHtml(value) {
