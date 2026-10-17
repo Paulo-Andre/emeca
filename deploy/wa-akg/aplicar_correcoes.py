@@ -41,8 +41,12 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
     profile_route_target = source / "src/app/api/chat/[sessionId]/[jid]/contact-profile/route.ts"
     purge_route_overlay = patch_dir / "overrides/src/app/api/sessions/[sessionId]/purge-history/route.ts"
     purge_route_target = source / "src/app/api/sessions/[sessionId]/purge-history/route.ts"
+    group_route_overlay = patch_dir / "overrides/src/app/api/groups/[sessionId]/create/route.ts"
+    group_route_target = source / "src/app/api/groups/[sessionId]/create/route.ts"
+    scheduler_overlay = patch_dir / "overrides/src/modules/whatsapp/scheduler.ts"
+    scheduler_target = source / "src/modules/whatsapp/scheduler.ts"
 
-    required = [instance, index, contact_store, chat_service, chat_route, messages_route, contacts_route, overlay_file, profile_route_overlay, purge_route_overlay]
+    required = [instance, index, contact_store, chat_service, chat_route, messages_route, contacts_route, overlay_file, profile_route_overlay, purge_route_overlay, group_route_overlay, scheduler_overlay, group_route_target, scheduler_target]
     missing = [str(p) for p in required if not p.is_file()]
     if missing:
         raise RuntimeError("Arquivos não encontrados: " + ", ".join(missing))
@@ -277,6 +281,30 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
             "Revisar o diff antes de atualizar para não sobrescrever código local."
         )
     edits[purge_route_target] = purge_route_overlay.read_text(encoding="utf-8")
+    for original, patch in [
+        (group_route_target, group_route_overlay),
+        (scheduler_target, scheduler_overlay),
+    ]:
+        desired = patch.read_text(encoding="utf-8")
+        current = original.read_text(encoding="utf-8")
+        if current == desired:
+            continue
+        # Strictly permit updating only the corresponding upstream baseline.
+        # Never overwrite unknown local edits made by another administrator.
+        baseline = {
+            "src/app/api/groups/[sessionId]/create/route.ts": "__GROUP_SHA__",
+            "src/modules/whatsapp/scheduler.ts": "__SCHEDULER_SHA__",
+        }[str(original.relative_to(source))]
+        digest = hashlib.sha1(
+            b"blob " + str(len(current.encode("utf-8"))).encode() +
+            b"\\0" + current.encode("utf-8")
+        ).hexdigest()
+        if digest != baseline:
+            raise RuntimeError(
+                f"{original.relative_to(source)} tem alterações locais não reconhecidas. "
+                "Patcher não sobrescreveu o arquivo; confira o diff e faça backup."
+            )
+        edits[original] = desired
     edits[target_file] = overlay_file.read_text(encoding="utf-8")
     return edits
 
