@@ -838,3 +838,41 @@ textarea.wa-new-chat-input{resize:vertical;min-height:94px}
   font-weight: 800;
   line-height: 1;
 }
+
+
+/* Identificação assistida de contatos WhatsApp */
+.wa-identity-dialog { width: min(490px, calc(100% - 24px)); }
+.wa-identity-card { display: grid; gap: 10px; }
+.wa-identity-card .wa-new-chat-head { margin-bottom: 5px; }
+.wa-identity-card > label {
+  display: block;
+  font-size: .82rem;
+  font-weight: 750;
+  color: #27473c;
+  margin-top: 5px;
+}
+.wa-identity-card .wa-new-chat-input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 12px 13px;
+  font: inherit;
+  font-size: .85rem;
+}
+.wa-identity-card select.wa-new-chat-input { background: #fff; }
+.wa-identity-card select:disabled { background: #f3f6f4; color: #77867d; }
+.wa-identity-help { color: #64766b; font-size: .75rem; }
+.wa-identity-warning {
+  margin: 3px 0 8px;
+  padding: 11px 13px;
+  background: #f4f8f5;
+  border: 1px solid #dfebe1;
+  border-radius: 11px;
+  color: #516e5c;
+  line-height: 1.5;
+  font-size: .76rem;
+}
+.wa-identity-card .wa-new-chat-status:not(:empty) {
+  color: #8b3f30;
+  font-size: .8rem;
+}
