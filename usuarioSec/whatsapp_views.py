@@ -14,15 +14,17 @@ from django.core.cache import cache
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Q
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_POST
 
 from site_publico.boletim_importacao import normalizar_nome
 from site_publico.models import BoletimAluno, PeriodoBoletim
 
+from .agenda_android import AgendaImportError, MAX_VCF_BYTES, processar_agenda_vcf
 from .models import (
     EnvioBoletimWhatsApp,
+    ContatoAgendaWhatsApp,
     ItemEnvioBoletimWhatsApp,
     IdentidadeContatoWhatsApp,
     LeituraChatWhatsApp,
@@ -855,6 +857,11 @@ def _enriquecer_chats(chats):
         return []
 
     identidades = _identidades_wa()
+    nomes_agenda = dict(
+        ContatoAgendaWhatsApp.objects.filter(
+            sessao=settings.WA_AKG_SESSION_ID
+        ).values_list("telefone_jid", "nome")
+    )
     nomes_manuais = {
         item["jid"]: item["nome_exibicao"]
         for item in identidades if item["origem"] == "MANUAL" and item["nome_exibicao"]
@@ -1056,7 +1063,14 @@ def _enriquecer_chats(chats):
             (nomes_perfil[jid] for jid in [merged["jid"], *aliases] if jid in nomes_perfil),
             "",
         )
-        merged["name"] = nome_manual or nome or (nome_remoto if not phone_jid else "")
+        # A agenda Android relaciona nomes somente a telefones reais.
+        # Um ID @lid sem número comprovado continua sem vínculo.
+        nome_agenda = nomes_agenda.get(phone_jid, "") if phone_jid else ""
+        merged["name"] = (
+            nome_manual or nome_agenda or nome
+            or (nome_remoto if not phone_jid else "")
+        )
+        merged["nomeAgenda"] = bool(nome_agenda)
         merged["nomeManual"] = bool(nome_manual)
         merged["notify"] = next(
             (texto for texto in apelidos if texto.casefold() not in genericos), ""
@@ -1716,6 +1730,44 @@ def whatsapp_midia_recebida(request, message_id):
             status=exc.status_code or 502,
         )
 
+
+
+@login_required
+def whatsapp_importar_agenda(request):
+    """Importa agenda Android sem tocar mensagens, sessões ou dados WA-AKG."""
+    if not request.user.is_staff:
+        return HttpResponseForbidden("Apenas administradores podem importar a agenda.")
+    if request.method == "GET":
+        return render(request, "whatsapp_importar_agenda.html", {
+            "total_agenda": ContatoAgendaWhatsApp.objects.filter(
+                sessao=settings.WA_AKG_SESSION_ID
+            ).count(),
+        })
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "erro": "Método não permitido."}, status=405)
+    arquivo = request.FILES.get("arquivo")
+    if not arquivo or not arquivo.name.lower().endswith(".vcf"):
+        return JsonResponse({
+            "ok": False, "erro": "Selecione um arquivo de contatos .vcf exportado do Android."
+        }, status=400)
+    if arquivo.size > MAX_VCF_BYTES:
+        return JsonResponse({
+            "ok": False, "erro": "O arquivo deve ter no máximo 8 MB."
+        }, status=400)
+    modo = (request.POST.get("modo") or "previa").strip()
+    if modo not in ("previa", "importar"):
+        return JsonResponse({"ok": False, "erro": "Operação inválida."}, status=400)
+    try:
+        resultado = processar_agenda_vcf(
+            arquivo.read(),
+            sessao=settings.WA_AKG_SESSION_ID,
+            aplicar=(modo == "importar"),
+        )
+    except AgendaImportError as exc:
+        return JsonResponse({"ok": False, "erro": str(exc)}, status=400)
+    return JsonResponse({
+        "ok": True, "modo": modo, "resultado": resultado,
+    })
 
 
 @login_required
