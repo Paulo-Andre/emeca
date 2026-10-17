@@ -445,3 +445,76 @@ def baixar_midia_mensagem(message_id):
         raise WhatsAppGatewayError(
             "Não foi possível baixar a mídia do WA-AKG."
         ) from exc
+
+
+def listar_grupos():
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    return _request("GET", f"groups/{session_id}")
+
+
+def criar_grupo(subject, participants):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    return _request(
+        "POST",
+        f"groups/{session_id}/create",
+        {"subject": subject, "participants": participants},
+    )
+
+
+def criar_etiqueta(name, color=0):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    return _request(
+        "POST",
+        f"labels/{session_id}",
+        {"name": name, "color": int(color)},
+    )
+
+
+def listar_respostas_automaticas():
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    return _request("GET", f"autoreplies/{session_id}")
+
+
+def criar_resposta_automatica(keyword, response, match_type="EXACT", trigger_type="ALL"):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    return _request(
+        "POST",
+        f"autoreplies/{session_id}",
+        {
+            "keyword": keyword,
+            "response": response,
+            "matchType": match_type,
+            "triggerType": trigger_type,
+            "isMedia": False,
+        },
+    )
+
+
+def apagar_resposta_automatica(reply_id):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    reply_id = quote(reply_id, safe="")
+    return _request("DELETE", f"autoreplies/{session_id}/{reply_id}")
+
+
+def listar_agendamentos(tab="pending"):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    return _request("GET", f"scheduler/{session_id}?tab={quote(tab, safe='')}")
+
+
+def criar_agendamento(jid, content, send_at):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    return _request(
+        "POST",
+        f"scheduler/{session_id}",
+        {
+            "jid": jid,
+            "content": content,
+            "sendAt": send_at,
+        },
+    )
+
+
+def apagar_agendamento(schedule_id):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    schedule_id = quote(schedule_id, safe="")
+    return _request("DELETE", f"scheduler/{session_id}/{schedule_id}")
