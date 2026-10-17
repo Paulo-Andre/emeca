@@ -24,6 +24,7 @@ from .whatsapp_gateway import (
     configurado as gateway_configurado,
     enviar_broadcast,
     enviar_mensagem_chat,
+    gerenciar_chat,
     iniciar_sessao,
     listar_chats,
     listar_contatos,
@@ -32,6 +33,7 @@ from .whatsapp_gateway import (
     obter_mensagens_chat,
     obter_qr,
     obter_sessao,
+    verificar_numeros,
 )
 
 
@@ -330,6 +332,68 @@ def whatsapp_buscar_contatos(request):
 
 @login_required
 @require_GET
+def whatsapp_buscar_contatos_wa(request):
+    termo = (request.GET.get("q") or "").strip()
+    if len(termo) < 2:
+        return JsonResponse({"results": []})
+
+    try:
+        payload = listar_contatos()
+        contatos = payload.get("data") if isinstance(payload, dict) else []
+        if not isinstance(contatos, list):
+            contatos = []
+    except WhatsAppGatewayError as exc:
+        return JsonResponse({"results": [], "erro": str(exc)}, status=exc.status_code or 502)
+
+    termo_norm = termo.casefold()
+    termo_digitos = re.sub(r"\D", "", termo)
+    results = []
+    vistos = set()
+
+    for contato in contatos:
+        if not isinstance(contato, dict):
+            continue
+        jid = str(contato.get("jid") or "")
+        lid = str(contato.get("lid") or "")
+        alt = str(contato.get("remoteJidAlt") or "")
+        nome = (
+            contato.get("name")
+            or contato.get("verifiedName")
+            or contato.get("notify")
+            or ""
+        )
+        phone_jid = next(
+            (
+                item for item in (alt, jid)
+                if _jid_eh_telefone(item)
+            ),
+            "",
+        )
+        telefone = re.sub(r"\D", "", phone_jid.split("@")[0]) if phone_jid else ""
+        haystack = " ".join([str(nome), telefone, jid, lid, alt]).casefold()
+        if termo_norm not in haystack and (
+            not termo_digitos or termo_digitos not in re.sub(r"\D", "", haystack)
+        ):
+            continue
+
+        chave = phone_jid or jid or lid
+        if not chave or chave in vistos:
+            continue
+        vistos.add(chave)
+        results.append({
+            "jid": phone_jid or jid or lid,
+            "nome": nome or "Contato WhatsApp",
+            "telefone": telefone,
+            "profilePic": contato.get("profilePic") or "",
+        })
+        if len(results) >= 30:
+            break
+
+    return JsonResponse({"results": results})
+
+
+@login_required
+@require_GET
 def whatsapp_destinatarios(request):
     try:
         destinatarios, invalidos, amostra = _resolver_destinatarios(
@@ -543,12 +607,32 @@ def whatsapp_enviar(request):
         return redirect("whatsapp")
 
     try:
-        resposta = enviar_broadcast(destinatarios, mensagem)
+        if len(destinatarios) == 1:
+            jid = destinatarios[0]
+            numero = jid.split("@")[0]
+            check = verificar_numeros([numero])
+            resultados = (
+                check.get("data", {}).get("results", [])
+                if isinstance(check, dict)
+                else []
+            )
+            valido = next((item for item in resultados if item.get("exists")), None)
+            if not valido:
+                messages.error(
+                    request,
+                    "O número selecionado não foi localizado no WhatsApp.",
+                )
+                return redirect("whatsapp")
+            jid_real = valido.get("jid") or jid
+            resposta = enviar_mensagem_chat(jid_real, mensagem)
+            broadcast_id = None
+        else:
+            resposta = enviar_broadcast(destinatarios, mensagem)
+            broadcast_id = resposta.get("data", {}).get("broadcastId")
     except WhatsAppGatewayError as exc:
-        messages.error(request, f"Falha ao iniciar o envio: {exc}")
+        messages.error(request, f"Falha ao enviar a mensagem: {exc}")
         return redirect("whatsapp")
 
-    broadcast_id = resposta.get("data", {}).get("broadcastId")
     complemento = f" Lote #{broadcast_id}." if broadcast_id else ""
     aviso_invalidos = (
         f" {invalidos} telefone(s) inválido(s) foram ignorados."
@@ -728,6 +812,59 @@ def whatsapp_foto_api(request):
             {"ok": False, "erro": str(exc)},
             status=exc.status_code or 502,
         )
+
+@login_required
+@require_POST
+def whatsapp_nova_conversa_api(request):
+    jid = (request.POST.get("jid") or "").strip()
+    numero = re.sub(r"\D", "", request.POST.get("numero") or "")
+    mensagem = (request.POST.get("mensagem") or "").strip()
+
+    if not jid and numero:
+        if numero.startswith("00"):
+            numero = numero[2:]
+        if not numero.startswith("55") and len(numero) in (10, 11):
+            numero = "55" + numero
+        try:
+            check = verificar_numeros([numero])
+        except WhatsAppGatewayError as exc:
+            return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
+        resultados = check.get("data", {}).get("results", []) if isinstance(check, dict) else []
+        valido = next((item for item in resultados if item.get("exists")), None)
+        if not valido:
+            return JsonResponse({"ok": False, "erro": "Esse número não foi localizado no WhatsApp."}, status=400)
+        jid = valido.get("jid") or ""
+
+    if not jid:
+        return JsonResponse({"ok": False, "erro": "Selecione um contato ou informe um número."}, status=400)
+    if not mensagem:
+        return JsonResponse({"ok": False, "erro": "Digite uma mensagem."}, status=400)
+
+    try:
+        resposta = enviar_mensagem_chat(jid, mensagem)
+        return JsonResponse({"ok": True, "jid": jid, "resposta": resposta})
+    except WhatsAppGatewayError as exc:
+        return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
+
+
+@login_required
+@require_POST
+def whatsapp_gerenciar_chat_api(request):
+    jid = (request.POST.get("jid") or "").strip()
+    acao = (request.POST.get("acao") or "").strip()
+    ativo = str(request.POST.get("ativo") or "1").lower() not in {"0", "false", "nao", "não"}
+
+    if not jid:
+        return JsonResponse({"ok": False, "erro": "Conversa inválida."}, status=400)
+    if acao not in {"pin", "archive", "mute", "read"}:
+        return JsonResponse({"ok": False, "erro": "Ação inválida."}, status=400)
+
+    try:
+        resposta = gerenciar_chat(jid, acao, ativo)
+        return JsonResponse({"ok": True, "resposta": resposta})
+    except WhatsAppGatewayError as exc:
+        return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
+
 
 @login_required
 @require_POST
