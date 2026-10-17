@@ -1177,10 +1177,14 @@ def whatsapp_identificar_contato_api(request):
     }
     # Não permitir que um operador informe um JID inexistente/aleatório.
     if jid not in disponiveis:
+        # Pode existir apenas na tabela Contact, como alias do chat telefônico.
+        registro_contato = any(
+            jid in _jids_do_registro(contato) for contato in _contatos_wa()
+        )
         ja_registrado = IdentidadeContatoWhatsApp.objects.filter(
             sessao=settings.WA_AKG_SESSION_ID, jid=jid
         ).exists()
-        if not ja_registrado:
+        if not (ja_registrado or registro_contato):
             return JsonResponse({"ok": False, "erro": "Contato não encontrado nas conversas."}, status=400)
     if telefone and telefone not in disponiveis:
         return JsonResponse({
@@ -1188,6 +1192,10 @@ def whatsapp_identificar_contato_api(request):
             "erro": "O número escolhido precisa constar na lista de conversas do WhatsApp.",
         }, status=400)
 
+    anterior = IdentidadeContatoWhatsApp.objects.filter(
+        sessao=settings.WA_AKG_SESSION_ID, jid=jid
+    ).first()
+    telefone_anterior = anterior.telefone_jid if anterior else ""
     with transaction.atomic():
         if nome or telefone:
             IdentidadeContatoWhatsApp.objects.update_or_create(
@@ -1205,6 +1213,13 @@ def whatsapp_identificar_contato_api(request):
             ).delete()
     if jid.endswith("@lid"):
         cache.delete("emeca:whatsapp:lid:" + sha256(jid.encode("utf-8")).hexdigest())
+        # Evitar que o cache temporário preserve um vínculo manual desfeito.
+        if telefone_anterior and telefone_anterior != telefone:
+            chave = "emeca:whatsapp:phone:" + sha256(
+                telefone_anterior.encode("utf-8")
+            ).hexdigest()
+            lids = [lid for lid in (cache.get(chave) or []) if lid != jid]
+            cache.set(chave, lids, 900)
     return JsonResponse({"ok": True, "jid": jid, "nome": nome, "telefone_jid": telefone})
 
 
