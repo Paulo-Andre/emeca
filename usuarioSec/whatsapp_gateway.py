@@ -105,6 +105,21 @@ def desvincular_sessao():
     return _request("POST", f"sessions/{session_id}/logout", {})
 
 
+def excluir_historico_sessao(sessao_id=None):
+    """Apaga no WA-AKG todo o histórico da sessão DESVINCULADA.
+
+    Nunca é executado na ação de pausa. Exige logout confirmado e a
+    confirmação administrativa feita na view do EMECA.
+    """
+    session_id = quote(sessao_id or sessao_atual_id(), safe="")
+    resposta = _request("POST", f"sessions/{session_id}/purge-history", {})
+    if not isinstance(resposta, dict) or resposta.get("status") is not True:
+        raise WhatsAppGatewayError(
+            str((resposta or {}).get("message") or "O WA-AKG não confirmou a exclusão.")
+        )
+    return resposta
+
+
 def obter_qr():
     session_id = quote(sessao_atual_id(), safe="")
     return _request("GET", f"sessions/{session_id}/qr")
