@@ -10,7 +10,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
   <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-unified-03">
-  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-inbox-02">
+  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-inbox-03">
 </head>
 <body>
   {% include 'includes/sidebar.html' %}
@@ -133,13 +133,20 @@
     let chats = Array.isArray(initialChats) ? initialChats : [];
     let activeJid = "";
     let refreshTimer = null;
+    const photoCache = new Map();
+
+    function csrfToken() {
+      return replyForm.querySelector('input[name="csrfmiddlewaretoken"]')?.value || "";
+    }
 
     function phoneFromJid(jid) {
       return String(jid || "").split("@")[0].replace(/\D/g, "");
     }
 
     function prettyPhone(jid) {
-      const digits = phoneFromJid(jid);
+      const raw = String(jid || "");
+      if (!raw || raw.endsWith("@lid")) return "";
+      const digits = phoneFromJid(raw);
       if (digits.startsWith("55") && digits.length >= 12) {
         const n = digits.slice(2);
         const ddd = n.slice(0, 2);
@@ -147,12 +154,82 @@
         if (local.length === 9) return `+${digits.slice(0,2)} (${ddd}) ${local.slice(0,5)}-${local.slice(5)}`;
         if (local.length === 8) return `+${digits.slice(0,2)} (${ddd}) ${local.slice(0,4)}-${local.slice(4)}`;
       }
-      return digits ? "+" + digits : jid;
+      return digits ? "+" + digits : "";
+    }
+
+    function realPhone(chat) {
+      return prettyPhone(chat.phoneJid || "");
     }
 
     function chatDisplayName(chat) {
-      return chat.name || chat.notify || prettyPhone(chat.jid) || "Contato";
+      return chat.name || chat.notify || realPhone(chat) || "Contato WhatsApp";
     }
+
+    function setAvatarContent(element, chat, url="") {
+      element.innerHTML = "";
+      if (url && /^https?:\/\//i.test(url)) {
+        const img = document.createElement("img");
+        img.src = url;
+        img.alt = "";
+        img.loading = "lazy";
+        img.referrerPolicy = "no-referrer";
+        img.addEventListener("error", () => {
+          element.innerHTML = "";
+          element.textContent = chatDisplayName(chat).trim().charAt(0).toUpperCase() || "?";
+        }, { once: true });
+        element.appendChild(img);
+      } else {
+        element.textContent = chatDisplayName(chat).trim().charAt(0).toUpperCase() || "?";
+      }
+    }
+
+    async function loadLivePhoto(chat, element) {
+      const photoJid = chat.photoJid || chat.phoneJid || chat.jid;
+      if (!photoJid) return;
+
+      if (chat.profilePic) {
+        photoCache.set(photoJid, chat.profilePic);
+        setAvatarContent(element, chat, chat.profilePic);
+        return;
+      }
+
+      if (photoCache.has(photoJid)) {
+        setAvatarContent(element, chat, photoCache.get(photoJid) || "");
+        return;
+      }
+
+      try {
+        const body = new FormData();
+        body.append("jid", photoJid);
+        body.append("csrfmiddlewaretoken", csrfToken());
+        const resp = await fetch("{% url 'whatsapp_foto_api' %}", {
+          method: "POST",
+          body,
+          headers: {"X-CSRFToken": csrfToken()}
+        });
+        const data = await resp.json();
+        const url = resp.ok && data.ok ? (data.url || "") : "";
+        photoCache.set(photoJid, url);
+        if (url) {
+          chat.profilePic = url;
+          setAvatarContent(element, chat, url);
+        }
+      } catch (_) {
+        photoCache.set(photoJid, "");
+      }
+    }
+
+    const avatarObserver = ("IntersectionObserver" in window)
+      ? new IntersectionObserver(entries => {
+          entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+            avatarObserver.unobserve(entry.target);
+            const jid = entry.target.dataset.chatJid;
+            const chat = chats.find(item => item.jid === jid);
+            if (chat) loadLivePhoto(chat, entry.target);
+          });
+        }, { root: chatList, rootMargin: "80px" })
+      : null;
 
     function previewText(chat) {
       const last = chat.lastMessage || {};
@@ -181,8 +258,10 @@
 
       const avatar = document.createElement("span");
       avatar.className = "wa-chat-avatar";
+      avatar.dataset.chatJid = chat.jid || "";
       const name = chatDisplayName(chat);
-      avatar.textContent = name.trim().charAt(0).toUpperCase() || "?";
+      setAvatarContent(avatar, chat, chat.profilePic || "");
+      if (avatarObserver) avatarObserver.observe(avatar);
 
       const body = document.createElement("span");
       body.className = "wa-chat-item-body";
@@ -207,7 +286,7 @@
       const q = chatSearch.value.trim().toLowerCase();
       const filtered = chats.filter(chat => {
         if (!q) return true;
-        return [chatDisplayName(chat), chat.jid, previewText(chat)]
+        return [chatDisplayName(chat), chat.phoneJid, realPhone(chat), previewText(chat)]
           .join(" ").toLowerCase().includes(q);
       });
       chatList.innerHTML = "";
@@ -270,8 +349,9 @@
       replyJid.value = chat.jid;
       const name = chatDisplayName(chat);
       contactName.textContent = name;
-      contactNumber.textContent = prettyPhone(chat.jid);
-      contactAvatar.textContent = name.trim().charAt(0).toUpperCase() || "?";
+      contactNumber.textContent = realPhone(chat) || "Número real não disponível";
+      setAvatarContent(contactAvatar, chat, chat.profilePic || "");
+      loadLivePhoto(chat, contactAvatar);
       conversationEmpty.hidden = true;
       conversation.hidden = false;
       renderChats();
