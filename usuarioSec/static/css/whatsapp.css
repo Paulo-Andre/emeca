@@ -940,3 +940,87 @@ textarea.wa-new-chat-input{resize:vertical;min-height:94px}
 .wa-agenda-note p { margin:0; line-height:1.55; color:#476653; font-size:.77rem; }
 @media(max-width:1000px){ .wa-agenda-layout {grid-template-columns:1fr;} }
 @media(max-width:600px){ .wa-agenda-stats {grid-template-columns:repeat(2,minmax(0,1fr));} .wa-agenda-actions button {flex:1 1 100%;} }
+
+
+/* Perfil do contato e ampliação de foto */
+.wa-avatar-interactive{
+  padding:0;border:0;cursor:zoom-in;font:inherit;
+  transition:box-shadow .2s,transform .2s;
+}
+.wa-avatar-interactive:hover{box-shadow:0 0 0 3px rgba(22,163,74,.23)}
+.wa-avatar-interactive:focus-visible{outline:3px solid #16a34a;outline-offset:3px}
+.wa-conversation-head .wa-profile-header-btn{
+  width:auto;min-width:38px;padding:0 10px;display:flex;gap:7px;
+  color:#176d44;border-color:#d4e8da;background:#f1faf5;
+}
+.wa-profile-header-btn span{font-size:.78rem;font-weight:700}
+.wa-profile-dialog,.wa-photo-dialog{
+  padding:0;border:0;border-radius:18px;background:transparent;
+  max-height:min(90dvh,860px);box-shadow:0 28px 90px rgba(15,23,42,.24);
+  overflow:visible;
+}
+.wa-profile-dialog::backdrop,.wa-photo-dialog::backdrop{
+  background:rgba(11,22,19,.65);backdrop-filter:blur(3px)
+}
+.wa-profile-dialog{width:min(440px,calc(100vw - 26px))}
+.wa-profile-card{
+  max-height:90dvh;overflow-y:auto;background:#fff;border-radius:18px;
+  color:#172e23;
+}
+.wa-profile-head{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:19px 20px;border-bottom:1px solid #e6ece8;
+}
+.wa-profile-head>div{display:grid;gap:4px}
+.wa-profile-head strong{font-size:1rem;color:#193c2a}
+.wa-profile-head small{font-size:.76rem;color:#64786d}
+.wa-profile-intro{
+  padding:23px 18px 19px;display:flex;align-items:center;
+  flex-direction:column;text-align:center;gap:7px;
+  background:linear-gradient(180deg,#f1faf5,#fff);
+}
+.wa-profile-picture{
+  width:148px;height:148px;display:grid;place-items:center;overflow:hidden;
+  border-radius:50%;background:#d9efdf;color:#1b6540;
+  box-shadow:0 0 0 4px #fff,0 5px 19px rgba(14,63,39,.12);
+  font-weight:800;font-size:2.1rem;
+}
+.wa-profile-picture img{display:block;width:100%;height:100%;object-fit:cover;border-radius:50%}
+.wa-profile-intro h3{font-size:1.15rem;margin:9px 0 0;color:#173c29;overflow-wrap:anywhere}
+.wa-profile-phone{font-size:.85rem;color:#667b6f;overflow-wrap:anywhere}
+.wa-profile-enlarge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 12px;margin-top:8px;border:1px solid #cee7d5;
+  border-radius:9px;background:#fff;color:#247349;font:inherit;
+  font-size:.78rem;cursor:pointer
+}
+.wa-profile-enlarge:hover{background:#e9f8ef}
+.wa-profile-enlarge svg{width:16px;height:16px}
+.wa-profile-fields{padding:6px 21px 10px}
+.wa-profile-field{padding:12px 0;border-bottom:1px solid #edf1ee}
+.wa-profile-field:last-child{border-bottom:0}
+.wa-profile-field>span{display:block;margin-bottom:7px;color:#64786d;font-size:.75rem}
+.wa-profile-field strong,.wa-profile-field p{
+  display:block;margin:0;color:#193d2a;font-size:.9rem;font-weight:550;
+  white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.4;
+}
+.wa-profile-help{padding:12px 20px 19px;margin:0;color:#677d70;font-size:.75rem;line-height:1.5}
+.wa-photo-dialog{width:min(640px,calc(100vw - 24px))}
+.wa-photo-dialog-card{background:#111c18;color:#fff;border-radius:18px;overflow:hidden;min-height:170px}
+.wa-photo-dialog-card header{
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
+  padding:12px 15px;background:#1d2d26
+}
+.wa-photo-dialog-card header strong{font-size:.9rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wa-photo-dialog-card header .wa-icon-button{background:#293c32;color:#fff;border-color:#496252}
+.wa-photo-dialog-card img{
+  max-width:100%;max-height:calc(88dvh - 65px);width:auto;height:auto;
+  margin:auto;object-fit:contain;background:#111c18
+}
+.wa-photo-dialog-card img:not([hidden]){display:block}
+.wa-photo-dialog-card p{padding:35px 20px;margin:0;color:#d9e9de;text-align:center;font-size:.88rem}
+@media(max-width:720px){
+  .wa-conversation-head .wa-profile-header-btn span{display:none}
+  .wa-conversation-head .wa-profile-header-btn{padding:0;justify-content:center}
+  .wa-profile-picture{width:126px;height:126px}
+}
