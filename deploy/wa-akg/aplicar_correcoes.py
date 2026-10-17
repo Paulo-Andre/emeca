@@ -50,6 +50,7 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
         ).hexdigest()
         approved_prior_versions = {
             "3e44cfba9b5ea22bdbab55cdd6bbe7342244cb58",
+            "0ce64f8730400cbdc52c2c47d56001d05f7f0397",
         }
         if git_blob not in approved_prior_versions:
             raise RuntimeError(
