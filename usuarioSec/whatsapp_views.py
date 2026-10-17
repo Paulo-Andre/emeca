@@ -1219,7 +1219,9 @@ def whatsapp_midia_recebida(request, message_id):
     try:
         conteudo, content_type, disposition = baixar_midia_mensagem(message_id)
         resposta = HttpResponse(conteudo, content_type=content_type)
-        if disposition:
+        if content_type.startswith(("image/", "video/", "audio/")):
+            resposta["Content-Disposition"] = "inline"
+        elif disposition:
             resposta["Content-Disposition"] = disposition
         resposta["Cache-Control"] = "private, max-age=300"
         return resposta
