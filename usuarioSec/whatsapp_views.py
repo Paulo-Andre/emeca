@@ -65,6 +65,7 @@ from .whatsapp_gateway import (
     marcar_chat_como_lido,
     obter_config_sistema,
     obter_foto_perfil,
+    obter_perfil_contato,
     obter_mensagens_chat,
     obter_qr,
     obter_sessao,
@@ -1505,6 +1506,20 @@ def whatsapp_perfil_api(request):
         if sobre:
             break
     nome = apelido_manual or nome_agenda or nome_salvo or nome_perfil
+    # O WA-AKG pode consultar o recado/"Sobre" em tempo real pelo Baileys.
+    # A ausência desse recurso ou restrições de privacidade não impedem abrir
+    # as informações de contato já sincronizadas.
+    try:
+        dados_remotos = obter_perfil_contato(telefone_jid or jid)
+        dados_remotos = dados_remotos.get("data") if isinstance(dados_remotos, dict) else None
+        if isinstance(dados_remotos, dict):
+            status_remoto = dados_remotos.get("about")
+            if isinstance(status_remoto, str) and status_remoto.strip():
+                sobre = status_remoto.strip()[:300]
+            nome_perfil = nome_perfil or str(dados_remotos.get("notify") or "").strip()[:160]
+            nome = nome or str(dados_remotos.get("name") or "").strip()[:160]
+    except WhatsAppGatewayError:
+        pass
     return JsonResponse({
         "ok": True,
         "perfil": {
