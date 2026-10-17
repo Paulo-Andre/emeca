@@ -107,14 +107,27 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
         '        dbSessionId: string,\n        limit = 300,\n        before?: string,\n        search?: string',
         "limite padrão de chats",
     )
-    value = substitute(
-        value,
-        '        return result;\n    }\n\n    /**\n     * Get messages for a specific chat',
-        '        return await ChatService.enrichEmecaChats(dbSessionId, result);\n'
-        '    }\n\n' + ENRICH_METHOD +
-        '    /**\n     * Get messages for a specific chat',
-        "identificação padronizada de chats",
-    )
+    if "private static async enrichEmecaChats" in value:
+        # Atualizar somente a implementação que o próprio EMECA adicionou
+        # anteriormente. O patch antigo não continha profileNames.
+        first = value.find(
+            '    /**\n     * Normaliza os metadados para EMECA sem inventar telefones.'
+        )
+        last = value.find('    /**\n     * Get messages for a specific chat', first)
+        existing = value[first:last] if first >= 0 and last > first else ""
+        if not existing or "const known = new Map<string, Set<string>>();" not in existing:
+            raise RuntimeError("Método de identificação foi alterado localmente; revise manualmente.")
+        if existing != ENRICH_METHOD:
+            value = value[:first] + ENRICH_METHOD + value[last:]
+    else:
+        value = substitute(
+            value,
+            '        return result;\n    }\n\n    /**\n     * Get messages for a specific chat',
+            '        return await ChatService.enrichEmecaChats(dbSessionId, result);\n'
+            '    }\n\n' + ENRICH_METHOD +
+            '    /**\n     * Get messages for a specific chat',
+            "identificação padronizada de chats",
+        )
     edits[chat_service] = value
 
     value = chat_route.read_text(encoding="utf-8")
