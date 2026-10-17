@@ -2119,6 +2119,15 @@ def whatsapp_buscar_mensagens_api(request):
             mensagens_por_id.values(),
             key=lambda msg: str(msg.get("timestamp") or ""),
         )
+        limite = _limite_exclusao_conversa_wa(
+            request.user, _aliases_contato_wa(jid)
+        ) if jid else None
+        if limite is not None:
+            mensagens = [
+                msg for msg in mensagens
+                if (data := _instante_mensagem_whatsapp(msg.get("timestamp")))
+                is not None and data > limite
+            ]
         ids = [
             str(msg.get("keyId") or msg.get("id") or "")
             for msg in mensagens
