@@ -50,12 +50,14 @@ from .whatsapp_gateway import (
     listar_respostas_automaticas,
     listar_etiquetas_chat,
     marcar_chat_como_lido,
+    obter_config_sistema,
     obter_foto_perfil,
     obter_mensagens_chat,
     obter_qr,
     obter_sessao,
     reagir_mensagem,
     responder_mensagem_citada,
+    salvar_config_sistema,
     verificar_numeros,
 )
 
@@ -1278,6 +1280,16 @@ def whatsapp_gerenciamento(request):
             elif acao == "apagar_agendamento":
                 apagar_agendamento((request.POST.get("id") or "").strip())
                 messages.success(request, "Agendamento removido.")
+            elif acao == "configurar_sistema":
+                timezone = (request.POST.get("timezone") or "America/Sao_Paulo").strip()
+                salvar_config_sistema(
+                    "EMECA WhatsApp",
+                    "",
+                    "/favicon.ico",
+                    timezone,
+                    False,
+                )
+                messages.success(request, "Configuração do WA-AKG atualizada.")
             elif acao == "criar_grupo":
                 assunto = (request.POST.get("assunto") or "").strip()
                 numeros = [
@@ -1302,6 +1314,7 @@ def whatsapp_gerenciamento(request):
         "agendamentos": [],
         "historico_agendamentos": [],
         "grupos": [],
+        "config_sistema": {},
     }
     if gateway_configurado():
         try:
@@ -1324,6 +1337,11 @@ def whatsapp_gerenciamento(request):
         try:
             payload = listar_grupos()
             dados["grupos"] = payload.get("data", []) if isinstance(payload, dict) else []
+        except WhatsAppGatewayError:
+            pass
+        try:
+            payload = obter_config_sistema()
+            dados["config_sistema"] = payload.get("data", {}) if isinstance(payload, dict) else {}
         except WhatsAppGatewayError:
             pass
 
