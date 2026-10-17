@@ -66,7 +66,7 @@
         </form>
         <div class="wa-manager-list">
           {% for item in etiquetas %}
-            <div class="wa-manager-list-row"><span class="wa-label-dot" style="background:{{ item.colorHex|default:'#94a3b8' }}"></span><strong>{{ item.name }}</strong><small>{{ item._count.chatLabels|default:0 }} conversa(s)</small></div>
+            <div class="wa-manager-list-row"><span class="wa-label-dot" style="background:{{ item.colorHex|default:'#94a3b8' }}"></span><strong>{{ item.name }}</strong></div>
           {% empty %}<p class="wa-manager-empty">Nenhuma etiqueta cadastrada.</p>{% endfor %}
         </div>
       </article>
