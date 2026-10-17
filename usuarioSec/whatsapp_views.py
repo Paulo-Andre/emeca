@@ -24,6 +24,7 @@ from site_publico.models import BoletimAluno, PeriodoBoletim
 from .models import (
     EnvioBoletimWhatsApp,
     ItemEnvioBoletimWhatsApp,
+    IdentidadeContatoWhatsApp,
     LeituraChatWhatsApp,
     TelefoneDeclaracao,
     declaracao,
@@ -697,6 +698,27 @@ def _contatos_wa():
         return []
 
 
+def _identidades_wa():
+    """Vínculos persistentes; não depender do cache local de cada worker."""
+    return list(
+        IdentidadeContatoWhatsApp.objects.filter(sessao=settings.WA_AKG_SESSION_ID)
+        .values("jid", "telefone_jid", "nome_exibicao", "origem")
+    )
+
+
+def _contatos_persistidos_wa(identidades=None):
+    return [
+        {
+            "jid": dado["jid"],
+            "lid": dado["jid"] if dado["jid"].endswith("@lid") else "",
+            "remoteJidAlt": dado["telefone_jid"],
+            # O apelido manual é aplicado depois da mesclagem.
+        }
+        for dado in (identidades if identidades is not None else _identidades_wa())
+        if dado["telefone_jid"]
+    ]
+
+
 def _jids_do_registro(registro):
     """Somente JIDs explícitos: nomes/fotos iguais NÃO autorizam fusão."""
     if not isinstance(registro, dict):
@@ -753,7 +775,9 @@ def _aliases_contato_wa(jid, contatos=None):
     jid = str(jid or "").strip()
     if not jid:
         return []
-    grupos = _mapa_aliases_wa(contatos if contatos is not None else _contatos_wa())
+    registros = list(contatos if contatos is not None else _contatos_wa())
+    registros.extend(_contatos_persistidos_wa())
+    grupos = _mapa_aliases_wa(registros)
     ligados = [jid] + [item for item in grupos.get(jid, ()) if item != jid]
     # Ligações adicionais confirmadas pelo senderJid das mensagens recebidas.
     # As duas direções são necessárias para abrir todo o histórico unificado.
@@ -806,7 +830,12 @@ def _enriquecer_chats(chats):
     if not chats:
         return []
 
-    contatos = _contatos_wa()
+    identidades = _identidades_wa()
+    nomes_manuais = {
+        item["jid"]: item["nome_exibicao"]
+        for item in identidades if item["origem"] == "MANUAL" and item["nome_exibicao"]
+    }
+    contatos = _contatos_wa() + _contatos_persistidos_wa(identidades)
     # Registros @lid antigos nem sempre têm o telefone na tabela Contact.
     # O histórico recebido pode conter senderJid (telefone) e pushName,
     # informados diretamente pelo WhatsApp. Consultar no máximo três LIDs
@@ -843,6 +872,28 @@ def _enriquecer_chats(chats):
                 if telefone and nome_perfil:
                     break
             identidade = {"telefone": telefone, "nome": nome_perfil}
+            # Uma associação comprovada pelo senderJid precisa sobreviver a
+            # reinícios e a processos Gunicorn com caches diferentes.
+            if telefone or nome_perfil:
+                salvo, criado = IdentidadeContatoWhatsApp.objects.get_or_create(
+                    sessao=settings.WA_AKG_SESSION_ID,
+                    jid=jid,
+                    defaults={
+                        "telefone_jid": telefone,
+                        "nome_exibicao": nome_perfil[:160],
+                        "origem": "METADATA",
+                    },
+                )
+                if not criado and salvo.origem == "METADATA":
+                    alterou = False
+                    if telefone and salvo.telefone_jid != telefone:
+                        salvo.telefone_jid = telefone
+                        alterou = True
+                    if nome_perfil and salvo.nome_exibicao != nome_perfil[:160]:
+                        salvo.nome_exibicao = nome_perfil[:160]
+                        alterou = True
+                    if alterou:
+                        salvo.save(update_fields=["telefone_jid", "nome_exibicao", "atualizado_em"])
             if disponivel:
                 cache.set(chave_cache, identidade, 900 if telefone or nome_perfil else 120)
             else:
@@ -952,7 +1003,12 @@ def _enriquecer_chats(chats):
                 (texto for texto in apelidos if texto.casefold() not in genericos),
                 "",
             )
-        merged["name"] = nome
+        nome_manual = next(
+            (nomes_manuais[jid] for jid in [merged["jid"], *aliases] if jid in nomes_manuais),
+            "",
+        )
+        merged["name"] = nome_manual or nome
+        merged["nomeManual"] = bool(nome_manual)
         merged["notify"] = next(
             (texto for texto in apelidos if texto.casefold() not in genericos), ""
         )
