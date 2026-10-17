@@ -120,3 +120,14 @@ class AgendaAndroidTests(TestCase):
         self.assertEqual(len(contacts), 2)
         self.assertEqual(summary["cartoes"], 1)
         self.assertIn("José Maria", contacts.values())
+
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=False)
+    def test_gerenciamento_oferece_sincronizacao_automatica_sem_vcf_obrigatorio(self, _gateway):
+        usuario = get_user_model().objects.create_user(
+            username="administrador_sincronizacao", is_staff=True
+        )
+        self.client.force_login(usuario)
+        pagina = self.client.get(reverse("whatsapp_gerenciamento"))
+        self.assertEqual(pagina.status_code, 200)
+        self.assertContains(pagina, "Sincronização automática de contatos")
+        self.assertNotContains(pagina, "Importar contatos</a>")
