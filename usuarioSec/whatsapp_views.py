@@ -2158,6 +2158,9 @@ def whatsapp_importar_agenda(request):
 @login_required
 def whatsapp_gerenciamento(request):
     if request.method == "POST":
+        if _validar_sessao_cliente(request) is not None:
+            messages.error(request, "A conta WhatsApp foi trocada. Atualize a página.")
+            return redirect("whatsapp_gerenciamento")
         acao = (request.POST.get("acao") or "").strip()
         try:
             if acao == "criar_etiqueta":
@@ -2221,6 +2224,7 @@ def whatsapp_gerenciamento(request):
     dados = {
         "gateway_configurado": gateway_configurado(),
         "gateway_status": "NAO_CONFIGURADO",
+        "wa_sessao_id": sessao_atual_id(),
         "pode_desconectar": _pode_desconectar_whatsapp(request.user),
         "etiquetas": [],
         "auto_respostas": [],
