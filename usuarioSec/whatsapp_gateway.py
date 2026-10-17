@@ -402,3 +402,46 @@ def atualizar_etiquetas_chat(jid, label_ids, action):
         f"labels/{session_id}/chat/{jid_codificado}/labels",
         {"labelIds": label_ids, "action": action},
     )
+
+
+
+def baixar_midia_mensagem(message_id):
+    if not configurado():
+        raise WhatsAppGatewayError(
+            "A integração com o WhatsApp ainda não foi configurada no servidor."
+        )
+
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    message_id_codificado = quote(message_id, safe="")
+    base_url = settings.WA_AKG_BASE_URL.rstrip("/")
+    url = f"{base_url}/messages/{session_id}/download/{message_id_codificado}/media"
+    request = Request(
+        url,
+        headers={
+            "Accept": "*/*",
+            "X-API-Key": settings.WA_AKG_API_KEY,
+        },
+        method="GET",
+    )
+    try:
+        with urlopen(request, timeout=max(settings.WA_AKG_TIMEOUT_SECONDS, 30)) as response:
+            return (
+                response.read(),
+                response.headers.get("Content-Type") or "application/octet-stream",
+                response.headers.get("Content-Disposition") or "",
+            )
+    except HTTPError as exc:
+        raw = exc.read().decode("utf-8", errors="replace")
+        try:
+            data = json.loads(raw) if raw else {}
+        except json.JSONDecodeError:
+            data = {}
+        raise WhatsAppGatewayError(
+            str(data.get("message") or data.get("error") or f"HTTP {exc.code}"),
+            exc.code,
+            data,
+        ) from exc
+    except URLError as exc:
+        raise WhatsAppGatewayError(
+            "Não foi possível baixar a mídia do WA-AKG."
+        ) from exc
