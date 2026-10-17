@@ -346,3 +346,31 @@ class MensagemOcultaWhatsApp(models.Model):
         ]
         verbose_name = "Mensagem oculta no EMECA"
         verbose_name_plural = "Mensagens ocultas no EMECA"
+
+
+class ConversaExcluidaWhatsApp(models.Model):
+    """Limpeza local de uma conversa no EMECA, por usuário e sessão.
+
+    Armazena o horário da última mensagem no momento da exclusão.
+    Mensagens até esse instante ficam ocultas para este operador; novas
+    mensagens permitem que a conversa volte a aparecer. Não remove o
+    histórico WA-AKG nem altera o WhatsApp do dispositivo.
+    """
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name="conversas_excluidas_whatsapp",
+    )
+    sessao = models.CharField(max_length=120)
+    jid = models.CharField(max_length=120)
+    ultima_mensagem_em = models.CharField(max_length=60, blank=True, default="")
+    excluida_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["usuario", "sessao", "jid"],
+                name="uniq_conversa_excluida_wa_operador",
+            )
+        ]
+        verbose_name = "Conversa excluída no EMECA"
+        verbose_name_plural = "Conversas excluídas no EMECA"
