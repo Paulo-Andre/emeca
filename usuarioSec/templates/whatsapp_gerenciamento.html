@@ -22,7 +22,6 @@
         <p>Recursos administrativos de atendimento integrados ao WA-AKG.</p>
       </div>
       <div class="wa-header-actions">
-        {% if request.user.is_staff %}<a class="btn-secondary" href="{% url 'whatsapp_importar_agenda' %}"><i data-lucide="contact-round"></i> Importar contatos</a>{% endif %}
         <a class="btn-secondary" href="{% url 'whatsapp_mensagens' %}"><i data-lucide="messages-square"></i> Mensagens</a>
         <a class="btn-secondary" href="{% url 'whatsapp' %}"><i data-lucide="send"></i> Envios</a>
       </div>
@@ -31,6 +30,18 @@
     {% for message in messages %}
       <div class="wa-manager-alert{% if message.tags %} {{ message.tags }}{% endif %}">{{ message }}</div>
     {% endfor %}
+
+    <section class="wa-manager-card wa-auto-sync-info" aria-labelledby="wa-sync-title">
+      <div class="wa-manager-card-head">
+        <i data-lucide="refresh-cw"></i>
+        <div>
+          <h3 id="wa-sync-title">Sincronização automática de contatos</h3>
+          <p>Ao conectar um número pelo QR Code, o WA-AKG importa automaticamente os contatos, as conversas e as associações telefônicas que o WhatsApp disponibilizar.</p>
+        </div>
+      </div>
+      <p>Não é necessário exportar ou importar arquivos VCF. Os dados são organizados por sessão e atualizados quando o WhatsApp fornece novos eventos. Se um contato chegar apenas com identificador LID, sem nome ou telefone disponível, ele não poderá ser identificado automaticamente com segurança.</p>
+      <a class="btn-secondary" href="{% url 'whatsapp_mensagens' %}"><i data-lucide="messages-square"></i> Ver conversas sincronizadas</a>
+    </section>
 
     <section class="wa-manager-grid">
       <article class="wa-manager-card">
