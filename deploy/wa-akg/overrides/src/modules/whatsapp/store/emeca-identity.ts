@@ -152,6 +152,49 @@ export function bindEmecaContactIdentity(sock: WASocket, sessionId: string): voi
         logger.info("EMECA Identity",
             "LID mappings recovered from existing Signal store: " +
             resolved + "/" + lids.length);
+
+        // Em mensagens diretas antigas, o WA-AKG podia armazenar o LID
+        // como remoteJid e o telefone original como senderJid.
+        // Só usamos pares do MESMO registro de mensagem recebida.
+        const historicalPairs = await prisma.message.findMany({
+            where: {
+                sessionId: dbSessionId,
+                fromMe: false,
+                remoteJid: { endsWith: "@lid" },
+                senderJid: { endsWith: "@s.whatsapp.net" }
+            },
+            select: { remoteJid: true, senderJid: true },
+            distinct: ["remoteJid", "senderJid"],
+            take: 20000
+        });
+        const phonesByLid = new Map<string, Set<string>>();
+        const lidsByPhone = new Map<string, Set<string>>();
+        for (const pair of historicalPairs) {
+            if (!isLid(pair.remoteJid) || !isPhone(pair.senderJid)) continue;
+            const pn = phone(pair.senderJid);
+            if (!phonesByLid.has(pair.remoteJid)) phonesByLid.set(pair.remoteJid, new Set());
+            phonesByLid.get(pair.remoteJid)!.add(pn);
+            if (!lidsByPhone.has(pn)) lidsByPhone.set(pn, new Set());
+            lidsByPhone.get(pn)!.add(pair.remoteJid);
+        }
+        const verified = [...phonesByLid.entries()]
+            .filter(([lid, pns]) => {
+                if (pns.size !== 1) return false;
+                const pn = [...pns][0];
+                return lidsByPhone.get(pn)?.size === 1 && isLid(lid);
+            })
+            .map(([lid, pns]) => ({ lid, pn: [...pns][0] }));
+        let fromHistory = 0;
+        for (let i = 0; i < verified.length; i += 12) {
+            const results = await Promise.all(verified.slice(i, i + 12).map(
+                ({ lid, pn }) => persistPair(lid, pn).then(() => true).catch(() => false)
+            ));
+            fromHistory += results.filter(Boolean).length;
+        }
+        logger.info("EMECA Identity",
+            "LID mappings recovered from historical message pairs: " +
+            fromHistory + "/" + phonesByLid.size +
+            " (ambiguous pairs skipped: " + (phonesByLid.size - verified.length) + ")");
     }
 
     // Reconcile old contacts as soon as the existing session reconnects.
