@@ -559,6 +559,24 @@ def whatsapp_conectar(request):
         return redirect("whatsapp")
 
     try:
+        # Não permitir reutilização do mesmo Session do WA-AKG após logout:
+        # esse registro precisa ser eliminado antes de outro QR Code.
+        try:
+            sessao = obter_sessao()
+        except WhatsAppGatewayError as exc:
+            if exc.status_code != 404:
+                raise
+            sessao = {}
+        if isinstance(sessao, dict):
+            dados = sessao.get("data") or {}
+            estado = str((dados if isinstance(dados, dict) else {}).get("status") or "").upper()
+            if estado == "LOGGED_OUT":
+                messages.error(
+                    request,
+                    "Esta sessão foi desvinculada. Finalize a exclusão do histórico "
+                    "em Gerenciamento antes de conectar outro número."
+                )
+                return redirect("whatsapp")
         iniciar_sessao()
         messages.success(
             request,
