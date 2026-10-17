@@ -387,6 +387,47 @@ class WhatsAppInboxTests(TestCase):
         self.assertEqual(chat["phoneJid"], "")
         self.assertEqual(chat["name"], "")
 
+    @patch("usuarioSec.whatsapp_views.listar_contatos")
+    def test_lid_sem_telefone_exibe_apelido_quando_disponivel(self, listar_contatos_mock):
+        listar_contatos_mock.return_value = {"data": [{
+            "jid": "184774392074394@lid",
+            "notify": "Responsável pela turma",
+        }]}
+        chat = _enriquecer_chats([{"jid": "184774392074394@lid"}])[0]
+        self.assertEqual(chat["phoneJid"], "")
+        self.assertEqual(chat["name"], "Responsável pela turma")
+
+    @patch("usuarioSec.whatsapp_views.listar_contatos")
+    def test_lid_recupera_telefone_quando_disponivel_em_data(self, listar_contatos_mock):
+        listar_contatos_mock.return_value = {"data": [{
+            "jid": "184774392074394@lid",
+            "lid": "184774392074394@lid",
+            "data": {"id": "5538999990000@s.whatsapp.net"},
+        }]}
+        chat = _enriquecer_chats([{"jid": "184774392074394@lid"}])[0]
+        self.assertEqual(chat["phoneJid"], "5538999990000@s.whatsapp.net")
+
+    @patch("usuarioSec.whatsapp_views.listar_contatos")
+    def test_pushname_igual_ao_nome_nao_substitui_numero_nao_salvo(self, listar_contatos_mock):
+        listar_contatos_mock.return_value = {"data": [{
+            "jid": "5538999990000@s.whatsapp.net",
+            "name": "Nome de perfil",
+            "notify": "Nome de perfil",
+        }]}
+        chat = _enriquecer_chats([{"jid": "5538999990000@s.whatsapp.net"}])[0]
+        self.assertEqual(chat["phoneJid"], "5538999990000@s.whatsapp.net")
+        self.assertEqual(chat["name"], "")
+
+    @patch("usuarioSec.whatsapp_views.listar_contatos")
+    def test_nome_salvo_diferente_do_apelido_e_preservado(self, listar_contatos_mock):
+        listar_contatos_mock.return_value = {"data": [{
+            "jid": "5538999990000@s.whatsapp.net",
+            "name": "Responsável cadastrado",
+            "notify": "Apelido WhatsApp",
+        }]}
+        chat = _enriquecer_chats([{"jid": "5538999990000@s.whatsapp.net"}])[0]
+        self.assertEqual(chat["name"], "Responsável cadastrado")
+
     @patch("usuarioSec.whatsapp_views.obter_foto_perfil")
     def test_api_foto_retorna_url_de_perfil(self, obter_foto_mock):
         obter_foto_mock.return_value = {
