@@ -29,7 +29,7 @@
         <a class="btn-secondary inbox-back-send" href="{% url 'whatsapp' %}">
           <i data-lucide="send"></i> Envios
         </a>
-        {% if gateway_status == "CONNECTED" and request.user.is_staff %}
+        {% if gateway_status == "CONNECTED" and pode_desconectar %}
           <form method="post" action="{% url 'whatsapp_desconectar' %}" class="wa-disconnect-header-form"
             onsubmit="return confirm('Pausar o WhatsApp? O histórico e o vínculo com o celular serão preservados.');">
             {% csrf_token %}
