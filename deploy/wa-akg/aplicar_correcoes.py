@@ -292,12 +292,12 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
         # Strictly permit updating only the corresponding upstream baseline.
         # Never overwrite unknown local edits made by another administrator.
         baseline = {
-            "src/app/api/groups/[sessionId]/create/route.ts": "__GROUP_SHA__",
-            "src/modules/whatsapp/scheduler.ts": "__SCHEDULER_SHA__",
+            "src/app/api/groups/[sessionId]/create/route.ts": "3d40ca6f3151b6cc8419bd1588f4bfd9112d535a",
+            "src/modules/whatsapp/scheduler.ts": "626d731a9bf199a21597c25f20ee0b9dc1cc8862",
         }[str(original.relative_to(source))]
         digest = hashlib.sha1(
             b"blob " + str(len(current.encode("utf-8"))).encode() +
-            b"\\0" + current.encode("utf-8")
+            b"\0" + current.encode("utf-8")
         ).hexdigest()
         if digest != baseline:
             raise RuntimeError(
