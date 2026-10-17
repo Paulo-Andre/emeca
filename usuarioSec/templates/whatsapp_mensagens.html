@@ -170,8 +170,10 @@
       <label for="waNewNumber">Número com DDD</label>
       <input class="wa-new-chat-input" id="waNewNumber" type="tel" inputmode="tel" placeholder="(38) 99999-9999">
 
-      <label for="waNewMessage">Mensagem</label>
+      <label for="waNewMessage">Mensagem ou legenda (opcional com anexo)</label>
       <textarea class="wa-new-chat-input" id="waNewMessage" rows="4" maxlength="4000" placeholder="Digite a mensagem"></textarea>
+      <label for="waNewFile"><i data-lucide="paperclip"></i> Anexar imagem, vídeo, áudio ou documento (até 25 MB)</label>
+      <input class="wa-new-chat-input" id="waNewFile" type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.odt,.ods,.zip">
 
       <input type="hidden" id="waSelectedJid">
       <div class="wa-new-chat-selected" id="waSelectedContact" hidden></div>
@@ -1886,11 +1888,17 @@
     newChatForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const message = waNewMessage.value.trim();
-      if (!message) {
-        waNewChatStatus.textContent = "Digite uma mensagem.";
+      const attachment = document.getElementById("waNewFile").files?.[0];
+      if (!message && !attachment) {
+        waNewChatStatus.textContent = "Digite uma mensagem ou escolha um arquivo.";
+        return;
+      }
+      if (attachment && attachment.size > 25 * 1024 * 1024) {
+        waNewChatStatus.textContent = "O arquivo deve ter no máximo 25 MB.";
         return;
       }
       const body = new FormData();
+      if (attachment) body.append("arquivo", attachment);
       if (waSelectedJid.value) body.append("jid", waSelectedJid.value);
       if (waNewNumber.value) body.append("numero", waNewNumber.value);
       body.append("mensagem", message);
@@ -1904,7 +1912,7 @@
         });
         const data = await resp.json();
         if (!resp.ok || !data.ok) throw new Error(data.erro || "Não foi possível enviar.");
-        waNewChatStatus.textContent = "Mensagem enviada.";
+        waNewChatStatus.textContent = attachment ? "Arquivo enviado." : "Mensagem enviada.";
         await refreshChats();
         const chat = chats.find(item => item.jid === data.jid || item.phoneJid === data.jid);
         if (chat) {
