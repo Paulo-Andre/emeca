@@ -215,6 +215,9 @@
 
       <article class="wa-manager-card">
         <div class="wa-manager-card-head"><i data-lucide="users"></i><div><h3>Grupos</h3><p>Visualize, crie ou gerencie os grupos vinculados ao WhatsApp da escola.</p></div></div>
+        <a class="btn-secondary" href="{% url 'whatsapp_mensagens' %}?grupos=1">
+          <i data-lucide="messages-square"></i> Abrir conversas dos grupos
+        </a>
         <form method="post" class="wa-manager-form">
           {% csrf_token %}
           <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
