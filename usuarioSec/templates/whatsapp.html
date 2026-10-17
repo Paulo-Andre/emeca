@@ -71,6 +71,7 @@
             <form method="post" action="{% url 'whatsapp_desconectar' %}"
               onsubmit="return confirm('Pausar a conexão do WhatsApp? A sessão e as mensagens serão preservadas.');">
               {% csrf_token %}
+          <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
               <input type="hidden" name="acao" value="pausar">
               <button class="btn-secondary" type="submit" title="Pausar WhatsApp sem desvincular o celular">
                 <i data-lucide="pause-circle"></i> Pausar
@@ -79,6 +80,7 @@
             <form method="post" action="{% url 'whatsapp_desconectar' %}"
               onsubmit="return confirm('Desvincular este número do EMECA? Será necessário ler um novo QR Code para reconectar. O histórico armazenado será mantido.');">
               {% csrf_token %}
+          <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
               <input type="hidden" name="acao" value="desvincular">
               <input type="hidden" name="confirmacao" value="DESVINCULAR">
               <button class="btn-secondary wa-disconnect-btn" type="submit"
@@ -90,6 +92,7 @@
         {% else %}
           <form method="post" action="{% url 'whatsapp_conectar' %}">
             {% csrf_token %}
+          <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
             <button class="btn-primary" type="submit">
               <i data-lucide="power"></i>
               Conectar WhatsApp
@@ -99,6 +102,7 @@
             <form method="post" action="{% url 'whatsapp_desconectar' %}"
               onsubmit="return confirm('Cancelar a conexão e interromper a leitura do QR Code?');">
               {% csrf_token %}
+          <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
               <input type="hidden" name="acao" value="pausar">
               <button class="btn-secondary" type="submit"><i data-lucide="pause-circle"></i> Cancelar conexão</button>
             </form>
@@ -121,6 +125,7 @@
         <form method="post" action="{% url 'whatsapp_desconectar' %}"
           onsubmit="return confirm('IMPORTANTE: desconectar a conta atual e criar uma nova sessão isolada? Será preciso ler o QR Code novamente. Nenhum histórico será apagado.');">
           {% csrf_token %}
+          <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
           <input type="hidden" name="acao" value="isolar">
           <input type="hidden" name="confirmacao" value="ISOLAR">
           <button type="submit" class="btn-secondary"><i data-lucide="shield-check"></i> Separar conta atual</button>
@@ -130,6 +135,7 @@
 
     <form method="post" action="{% url 'whatsapp_enviar' %}" id="formEnvio" class="send-grid">
       {% csrf_token %}
+          <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
       <section class="card audience-card">
         <div class="section-heading">
           <div>
