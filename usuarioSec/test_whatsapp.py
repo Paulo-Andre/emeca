@@ -2,6 +2,9 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
+
+from .access_control import GRUPO_WHATSAPP
 from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.cache import cache
@@ -31,6 +34,17 @@ from .whatsapp_views import (
     _resolver_boletins_destinatarios,
     _resolver_destinatarios,
 )
+
+
+def autorizar_operador_whatsapp_teste(usuario):
+    """Concede o perfil exigido pelo RBAC somente ao usuário deste teste.
+
+    Não altera permissões de produção nem interfere nos testes negativos
+    de operadores sem permissão.
+    """
+    grupo, _ = Group.objects.get_or_create(name=GRUPO_WHATSAPP)
+    usuario.groups.add(grupo)
+    return usuario
 
 
 class WhatsAppDestinatariosTests(TestCase):
@@ -220,6 +234,7 @@ class WhatsAppBoletimTests(TestCase):
             username="secretaria_whatsapp",
             password="senha-segura-123",
         )
+        autorizar_operador_whatsapp_teste(usuario)
         self.client.force_login(usuario)
 
         with (
@@ -302,6 +317,7 @@ class WhatsAppInboxTests(TestCase):
             username="atendimento_whatsapp",
             password="Senha-Sintetica-2026!",
         )
+        autorizar_operador_whatsapp_teste(self.usuario)
         self.client.force_login(self.usuario)
 
     @patch("usuarioSec.whatsapp_views.listar_chats")
@@ -525,6 +541,7 @@ class WhatsAppAtendimentoCompletoTests(TestCase):
             username="whatsapp_atendimento_completo",
             password="Senha-Sintetica-2026!",
         )
+        autorizar_operador_whatsapp_teste(self.usuario)
         self.client.force_login(self.usuario)
 
     @patch("usuarioSec.whatsapp_views.listar_contatos")
@@ -615,6 +632,7 @@ class WhatsAppAliasMidiaTests(TestCase):
             username="whatsapp_alias_midia",
             password="Senha-Sintetica-2026!",
         )
+        autorizar_operador_whatsapp_teste(self.usuario)
         self.client.force_login(self.usuario)
 
     @patch("usuarioSec.whatsapp_views.listar_contatos")
@@ -694,6 +712,7 @@ class WhatsAppRecursosAvancadosTests(TestCase):
             username="whatsapp_recursos_avancados",
             password="Senha-Sintetica-2026!",
         )
+        autorizar_operador_whatsapp_teste(self.usuario)
         self.client.force_login(self.usuario)
 
     @patch("usuarioSec.whatsapp_views.obter_config_sistema")
@@ -834,6 +853,7 @@ class WhatsAppIdentidadeNotificacoesTests(TestCase):
             username="teste_notificacoes_whatsapp",
             password="Senha-Sintetica-2026!",
         )
+        autorizar_operador_whatsapp_teste(self.usuario)
         self.client.force_login(self.usuario)
         self.lid = "184774392074394@lid"
         self.telefone = "5538999990000@s.whatsapp.net"
@@ -948,6 +968,7 @@ class WhatsAppIdentificacaoManualTests(TestCase):
             username="operador_identificacao",
             password="Senha-Sintetica-2026!",
         )
+        autorizar_operador_whatsapp_teste(self.usuario)
         self.client.force_login(self.usuario)
         self.lid = "184774392074394@lid"
         self.telefone = "5538999990000@s.whatsapp.net"
@@ -1139,6 +1160,7 @@ class WhatsAppVisualizacaoPerfilTests(TestCase):
         self.usuario = get_user_model().objects.create_user(
             username="operador_perfil", password="senha-local-exemplo"
         )
+        autorizar_operador_whatsapp_teste(self.usuario)
         self.client.force_login(self.usuario)
 
     @patch("usuarioSec.whatsapp_views.obter_perfil_contato")
@@ -1209,6 +1231,7 @@ class WhatsAppDesconexaoTests(TestCase):
             is_staff=True,
             is_superuser=True,
         )
+        autorizar_operador_whatsapp_teste(self.usuario)
         self.client.force_login(self.usuario)
         self.url = reverse("whatsapp_desconectar")
 
@@ -1338,6 +1361,7 @@ class WhatsAppAcoesCabecalhoTests(TestCase):
         self.usuario = get_user_model().objects.create_user(
             username="operador_acoes", password="senha_ficticia"
         )
+        autorizar_operador_whatsapp_teste(self.usuario)
         self.client.force_login(self.usuario)
         self.jid = "5538999991234@s.whatsapp.net"
 
@@ -1562,6 +1586,7 @@ class WhatsAppExclusaoMensagemTests(TestCase):
         self.outro = get_user_model().objects.create_user(
             username="operador_diferente", password="SenhaFicticia-123"
         )
+        autorizar_operador_whatsapp_teste(self.operador)
         self.client.force_login(self.operador)
         self.jid = "5538999990000@s.whatsapp.net"
         self.message_id = "MENSAGEM_DE_TESTE_01"
@@ -1604,6 +1629,7 @@ class WhatsAppExclusaoMensagemTests(TestCase):
             [x["keyId"] for x in resposta.json()["mensagens"]],
             ["OUTRA_MSG"]
         )
+        autorizar_operador_whatsapp_teste(self.outro)
         self.client.force_login(self.outro)
         resposta_outro = self.client.get(reverse("whatsapp_chat_api"), {
             "jid": self.jid
@@ -1727,6 +1753,7 @@ class SidebarFlutuanteAutomaticoTests(TestCase):
         usuario = get_user_model().objects.create_user(
             username="teste_menu_hover", password="SenhaExemploNaoReal123"
         )
+        autorizar_operador_whatsapp_teste(usuario)
         self.client.force_login(usuario)
         resposta = self.client.get(reverse("whatsapp_mensagens"))
         self.assertEqual(resposta.status_code, 200)
