@@ -1400,6 +1400,21 @@ class WhatsAppAcoesCabecalhoTests(TestCase):
         self.assertEqual(response.status_code, 400)
         criar.assert_not_called()
 
+    @patch("usuarioSec.whatsapp_views._mapa_nomes_telefones_escola_wa")
+    @patch("usuarioSec.whatsapp_views.listar_contatos", return_value={"data": []})
+    def test_muitos_chats_uma_consulta_de_nomes_da_escola(
+        self, _contatos, carregar_nomes
+    ):
+        telefones = [f"5538999{i:06d}@s.whatsapp.net" for i in range(120)]
+        carregar_nomes.return_value = {
+            jid.split("@")[0]: "Responsável " + str(i)
+            for i, jid in enumerate(telefones)
+        }
+        resultado = _enriquecer_chats([{"jid": jid} for jid in telefones])
+        self.assertEqual(len(resultado), 120)
+        self.assertEqual(resultado[0]["name"], "Responsável 0")
+        carregar_nomes.assert_called_once_with()
+
     @patch("usuarioSec.whatsapp_views.listar_contatos", return_value={"data": []})
     def test_conversa_fixada_fica_acima_de_conversa_recente(self, _contatos):
         from .models import EstadoConversaWhatsApp
