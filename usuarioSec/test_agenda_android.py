@@ -62,6 +62,8 @@ class AgendaAndroidTests(TestCase):
 
     def test_endpoint_requer_administrador(self):
         user = get_user_model().objects.create_user(username="exemplo_comum")
+        grupo, _ = Group.objects.get_or_create(name=GRUPO_WHATSAPP)
+        user.groups.add(grupo)  # operador autorizado, mas não é admin/is_staff
         self.client.force_login(user)
         response = self.client.post(
             reverse("whatsapp_importar_agenda"),
