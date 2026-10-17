@@ -224,3 +224,32 @@ class IdentidadeContatoWhatsApp(models.Model):
 
     def __str__(self):
         return f"{self.sessao}: {self.jid} => {self.telefone_jid or self.nome_exibicao}"
+
+
+class ContatoAgendaWhatsApp(models.Model):
+    """Contato importado da agenda Android, independente das mensagens WA-AKG.
+
+    Nunca identifica @lid sem correspondência telefônica comprovada.
+    """
+    sessao = models.CharField(max_length=120)
+    telefone_jid = models.CharField(max_length=40)
+    nome = models.CharField(max_length=160)
+    origem = models.CharField(max_length=24, default="ANDROID_VCF")
+    importado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["sessao", "telefone_jid"],
+                name="uniq_agenda_wa_sessao_telefone",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["sessao", "telefone_jid"], name="idx_agenda_wa_telefone")
+        ]
+        verbose_name = "Contato importado da agenda WhatsApp"
+        verbose_name_plural = "Contatos importados da agenda WhatsApp"
+
+    def __str__(self):
+        return f"{self.nome} ({self.telefone_jid})"
