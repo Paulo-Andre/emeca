@@ -10,7 +10,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
   <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-unified-05">
-  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-inbox-09">
+  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-inbox-10">
 </head>
 <body>
   {% include 'includes/sidebar.html' %}
@@ -330,8 +330,13 @@
       const last = chat.lastMessage || {};
       const content = String(last.content || "").trim();
       if (content) return content;
-      const type = String(last.type || "").toLowerCase();
-      return type ? "[" + type + "]" : "Sem prévia";
+      const type = String(last.type || "").toUpperCase();
+      const labels = {
+        IMAGE:"📷 Imagem", VIDEO:"🎥 Vídeo", AUDIO:"🎵 Áudio",
+        DOCUMENT:"📄 Documento", STICKER:"Figurinha",
+        CONTACT:"Contato compartilhado", LOCATION:"📍 Localização"
+      };
+      return labels[type] || (type === "TEXT" ? "Mensagem sem texto" : "Sem prévia");
     }
 
     function formatDate(value) {
@@ -348,7 +353,8 @@
     function createChatItem(chat) {
       const button = document.createElement("button");
       button.type = "button";
-      button.className = "wa-chat-item" + (chat.jid === activeJid ? " active" : "");
+      const unread = Math.max(0, Number(chat.naoLidas || 0));
+      button.className = "wa-chat-item" + (chat.jid === activeJid ? " active" : "") + (unread ? " has-unread" : "");
       button.dataset.jid = chat.jid || "";
 
       const avatar = document.createElement("span");
@@ -365,9 +371,19 @@
       row.className = "wa-chat-item-row";
       const strong = document.createElement("strong");
       strong.textContent = name;
+      const trailing = document.createElement("span");
+      trailing.className = "wa-chat-item-trailing";
       const time = document.createElement("time");
       time.textContent = formatDate(chat.lastMessage?.timestamp);
-      row.append(strong, time);
+      trailing.appendChild(time);
+      if (unread) {
+        const badge = document.createElement("span");
+        badge.className = "wa-unread-badge";
+        badge.textContent = unread > 99 ? "99+" : String(unread);
+        badge.setAttribute("aria-label", unread + " mensagens novas não lidas");
+        trailing.appendChild(badge);
+      }
+      row.append(strong, trailing);
 
       const preview = document.createElement("span");
       preview.className = "wa-chat-preview";
@@ -394,20 +410,22 @@
       } else {
         filtered.forEach(chat => chatList.appendChild(createChatItem(chat)));
       }
-      chatCount.textContent = `${filtered.length} conversa(s)`;
+      const totalNaoLidas = chats.reduce((total, item) => total + Math.max(0, Number(item.naoLidas || 0)), 0);
+      chatCount.textContent = `${filtered.length} conversa(s)` + (totalNaoLidas ? ` · ${totalNaoLidas} nova(s)` : "");
     }
 
     function messageText(msg) {
       const content = String(msg.content || "").trim();
       if (content) return content;
       const type = String(msg.type || "").toLowerCase();
+      if (type === "text") return "";
       if (type === "image") return "📷 Imagem";
       if (type === "audio") return "🎵 Áudio";
       if (type === "video") return "🎥 Vídeo";
       if (type === "document") return "📄 Documento";
       if (type === "sticker") return "Sticker";
       if (type === "location") return "📍 Localização";
-      return type ? "[" + type + "]" : "Mensagem";
+      return type ? "Mensagem " + type.toLowerCase() : "";
     }
 
     function mediaUrl(msg) {
@@ -461,7 +479,11 @@
     }
 
     function renderMessages(messages) {
-      currentMessages = Array.isArray(messages) ? messages : [];
+      currentMessages = (Array.isArray(messages) ? messages : []).filter(msg => {
+        if (!msg || typeof msg !== "object") return false;
+        const tipo = String(msg.type || "").toUpperCase();
+        return tipo !== "TEXT" || Boolean(String(msg.content || "").trim());
+      });
       thread.replaceChildren();
       let prior = null;
       let priorDay = "";
@@ -664,6 +686,7 @@
     function chatListSignature(items) {
       return JSON.stringify(items.map(chat => [
         chat.jid, chat.name, chat.notify, chat.phoneJid, chat.profilePic,
+        chat.naoLidas,
         lastMessageSignature(chat)
       ]));
     }
@@ -710,6 +733,17 @@
           contactName.textContent = chatDisplayName(chat);
           renderChats();
         }
+        // O histórico aberto foi marcado como visto no banco do EMECA.
+        chat.naoLidas = 0;
+        const itemAtual = chats.find(item => item.jid === chat.jid);
+        if (itemAtual) itemAtual.naoLidas = 0;
+        chatList.querySelectorAll(".wa-chat-item").forEach(button => {
+          if (button.dataset.jid !== chat.jid) return;
+          button.classList.remove("has-unread");
+          button.querySelector(".wa-unread-badge")?.remove();
+        });
+        const totalNaoLidas = chats.reduce((total, item) => total + Math.max(0, Number(item.naoLidas || 0)), 0);
+        chatCount.textContent = chats.length + " conversa(s)" + (totalNaoLidas ? " · " + totalNaoLidas + " nova(s)" : "");
         if (!quiet) {
           replyStatus.textContent = "";
           replyStatus.className = "wa-reply-status";
