@@ -1,5 +1,6 @@
 import re
 from collections import defaultdict
+from hashlib import sha256
 from datetime import timezone as datetime_timezone
 
 from django.utils.dateparse import parse_datetime
@@ -9,6 +10,7 @@ from urllib.request import Request, urlopen
 
 from django.conf import settings
 from django.contrib import messages
+from django.core.cache import cache
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Q
@@ -791,6 +793,54 @@ def _enriquecer_chats(chats):
         return []
 
     contatos = _contatos_wa()
+    # Registros @lid antigos nem sempre têm o telefone na tabela Contact.
+    # O histórico recebido pode conter senderJid (telefone) e pushName,
+    # informados diretamente pelo WhatsApp. Consultar no máximo três LIDs
+    # novos por atualização e guardar o resultado em cache por alguns minutos.
+    grupos_previos = _mapa_aliases_wa(contatos, chats)
+    consultas = 0
+    for chat in chats:
+        jid = str(chat["jid"])
+        if not jid.endswith("@lid"):
+            continue
+        aliases = grupos_previos.get(jid, (jid,))
+        if any(_jid_eh_telefone(item) for item in aliases):
+            continue
+        chave_cache = "emeca:whatsapp:lid:" + sha256(jid.encode("utf-8")).hexdigest()
+        identidade = cache.get(chave_cache)
+        if identidade is None:
+            if consultas >= 3:
+                continue
+            consultas += 1
+            mensagens, disponivel = _mensagens_para_contar([jid])
+            telefone = ""
+            nome_perfil = ""
+            for msg in sorted(
+                mensagens, key=lambda m: str(m.get("timestamp") or ""), reverse=True
+            ):
+                if msg.get("fromMe") is True:
+                    continue
+                if not telefone:
+                    candidato = str(msg.get("senderJid") or "")
+                    if _jid_eh_telefone(candidato):
+                        telefone = candidato.replace("@c.us", "@s.whatsapp.net")
+                if not nome_perfil:
+                    nome_perfil = str(msg.get("pushName") or "").strip()
+                if telefone and nome_perfil:
+                    break
+            identidade = {"telefone": telefone, "nome": nome_perfil}
+            if disponivel:
+                cache.set(chave_cache, identidade, 900 if telefone or nome_perfil else 120)
+            else:
+                cache.set(chave_cache, identidade, 45)
+        if identidade.get("telefone") or identidade.get("nome"):
+            contatos.append({
+                "jid": jid,
+                "lid": jid,
+                "remoteJidAlt": identidade.get("telefone") or "",
+                "notify": identidade.get("nome") or "",
+                "name": identidade.get("nome") or "",
+            })
     grupos_aliases = _mapa_aliases_wa(contatos, chats)
     contatos_por_id = defaultdict(list)
     for contato in contatos:
