@@ -553,11 +553,12 @@ def whatsapp_desconectar(request):
         "whatsapp_mensagens" if request.POST.get("origem") == "mensagens" else "whatsapp"
     )
     acao = (request.POST.get("acao") or "").strip()
-    if acao not in ("pausar", "desvincular"):
+    if acao not in ("pausar", "desvincular", "isolar"):
         messages.error(request, "Ação de desconexão inválida.")
         return redirect(destino)
-    if acao == "desvincular" and request.POST.get("confirmacao") != "DESVINCULAR":
-        messages.error(request, "Confirme a desvinculação do WhatsApp para continuar.")
+    confirmacoes = {"desvincular": "DESVINCULAR", "isolar": "ISOLAR"}
+    if acao in confirmacoes and request.POST.get("confirmacao") != confirmacoes[acao]:
+        messages.error(request, "Confirme a troca de sessão WhatsApp para continuar.")
         return redirect(destino)
     if not gateway_configurado():
         messages.error(request, "Integração do WhatsApp não configurada.")
@@ -569,34 +570,38 @@ def whatsapp_desconectar(request):
             (sessao.get("data") or {}).get("status")
             or sessao.get("status") or ""
         ).upper()
-        if acao == "desvincular":
-            # O WA-AKG só remove o vínculo real via socket.logout() quando
-            # a sessão estiver ativa; offline ele apenas troca o status no DB.
+        if acao in {"desvincular", "isolar"}:
+            # O WA-AKG mantém a FK Session mesmo após logout. Nunca reconectar
+            # outro número nesse registro, pois ele contém o histórico anterior.
             if status != "CONNECTED":
                 messages.error(
                     request,
-                    "Para desvincular o número, conecte primeiro a sessão. "
-                    "O WA-AKG não confirma logout real quando está offline.",
+                    "A troca exige uma conexão ativa para confirmar o logout "
+                    "da conta anterior. Não é seguro reutilizar uma sessão offline.",
                 )
                 return redirect(destino)
             resposta = desvincular_sessao()
-            texto = (
-                "Desvinculação solicitada ao WhatsApp. Aguarde o encerramento "
-                "e conecte novamente pelo QR Code para usar outro número. "
-                "As mensagens já armazenadas foram preservadas."
+            if not isinstance(resposta, dict) or resposta.get("status") is not True:
+                raise WhatsAppGatewayError("O WA-AKG não confirmou o logout.")
+            nova = criar_sessao_isolada()
+            messages.success(
+                request,
+                "WhatsApp anterior desvinculado. A sessão histórica foi preservada "
+                "separadamente. Clique em Conectar WhatsApp e leia o novo QR Code "
+                "para sincronizar a conta atual sem misturar conversas."
             )
         else:
             if status in {"STOPPED", "LOGGED_OUT", "NAO_CRIADA"}:
                 messages.info(request, "O WhatsApp já está desconectado.")
                 return redirect(destino)
             resposta = pausar_sessao()
-            texto = (
+            if not isinstance(resposta, dict) or resposta.get("status") is not True:
+                raise WhatsAppGatewayError("O WA-AKG não confirmou a pausa.")
+            messages.success(
+                request,
                 "Conexão do WhatsApp pausada. Mensagens e credenciais mantidas; "
                 "use Conectar WhatsApp para retomar."
             )
-        if not isinstance(resposta, dict) or resposta.get("status") is not True:
-            raise WhatsAppGatewayError("O WA-AKG não confirmou a operação.")
-        messages.success(request, texto)
     except WhatsAppGatewayError as exc:
         messages.error(request, f"Não foi possível desconectar o WhatsApp: {exc}")
     return redirect(destino)
@@ -984,7 +989,9 @@ def _enriquecer_chats(chats):
         aliases = grupos_previos.get(jid, (jid,))
         if any(_jid_eh_telefone(item) for item in aliases):
             continue
-        chave_cache = "emeca:whatsapp:lid:" + sha256(jid.encode("utf-8")).hexdigest()
+        chave_cache = "emeca:whatsapp:lid:" + sha256(
+            (sessao_atual_id() + "/" + jid).encode("utf-8")
+        ).hexdigest()
         identidade = cache.get(chave_cache)
         if identidade is None:
             if consultas >= 3:
@@ -1389,7 +1396,9 @@ def whatsapp_identificar_contato_api(request):
                 sessao=sessao_atual_id(), jid=jid, origem="MANUAL"
             ).delete()
     if jid.endswith("@lid"):
-        cache.delete("emeca:whatsapp:lid:" + sha256(jid.encode("utf-8")).hexdigest())
+        cache.delete("emeca:whatsapp:lid:" + sha256(
+            (sessao_atual_id() + "/" + jid).encode("utf-8")
+        ).hexdigest())
     return JsonResponse({"ok": True, "jid": jid, "nome": nome, "telefone_jid": telefone})
 
 
