@@ -2066,11 +2066,28 @@ def whatsapp_nova_conversa_api(request):
 
     if not jid:
         return JsonResponse({"ok": False, "erro": "Selecione um contato ou informe um número."}, status=400)
-    if not mensagem:
-        return JsonResponse({"ok": False, "erro": "Digite uma mensagem."}, status=400)
+    arquivo = request.FILES.get("arquivo")
+    if not mensagem and not arquivo:
+        return JsonResponse({"ok": False, "erro": "Digite uma mensagem ou escolha um arquivo."}, status=400)
+    if len(mensagem) > 4000:
+        return JsonResponse({"ok": False, "erro": "Mensagem muito longa."}, status=400)
+    if arquivo:
+        if arquivo.size > 25 * 1024 * 1024:
+            return JsonResponse({"ok": False, "erro": "O arquivo deve ter no máximo 25 MB."}, status=400)
+        nome = arquivo.name or "arquivo"
+        extensao = nome.rsplit(".", 1)[-1].lower() if "." in nome else ""
+        if extensao in {"exe", "msi", "bat", "cmd", "com", "scr", "ps1", "vbs", "js", "jar"}:
+            return JsonResponse({"ok": False, "erro": "Esse tipo de arquivo não é permitido."}, status=400)
+        content_type = (arquivo.content_type or "application/octet-stream").lower()
+        tipo = ("image" if content_type.startswith("image/") else
+                "video" if content_type.startswith("video/") else
+                "audio" if content_type.startswith("audio/") else "document")
 
     try:
-        resposta = enviar_mensagem_chat(jid, mensagem)
+        if arquivo:
+            resposta = enviar_midia(jid, arquivo.read(), nome, content_type, tipo, mensagem)
+        else:
+            resposta = enviar_mensagem_chat(jid, mensagem)
         return JsonResponse({"ok": True, "jid": jid, "resposta": resposta})
     except WhatsAppGatewayError as exc:
         return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
