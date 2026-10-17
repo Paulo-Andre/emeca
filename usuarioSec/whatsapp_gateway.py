@@ -324,18 +324,38 @@ def verificar_numeros(numbers):
     return _request("POST", f"chat/{session_id}/check", {"numbers": numbers})
 
 
+def confirmar_operacao_wa(resposta, descricao="ação"):
+    """Aceita os dois contratos existentes do WA-AKG, mas rejeita falhas.
+
+    O WA-AKG mistura {status: true} e {success: true}; antes, HTTP 200
+    com status:false podia ser tratado como sucesso na interface.
+    """
+    if not isinstance(resposta, dict):
+        raise WhatsAppGatewayError(f"Resposta inválida ao executar {descricao}.")
+    if resposta.get("status") is False or resposta.get("success") is False:
+        raise WhatsAppGatewayError(
+            str(resposta.get("error") or resposta.get("message")
+                or f"O WA-AKG não conseguiu executar {descricao}.")
+        )
+    if resposta.get("status") is not True and resposta.get("success") is not True:
+        raise WhatsAppGatewayError(f"O WA-AKG não confirmou {descricao}.")
+    return resposta
+
+
 def gerenciar_chat(jid, acao, ativo=True):
     session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
     jid_codificado = quote(jid, safe="")
     if acao == "pin":
-        return _request("PUT", f"chat/{session_id}/{jid_codificado}/pin", {"pin": bool(ativo)})
-    if acao == "archive":
-        return _request("PUT", f"chat/{session_id}/{jid_codificado}/archive", {"archive": bool(ativo)})
-    if acao == "mute":
-        return _request("PUT", f"chat/{session_id}/{jid_codificado}/mute", {"mute": bool(ativo)})
-    if acao == "read":
-        return marcar_chat_como_lido(jid)
-    raise WhatsAppGatewayError("Ação de conversa inválida.")
+        resposta = _request("PUT", f"chat/{session_id}/{jid_codificado}/pin", {"pin": bool(ativo)})
+    elif acao == "archive":
+        resposta = _request("PUT", f"chat/{session_id}/{jid_codificado}/archive", {"archive": bool(ativo)})
+    elif acao == "mute":
+        resposta = _request("PUT", f"chat/{session_id}/{jid_codificado}/mute", {"mute": bool(ativo)})
+    elif acao == "read":
+        resposta = marcar_chat_como_lido(jid)
+    else:
+        raise WhatsAppGatewayError("Ação de conversa inválida.")
+    return confirmar_operacao_wa(resposta, f"{acao} da conversa")
 
 
 def buscar_mensagens(q="", jid="", tipo="", page=1, limit=50):
@@ -423,11 +443,12 @@ def bloquear_contato(jid, bloquear=True):
     session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
     jid_codificado = quote(jid, safe="")
     acao = "block" if bloquear else "unblock"
-    return _request(
+    resposta = _request(
         "POST",
         f"contacts/{session_id}/{jid_codificado}/{acao}",
         {},
     )
+    return confirmar_operacao_wa(resposta, "bloqueio do contato")
 
 
 def enviar_presenca(jid, presence):
@@ -445,6 +466,14 @@ def listar_etiquetas():
     return _request("GET", f"labels/{session_id}")
 
 
+def criar_etiqueta(nome, cor=0):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    resposta = _request(
+        "POST", f"labels/{session_id}", {"name": nome, "color": int(cor)}
+    )
+    return confirmar_operacao_wa(resposta, "criação da etiqueta")
+
+
 def listar_etiquetas_chat(jid):
     session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
     jid_codificado = quote(jid, safe="")
@@ -454,11 +483,12 @@ def listar_etiquetas_chat(jid):
 def atualizar_etiquetas_chat(jid, label_ids, action):
     session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
     jid_codificado = quote(jid, safe="")
-    return _request(
+    resposta = _request(
         "PUT",
         f"labels/{session_id}/chat/{jid_codificado}/labels",
         {"labelIds": label_ids, "action": action},
     )
+    return confirmar_operacao_wa(resposta, "atualização de etiquetas")
 
 
 
