@@ -26,6 +26,7 @@ from .agenda_android import AgendaImportError, MAX_VCF_BYTES, processar_agenda_v
 from .models import (
     EnvioBoletimWhatsApp,
     ContatoAgendaWhatsApp,
+    EstadoConversaWhatsApp,
     ItemEnvioBoletimWhatsApp,
     IdentidadeContatoWhatsApp,
     LeituraChatWhatsApp,
@@ -1185,6 +1186,20 @@ def _enriquecer_chats(chats):
         )
         resultado.append(merged)
 
+    # Mostrar os últimos estados confirmados pelo WA-AKG sem consultar a
+    # API remota uma vez para cada botão ou conversa (a lista pode ser grande).
+    estados = {
+        obj.jid: obj for obj in EstadoConversaWhatsApp.objects.filter(
+            sessao=settings.WA_AKG_SESSION_ID,
+            jid__in=[item["jid"] for item in resultado],
+        )
+    }
+    for item in resultado:
+        estado = estados.get(item["jid"])
+        item["fixado"] = bool(estado and estado.fixado)
+        item["silenciado"] = bool(estado and estado.silenciado)
+        item["arquivado"] = bool(estado and estado.arquivado)
+        item["bloqueado"] = bool(estado and estado.bloqueado)
     resultado.sort(
         key=lambda item: str((item.get("lastMessage") or {}).get("timestamp") or ""),
         reverse=True,
@@ -1673,16 +1688,29 @@ def whatsapp_gerenciar_chat_api(request):
     acao = (request.POST.get("acao") or "").strip()
     ativo = str(request.POST.get("ativo") or "1").lower() not in {"0", "false", "nao", "não"}
 
-    if not jid:
+    if not jid or len(jid) > 120:
         return JsonResponse({"ok": False, "erro": "Conversa inválida."}, status=400)
-    if acao not in {"pin", "archive", "mute", "read"}:
+    campos = {"pin": "fixado", "archive": "arquivado", "mute": "silenciado"}
+    if acao not in {*campos, "read"}:
         return JsonResponse({"ok": False, "erro": "Ação inválida."}, status=400)
-
     try:
         resposta = gerenciar_chat(jid, acao, ativo)
         if acao == "read":
             _marcar_como_vista_no_emeca(request.user, jid)
-        return JsonResponse({"ok": True, "resposta": resposta})
+            return JsonResponse({"ok": True, "resposta": resposta, "acao": acao})
+        estado, _ = EstadoConversaWhatsApp.objects.get_or_create(
+            sessao=settings.WA_AKG_SESSION_ID, jid=jid
+        )
+        campo = campos[acao]
+        setattr(estado, campo, ativo)
+        estado.save(update_fields=[campo, "atualizado_em"])
+        return JsonResponse({
+            "ok": True, "resposta": resposta, "acao": acao,
+            "ativo": ativo, "estado": {
+                "fixado": estado.fixado, "silenciado": estado.silenciado,
+                "arquivado": estado.arquivado, "bloqueado": estado.bloqueado,
+            },
+        })
     except WhatsAppGatewayError as exc:
         return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
 
@@ -1856,11 +1884,19 @@ def whatsapp_encaminhar_api(request):
 def whatsapp_bloqueio_api(request):
     jid = (request.POST.get("jid") or "").strip()
     bloquear = str(request.POST.get("bloquear") or "1").lower() not in {"0", "false", "nao", "não"}
-    if not jid:
-        return JsonResponse({"ok": False, "erro": "Contato inválido."}, status=400)
+    if not jid or len(jid) > 120 or jid.endswith("@g.us"):
+        return JsonResponse({"ok": False, "erro": "Selecione um contato individual válido."}, status=400)
     try:
         resposta = bloquear_contato(jid, bloquear)
-        return JsonResponse({"ok": True, "resposta": resposta})
+        estado, _ = EstadoConversaWhatsApp.objects.get_or_create(
+            sessao=settings.WA_AKG_SESSION_ID, jid=jid
+        )
+        estado.bloqueado = bloquear
+        estado.save(update_fields=["bloqueado", "atualizado_em"])
+        return JsonResponse({
+            "ok": True, "resposta": resposta,
+            "bloqueado": estado.bloqueado,
+        })
     except WhatsAppGatewayError as exc:
         return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
 
