@@ -801,7 +801,7 @@ def _enriquecer_chats(chats):
     consultas = 0
     for chat in chats:
         jid = str(chat["jid"])
-        if not jid.endswith("@lid"):
+        if not jid.endswith("@lid") or not gateway_configurado():
             continue
         aliases = grupos_previos.get(jid, (jid,))
         if any(_jid_eh_telefone(item) for item in aliases):
