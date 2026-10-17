@@ -111,6 +111,9 @@
 @media(max-width:640px){.content-mode-grid,.bulletin-period-grid{grid-template-columns:1fr}.bulletin-preview,.history-item{align-items:flex-start;flex-direction:column}.bulletin-preview p{text-align:left}.history-numbers{width:100%}}
 
 
+/* Respeitar o atributo HTML hidden mesmo em componentes com display: grid/flex. */
+body [hidden] { display: none !important; }
+
 /* ===== Caixa de entrada WhatsApp ===== */
 .whatsapp-inbox-main{max-width:none}
 .whatsapp-inbox-header{max-width:1500px;margin-left:auto;margin-right:auto}
