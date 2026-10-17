@@ -1696,3 +1696,30 @@ class WhatsAppExclusaoMensagemTests(TestCase):
         self.assertContains(resposta, 'id="deleteMessageDialog"')
         self.assertContains(resposta, "Remover somente do EMECA")
         self.assertContains(resposta, "Apagar para todos")
+
+
+class SidebarFlutuanteAutomaticoTests(TestCase):
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=False)
+    def test_sidebar_nao_exibe_botao_manual_e_css_novo_e_carregado(self, _gateway):
+        usuario = get_user_model().objects.create_user(
+            username="teste_menu_hover", password="SenhaExemploNaoReal123"
+        )
+        self.client.force_login(usuario)
+        resposta = self.client.get(reverse("whatsapp_mensagens"))
+        self.assertEqual(resposta.status_code, 200)
+        self.assertContains(resposta, 'aria-label="Navegação da secretaria"')
+        self.assertNotContains(resposta, 'class="sidebar-toggle"')
+        self.assertNotContains(resposta, "js/sidebar.js")
+        self.assertContains(resposta, "20261017-sidebar-hover-overlay-06")
+
+    def test_css_menu_flutuante_preserva_largura_do_conteudo(self):
+        from pathlib import Path
+        from django.contrib.staticfiles.finders import find
+        caminho = find("css/school-ui.css")
+        self.assertIsNotNone(caminho)
+        css = Path(caminho).read_text(encoding="utf-8")
+        self.assertIn("position: fixed !important", css)
+        self.assertIn("body:has(> .sidebar)", css)
+        self.assertIn("padding-left: 76px", css)
+        self.assertIn(".sidebar:is(:hover, :focus-within)", css)
+        self.assertNotIn(".sidebar.is-collapsed", css)
