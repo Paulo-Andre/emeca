@@ -653,19 +653,75 @@ def _jid_eh_telefone(jid):
     return bool(jid and str(jid).endswith(("@s.whatsapp.net", "@c.us")))
 
 
+def _contatos_wa():
+    try:
+        resposta = listar_contatos()
+        contatos = resposta.get("data") if isinstance(resposta, dict) else []
+        return contatos if isinstance(contatos, list) else []
+    except WhatsAppGatewayError:
+        return []
+
+
+def _aliases_contato_wa(jid, contatos=None):
+    """Retorna todas as formas conhecidas do mesmo contato (LID/telefone/JID)."""
+    jid = str(jid or "").strip()
+    aliases = []
+    if jid:
+        aliases.append(jid)
+
+    for contato in contatos if contatos is not None else _contatos_wa():
+        if not isinstance(contato, dict):
+            continue
+        valores = {
+            str(contato.get("jid") or ""),
+            str(contato.get("lid") or ""),
+            str(contato.get("remoteJidAlt") or ""),
+        }
+        valores.discard("")
+        if jid in valores or any(item in aliases for item in valores):
+            for item in valores:
+                if item not in aliases:
+                    aliases.append(item)
+
+    return aliases
+
+
+def _nome_local_por_telefone(phone_jid):
+    """Usa a base da escola como fallback quando o WA-AKG não possui nome."""
+    digitos = re.sub(r"\D", "", str(phone_jid or "").split("@")[0])
+    if not digitos:
+        return ""
+
+    candidatos = {digitos}
+    if digitos.startswith("55"):
+        candidatos.add(digitos[2:])
+
+    telefones = TelefoneDeclaracao.objects.select_related("declaracao").all()
+    for registro in telefones:
+        salvo = re.sub(r"\D", "", registro.telefone or "")
+        salvo_sem_55 = salvo[2:] if salvo.startswith("55") else salvo
+        if salvo not in candidatos and salvo_sem_55 not in candidatos:
+            continue
+
+        dec = registro.declaracao
+        if registro.tipo == "PAI":
+            return dec.nomePai or f"Pai de {dec.nomeDoAluno}"
+        if registro.tipo == "MAE":
+            return dec.nomeMae or f"Mãe de {dec.nomeDoAluno}"
+        if registro.tipo == "RESPONSAVEL":
+            return dec.nomeResponsavel or f"Responsável por {dec.nomeDoAluno}"
+        return dec.nomeDoAluno or ""
+
+    return ""
+
+
 def _enriquecer_chats(chats):
     """Acrescenta telefone real, nome e foto usando contatos do WA-AKG."""
     chats = [dict(item) for item in (chats or []) if isinstance(item, dict)]
     if not chats:
         return chats
 
-    try:
-        resposta = listar_contatos()
-        contatos = resposta.get("data") if isinstance(resposta, dict) else []
-        if not isinstance(contatos, list):
-            contatos = []
-    except WhatsAppGatewayError:
-        contatos = []
+    contatos = _contatos_wa()
 
     mapa = {}
     for contato in contatos:
@@ -703,8 +759,17 @@ def _enriquecer_chats(chats):
         if foto and not str(foto).startswith(("https://", "http://")):
             foto = ""
         chat["profilePic"] = foto
-        chat["name"] = contato.get("name") or contato.get("verifiedName") or chat.get("name") or ""
+        chat["name"] = (
+            contato.get("name")
+            or contato.get("verifiedName")
+            or contato.get("notify")
+            or chat.get("name")
+            or chat.get("notify")
+            or _nome_local_por_telefone(phone_jid)
+            or ""
+        )
         chat["notify"] = contato.get("notify") or chat.get("notify") or ""
+        chat["aliases"] = _aliases_contato_wa(jid, contatos)
         chat["photoJid"] = phone_jid or jid
         resultado.append(chat)
 
@@ -773,23 +838,68 @@ def whatsapp_chat_api(request):
     jid = (request.GET.get("jid") or "").strip()
     if not jid or len(jid) > 120:
         return JsonResponse({"ok": False, "erro": "Conversa inválida."}, status=400)
-    try:
-        payload = obter_mensagens_chat(jid)
-        mensagens = payload.get("data") if isinstance(payload, dict) else []
-        if isinstance(mensagens, dict):
-            mensagens = mensagens.get("messages") or []
+
+    contatos = _contatos_wa()
+    aliases = _aliases_contato_wa(jid, contatos)
+    mensagens_por_id = {}
+    erros = []
+
+    for alias in aliases:
         try:
-            marcar_chat_como_lido(jid)
-        except WhatsAppGatewayError:
-            pass
-        return JsonResponse(
-            {"ok": True, "mensagens": mensagens if isinstance(mensagens, list) else []}
-        )
-    except WhatsAppGatewayError as exc:
+            payload = obter_mensagens_chat(alias)
+            mensagens = payload.get("data") if isinstance(payload, dict) else []
+            if isinstance(mensagens, dict):
+                mensagens = mensagens.get("messages") or []
+            if not isinstance(mensagens, list):
+                continue
+            for msg in mensagens:
+                if not isinstance(msg, dict):
+                    continue
+                chave = (
+                    msg.get("keyId")
+                    or msg.get("id")
+                    or f'{msg.get("timestamp")}-{msg.get("content")}-{msg.get("fromMe")}'
+                )
+                mensagens_por_id[str(chave)] = msg
+        except WhatsAppGatewayError as exc:
+            erros.append(exc)
+
+    mensagens = list(mensagens_por_id.values())
+    mensagens.sort(key=lambda item: str(item.get("timestamp") or ""))
+
+    if not mensagens and erros and len(erros) == len(aliases):
+        exc = erros[0]
         return JsonResponse(
             {"ok": False, "erro": str(exc)},
             status=exc.status_code or 502,
         )
+
+    for alias in aliases:
+        try:
+            marcar_chat_como_lido(alias)
+            break
+        except WhatsAppGatewayError:
+            continue
+
+    # Alguns contatos antigos não possuem name na tabela Contact, mas o
+    # pushName vem nas mensagens recebidas.
+    nome = next(
+        (
+            str(msg.get("pushName") or "").strip()
+            for msg in reversed(mensagens)
+            if not msg.get("fromMe") and str(msg.get("pushName") or "").strip()
+        ),
+        "",
+    )
+
+    return JsonResponse(
+        {
+            "ok": True,
+            "mensagens": mensagens,
+            "aliases": aliases,
+            "nome": nome,
+        }
+    )
 
 
 @login_required
@@ -799,19 +909,17 @@ def whatsapp_foto_api(request):
     if not jid or len(jid) > 120:
         return JsonResponse({"ok": False, "erro": "Contato inválido."}, status=400)
 
-    try:
-        payload = obter_foto_perfil(jid)
-        url = payload.get("profilePicUrl") if isinstance(payload, dict) else None
-        if url and not str(url).startswith(("https://", "http://")):
-            url = None
-        return JsonResponse({"ok": True, "url": url})
-    except WhatsAppGatewayError as exc:
-        if exc.status_code in (404, 500):
-            return JsonResponse({"ok": True, "url": None})
-        return JsonResponse(
-            {"ok": False, "erro": str(exc)},
-            status=exc.status_code or 502,
-        )
+    aliases = _aliases_contato_wa(jid)
+    for alias in aliases:
+        try:
+            payload = obter_foto_perfil(alias)
+            url = payload.get("profilePicUrl") if isinstance(payload, dict) else None
+            if url and str(url).startswith(("https://", "http://")):
+                return JsonResponse({"ok": True, "url": url, "jid": alias})
+        except WhatsAppGatewayError:
+            continue
+
+    return JsonResponse({"ok": True, "url": None})
 
 @login_required
 @require_POST
