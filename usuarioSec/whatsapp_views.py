@@ -770,6 +770,8 @@ def _enriquecer_chats(chats):
         for candidato in (
             contato.get("remoteJidAlt"),
             contato.get("jid"),
+            contato.get("phoneJid"),
+            chat.get("phoneJid"),
             chat.get("remoteJidAlt"),
             jid,
         ):
@@ -787,15 +789,26 @@ def _enriquecer_chats(chats):
         if foto and not str(foto).startswith(("https://", "http://")):
             foto = ""
         chat["profilePic"] = foto
-        chat["name"] = (
-            contato.get("name")
-            or contato.get("verifiedName")
-            or contato.get("notify")
-            or chat.get("name")
-            or chat.get("notify")
-            or _nome_local_por_telefone(phone_jid)
-            or ""
+        # O pushName/notify não equivale a um contato salvo. Quando não
+        # existe nome cadastrado, a interface deve exibir o telefone real.
+        # Também não tratar rótulos genéricos como nomes de contatos.
+        nomes = (
+            contato.get("name"),
+            contato.get("verifiedName"),
+            chat.get("name"),
         )
+        nome = next(
+            (
+                str(valor).strip()
+                for valor in nomes
+                if str(valor or "").strip().casefold()
+                not in {"", "contato whatsapp", "whatsapp", "unknown", "sem nome"}
+            ),
+            "",
+        )
+        if not nome and phone_jid:
+            nome = _nome_local_por_telefone(phone_jid)
+        chat["name"] = nome
         chat["notify"] = contato.get("notify") or chat.get("notify") or ""
         chat["aliases"] = _aliases_contato_wa(jid, contatos)
         chat["photoJid"] = phone_jid or jid
