@@ -328,7 +328,7 @@ Ensino Religioso"""
 
 class BoletimConsultaForm(forms.Form):
     cpf = forms.CharField(
-        max_length=18,
+        max_length=14,
         label="CPF da mãe ou do responsável",
         widget=forms.TextInput(
             attrs={
@@ -336,6 +336,8 @@ class BoletimConsultaForm(forms.Form):
                 "inputmode": "numeric",
                 "autocomplete": "off",
                 "placeholder": "000.000.000-00",
+                "maxlength": "14",
+                "data-cpf-mask": "true",
             }
         ),
     )
