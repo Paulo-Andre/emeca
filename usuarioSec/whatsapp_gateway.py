@@ -543,6 +543,22 @@ def criar_grupo(subject, participants):
     )
 
 
+def apagar_etiqueta(label_id):
+    session_id = quote(sessao_atual_id(), safe="")
+    label_codificado = quote(label_id, safe="")
+    resposta = _request("DELETE", f"labels/{session_id}/{label_codificado}")
+    return confirmar_operacao_wa(resposta, "exclusão da etiqueta")
+
+
+def sair_grupo(jid):
+    session_id = quote(sessao_atual_id(), safe="")
+    jid_codificado = quote(jid, safe="")
+    resposta = _request(
+        "POST", f"groups/{session_id}/{jid_codificado}/leave", {}
+    )
+    return confirmar_operacao_wa(resposta, "saída do grupo")
+
+
 def criar_etiqueta(name, color=0):
     session_id = quote(sessao_atual_id(), safe="")
     resposta = _request(
