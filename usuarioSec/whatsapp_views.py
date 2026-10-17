@@ -371,9 +371,38 @@ def whatsapp_buscar_contatos(request):
 @login_required
 @require_GET
 def whatsapp_buscar_contatos_wa(request):
-    termo = (request.GET.get("q") or "").strip()
+    """Busca números da agenda Android e contatos reais do WA-AKG, sem duplicar."""
+    termo = (request.GET.get("q") or "").strip()[:100]
     if len(termo) < 2:
         return JsonResponse({"results": []})
+
+    termo_norm = termo.casefold()
+    termo_digitos = re.sub(r"\D", "", termo)
+    results = []
+    vistos = set()
+
+    # A agenda importada tem prioridade para nomes e números da Secretaria.
+    filtro = Q(nome__icontains=termo)
+    if termo_digitos:
+        filtro |= Q(telefone_jid__contains=termo_digitos)
+    importados = (
+        ContatoAgendaWhatsApp.objects
+        .filter(sessao=settings.WA_AKG_SESSION_ID)
+        .filter(filtro)
+        .order_by("nome", "telefone_jid")[:50]
+    )
+    for contato in importados:
+        jid = contato.telefone_jid
+        if jid in vistos:
+            continue
+        vistos.add(jid)
+        results.append({
+            "jid": jid, "nome": contato.nome,
+            "telefone": jid.split("@")[0],
+            "profilePic": "", "origem": "agenda_android",
+        })
+        if len(results) >= 30:
+            return JsonResponse({"results": results})
 
     try:
         payload = listar_contatos()
@@ -381,12 +410,10 @@ def whatsapp_buscar_contatos_wa(request):
         if not isinstance(contatos, list):
             contatos = []
     except WhatsAppGatewayError as exc:
+        # Contatos importados continuam pesquisáveis mesmo com gateway offline.
+        if results:
+            return JsonResponse({"results": results, "aviso": "WA-AKG temporariamente indisponível."})
         return JsonResponse({"results": [], "erro": str(exc)}, status=exc.status_code or 502)
-
-    termo_norm = termo.casefold()
-    termo_digitos = re.sub(r"\D", "", termo)
-    results = []
-    vistos = set()
 
     for contato in contatos:
         if not isinstance(contato, dict):
@@ -394,6 +421,7 @@ def whatsapp_buscar_contatos_wa(request):
         jid = str(contato.get("jid") or "")
         lid = str(contato.get("lid") or "")
         alt = str(contato.get("remoteJidAlt") or "")
+        telefone_jid = str(contato.get("phoneJid") or "")
         nome = (
             contato.get("name")
             or contato.get("verifiedName")
@@ -401,10 +429,8 @@ def whatsapp_buscar_contatos_wa(request):
             or ""
         )
         phone_jid = next(
-            (
-                item for item in (alt, jid)
-                if _jid_eh_telefone(item)
-            ),
+            (item.replace("@c.us", "@s.whatsapp.net")
+             for item in (telefone_jid, alt, jid) if _jid_eh_telefone(item)),
             "",
         )
         telefone = re.sub(r"\D", "", phone_jid.split("@")[0]) if phone_jid else ""
@@ -413,20 +439,18 @@ def whatsapp_buscar_contatos_wa(request):
             not termo_digitos or termo_digitos not in re.sub(r"\D", "", haystack)
         ):
             continue
-
         chave = phone_jid or jid or lid
         if not chave or chave in vistos:
             continue
         vistos.add(chave)
         results.append({
             "jid": phone_jid or jid or lid,
-            "nome": nome or "Contato WhatsApp",
+            "nome": nome or (telefone if telefone else "Contato sem identificação"),
             "telefone": telefone,
             "profilePic": contato.get("profilePic") or "",
         })
         if len(results) >= 30:
             break
-
     return JsonResponse({"results": results})
 
 
