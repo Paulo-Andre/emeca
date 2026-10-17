@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.cache import cache
+from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -17,6 +18,7 @@ from .management.commands.processar_envios_whatsapp import (
 from .models import (
     EnvioBoletimWhatsApp,
     ItemEnvioBoletimWhatsApp,
+    IdentidadeContatoWhatsApp,
     LeituraChatWhatsApp,
     TelefoneDeclaracao,
     declaracao,
@@ -933,3 +935,86 @@ class WhatsAppIdentidadeNotificacoesTests(TestCase):
         self.assertEqual(estado.nao_lidas, 0)
         self.assertIsNotNone(estado.ultima_verificacao_em)
         marcar.assert_called_once_with(self.telefone)
+
+
+class WhatsAppIdentificacaoManualTests(TestCase):
+    def setUp(self):
+        self.usuario = get_user_model().objects.create_user(
+            username="operador_identificacao",
+            password="Senha-Sintetica-2026!",
+        )
+        self.client.force_login(self.usuario)
+        self.lid = "184774392074394@lid"
+        self.telefone = "5538999990000@s.whatsapp.net"
+
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=False)
+    @patch("usuarioSec.whatsapp_views.listar_contatos", return_value={"data": []})
+    def test_identidade_manual_persiste_e_une_lid_com_telefone(self, _contatos, _gateway):
+        raw = [
+            {"jid": self.lid, "lastMessage": {"timestamp": "2026-10-17T09:00:00Z"}},
+            {"jid": self.telefone, "lastMessage": {"timestamp": "2026-10-17T10:00:00Z"}},
+        ]
+        self.assertEqual(len(_enriquecer_chats(raw)), 2)
+        with patch("usuarioSec.whatsapp_views.listar_chats", return_value={"data": raw}):
+            response = self.client.post(
+                reverse("whatsapp_identificar_contato_api"),
+                {"jid": self.lid, "telefone_jid": self.telefone, "nome": "Responsável confirmado"},
+            )
+        self.assertEqual(response.status_code, 200, response.content)
+        entidade = IdentidadeContatoWhatsApp.objects.get(jid=self.lid)
+        self.assertEqual(entidade.origem, "MANUAL")
+        self.assertEqual(entidade.telefone_jid, self.telefone)
+        junto = _enriquecer_chats(raw)
+        self.assertEqual(len(junto), 1)
+        self.assertEqual(junto[0]["name"], "Responsável confirmado")
+        self.assertIn(self.lid, junto[0]["aliases"])
+        self.assertIn(self.telefone, _aliases_contato_wa(self.lid, []))
+
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=False)
+    @patch("usuarioSec.whatsapp_views.listar_contatos", return_value={"data": []})
+    def test_desfazer_vinculo_restaura_conversas_independentes(self, _contatos, _gateway):
+        IdentidadeContatoWhatsApp.objects.create(
+            sessao=settings.WA_AKG_SESSION_ID, jid=self.lid,
+            telefone_jid=self.telefone, nome_exibicao="Responsável confirmado",
+        )
+        raw = [{"jid": self.lid}, {"jid": self.telefone}]
+        self.assertEqual(len(_enriquecer_chats(raw)), 1)
+        with patch("usuarioSec.whatsapp_views.listar_chats", return_value={"data": raw}):
+            response = self.client.post(
+                reverse("whatsapp_identificar_contato_api"),
+                {"jid": self.lid, "telefone_jid": "", "nome": ""},
+            )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertFalse(IdentidadeContatoWhatsApp.objects.filter(jid=self.lid).exists())
+        self.assertEqual(len(_enriquecer_chats(raw)), 2)
+
+    @patch("usuarioSec.whatsapp_views.listar_chats")
+    def test_nao_permita_unir_numero_nao_listado(self, listar):
+        listar.return_value = {"data": [{"jid": self.lid}]}
+        resposta = self.client.post(
+            reverse("whatsapp_identificar_contato_api"),
+            {"jid": self.lid, "telefone_jid": self.telefone, "nome": "Pessoa"},
+        )
+        self.assertEqual(resposta.status_code, 400)
+        self.assertFalse(IdentidadeContatoWhatsApp.objects.exists())
+
+    @patch("usuarioSec.whatsapp_views.listar_chats")
+    def test_nao_confunde_digitos_do_lid_com_telefone(self, listar):
+        listar.return_value = {"data": [{"jid": self.lid}]}
+        resposta = self.client.post(
+            reverse("whatsapp_identificar_contato_api"),
+            {"jid": self.lid, "telefone_jid": self.lid, "nome": ""},
+        )
+        self.assertEqual(resposta.status_code, 400)
+
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=False)
+    @patch("usuarioSec.whatsapp_views.listar_contatos", return_value={"data": []})
+    def test_apelido_manual_aparece_sem_precisar_vincular_numero(self, _contatos, _gateway):
+        IdentidadeContatoWhatsApp.objects.create(
+            sessao=settings.WA_AKG_SESSION_ID,
+            jid=self.lid, nome_exibicao="Mãe da turma", origem="MANUAL",
+        )
+        data = _enriquecer_chats([{"jid": self.lid}])
+        self.assertEqual(data[0]["name"], "Mãe da turma")
+        self.assertEqual(data[0]["phoneJid"], "")
+
