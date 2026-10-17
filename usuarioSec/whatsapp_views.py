@@ -27,6 +27,7 @@ from .whatsapp_gateway import (
     apagar_mensagem,
     apagar_resposta_automatica,
     baixar_midia_mensagem,
+    baixar_midia_por_caminho,
     atualizar_etiquetas_chat,
     bloquear_contato,
     buscar_mensagens,
@@ -1230,7 +1231,11 @@ def whatsapp_etiquetas_atualizar_api(request):
 @require_GET
 def whatsapp_midia_recebida(request, message_id):
     try:
-        conteudo, content_type, disposition = baixar_midia_mensagem(message_id)
+        media_url = (request.GET.get("media") or "").strip()
+        if media_url:
+            conteudo, content_type, disposition = baixar_midia_por_caminho(media_url)
+        else:
+            conteudo, content_type, disposition = baixar_midia_mensagem(message_id)
         resposta = HttpResponse(conteudo, content_type=content_type)
         if content_type.startswith(("image/", "video/", "audio/")):
             resposta["Content-Disposition"] = "inline"
