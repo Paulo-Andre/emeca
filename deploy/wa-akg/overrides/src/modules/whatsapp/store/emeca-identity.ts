@@ -193,7 +193,7 @@ export function bindEmecaContactIdentity(sock: WASocket, sessionId: string): voi
 
     sock.ev.on("messages.upsert", ({ messages }) => {
         quietly(Promise.all(messages.map(async msg => {
-            if (msg.key.fromMe || !msg.key.remoteJid || msg.key.remoteJid.endsWith("@g.us")) return;
+            if (msg.key.fromMe || !msg.key.remoteJid) return;
             const jid = msg.key.remoteJid;
             const alt = msg.key.remoteJidAlt;
             if (isLid(jid) && isPhone(alt)) await persistPair(jid, alt);
@@ -202,7 +202,7 @@ export function bindEmecaContactIdentity(sock: WASocket, sessionId: string): voi
 
             // Contact identity in group participant metadata, when available.
             const participant = msg.key.participant;
-            const participantAlt = msg.key.participantAlt;
+            const participantAlt = (msg.key as any).participantAlt;
             if (isLid(participant) && isPhone(participantAlt)) {
                 await persistPair(participant, participantAlt);
             } else if (isPhone(participant) && isLid(participantAlt)) {
