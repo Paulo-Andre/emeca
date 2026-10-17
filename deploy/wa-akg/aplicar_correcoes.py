@@ -37,8 +37,10 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
     contacts_route = source / "src/app/api/contacts/[sessionId]/route.ts"
     overlay_file = patch_dir / "overrides/src/modules/whatsapp/store/emeca-identity.ts"
     target_file = source / "src/modules/whatsapp/store/emeca-identity.ts"
+    profile_route_overlay = patch_dir / "overrides/src/app/api/chat/[sessionId]/[jid]/contact-profile/route.ts"
+    profile_route_target = source / "src/app/api/chat/[sessionId]/[jid]/contact-profile/route.ts"
 
-    required = [instance, index, contact_store, chat_service, chat_route, messages_route, contacts_route, overlay_file]
+    required = [instance, index, contact_store, chat_service, chat_route, messages_route, contacts_route, overlay_file, profile_route_overlay]
     missing = [str(p) for p in required if not p.is_file()]
     if missing:
         raise RuntimeError("Arquivos não encontrados: " + ", ".join(missing))
@@ -261,6 +263,12 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
     )
     edits[contacts_route] = value
 
+    if profile_route_target.exists() and profile_route_target.read_bytes() != profile_route_overlay.read_bytes():
+        raise RuntimeError(
+            "O endpoint contact-profile/route.ts foi personalizado no servidor. "
+            "Para preservar suas alterações, revise o diff antes de continuar."
+        )
+    edits[profile_route_target] = profile_route_overlay.read_text(encoding="utf-8")
     edits[target_file] = overlay_file.read_text(encoding="utf-8")
     return edits
 
