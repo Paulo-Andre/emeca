@@ -425,7 +425,7 @@
 
     function profilePhotoUrl(chat) {
       const photoJid = chat.photoJid || chat.phoneJid || chat.jid;
-      return photoJid ? "{% url 'whatsapp_foto_imagem' %}?jid=" + encodeURIComponent(photoJid) : "";
+      return photoJid ? "{% url 'whatsapp_foto_imagem' %}?jid=" + encodeURIComponent(photoJid) + "&wa_session_id=" + encodeURIComponent(clientSessionId) : "";
     }
 
     function openPhotoViewer() {
@@ -541,7 +541,7 @@
         return;
       }
       // Priorizar o proxy: URLs diretas do WA-AKG podem expirar ou ser bloqueadas.
-      const proxyUrl = "{% url 'whatsapp_foto_imagem' %}?jid=" + encodeURIComponent(photoJid);
+      const proxyUrl = "{% url 'whatsapp_foto_imagem' %}?jid=" + encodeURIComponent(photoJid) + "&wa_session_id=" + encodeURIComponent(clientSessionId);
       const directUrl = /^https?:\/\//i.test(chat.profilePic || "") ? chat.profilePic : "";
       setAvatarContent(element, chat, proxyUrl, directUrl);
     }
@@ -697,6 +697,8 @@
       if (msg.mediaUrl) {
         url += "?media=" + encodeURIComponent(String(msg.mediaUrl));
       }
+      url += (url.includes("?") ? "&" : "?") +
+        "wa_session_id=" + encodeURIComponent(clientSessionId);
       return url;
     }
 
