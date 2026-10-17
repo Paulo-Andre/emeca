@@ -50,16 +50,41 @@
             <button class="btn-secondary" type="submit"><i data-lucide="pause-circle"></i> Pausar conexão</button>
           </form>
           <form method="post" action="{% url 'whatsapp_desconectar' %}"
-            onsubmit="return confirm('Desvincular este número do WhatsApp? Será necessário conectar novamente por QR Code. O histórico do EMECA não será excluído.');">
+            onsubmit="return confirm('ATENÇÃO: desvincular e APAGAR DEFINITIVAMENTE todas as mensagens, contatos e mídias locais desta sessão no WA-AKG e EMECA? Não será possível desfazer.');">
             {% csrf_token %}
           <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
             <input type="hidden" name="acao" value="desvincular">
             <input type="hidden" name="confirmacao" value="DESVINCULAR">
+            <input type="hidden" name="confirmar_exclusao" value="APAGAR_HISTORICO">
             <input type="hidden" name="origem" value="gerenciamento">
             <button class="btn-secondary wa-disconnect-btn" type="submit"><i data-lucide="log-out"></i> Desvincular número</button>
           </form>
         </div>
-        <p class="wa-connection-warning">Desvincular encerra a sessão atual e exige um novo QR Code. Não exclui os registros de mensagens armazenados no sistema.</p>
+        <p class="wa-connection-warning"><strong>Aviso:</strong> Desvincular apagará permanentemente o histórico, os contatos e as mídias desta sessão no WA-AKG e os dados auxiliares no EMECA. Pausar não apaga nenhuma informação.</p>
+      </section>
+    {% endif %}
+
+    {% if pode_desconectar and gateway_status == "LOGGED_OUT" %}
+      <section class="wa-manager-card wa-connection-management">
+        <div class="wa-manager-card-head">
+          <i data-lucide="shield-alert"></i>
+          <div>
+            <h3>Finalizar limpeza do WhatsApp desvinculado</h3>
+            <p>A conta saiu do WhatsApp, mas ainda há dados antigos para remover antes de conectar outro número.</p>
+          </div>
+        </div>
+        <form method="post" action="{% url 'whatsapp_desconectar' %}"
+          onsubmit="return confirm('APAGAR DEFINITIVAMENTE o histórico restante desta sessão? Os dados não poderão ser recuperados.');">
+          {% csrf_token %}
+          <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
+          <input type="hidden" name="origem" value="gerenciamento">
+          <input type="hidden" name="acao" value="finalizar_limpeza">
+          <input type="hidden" name="confirmacao" value="APAGAR">
+          <input type="hidden" name="confirmar_exclusao" value="APAGAR_HISTORICO">
+          <button class="btn-secondary wa-disconnect-btn" type="submit">
+            <i data-lucide="trash-2"></i> Apagar histórico e liberar nova conta
+          </button>
+        </form>
       </section>
     {% endif %}
 
