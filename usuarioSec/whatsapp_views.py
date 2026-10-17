@@ -22,6 +22,7 @@ from site_publico.boletim_importacao import normalizar_nome
 from site_publico.models import BoletimAluno, PeriodoBoletim
 
 from .access_control import usuario_tem_modulo
+from .sessao_whatsapp import sessao_atual_id, criar_sessao_isolada
 from .agenda_android import AgendaImportError, MAX_VCF_BYTES, processar_agenda_vcf
 from .models import (
     EnvioBoletimWhatsApp,
@@ -398,7 +399,7 @@ def whatsapp_buscar_contatos_wa(request):
         filtro |= Q(telefone_jid__contains=termo_digitos)
     importados = (
         ContatoAgendaWhatsApp.objects
-        .filter(sessao=settings.WA_AKG_SESSION_ID)
+        .filter(sessao=sessao_atual_id())
         .filter(filtro)
         .order_by("nome", "telefone_jid")[:50]
     )
@@ -802,7 +803,7 @@ def _contatos_wa():
 def _identidades_wa():
     """Vínculos persistentes; não depender do cache local de cada worker."""
     return list(
-        IdentidadeContatoWhatsApp.objects.filter(sessao=settings.WA_AKG_SESSION_ID)
+        IdentidadeContatoWhatsApp.objects.filter(sessao=sessao_atual_id())
         .values("jid", "telefone_jid", "nome_exibicao", "origem")
     )
 
@@ -958,7 +959,7 @@ def _enriquecer_chats(chats):
     identidades = _identidades_wa()
     nomes_agenda = dict(
         ContatoAgendaWhatsApp.objects.filter(
-            sessao=settings.WA_AKG_SESSION_ID
+            sessao=sessao_atual_id()
         ).values_list("telefone_jid", "nome")
     )
     nomes_manuais = {
@@ -1010,7 +1011,7 @@ def _enriquecer_chats(chats):
             # reinícios e a processos Gunicorn com caches diferentes.
             if telefone or nome_perfil:
                 salvo, criado = IdentidadeContatoWhatsApp.objects.get_or_create(
-                    sessao=settings.WA_AKG_SESSION_ID,
+                    sessao=sessao_atual_id(),
                     jid=jid,
                     defaults={
                         "telefone_jid": telefone,
@@ -1038,7 +1039,7 @@ def _enriquecer_chats(chats):
             telefone_confirmado = identidade.get("telefone") or ""
             if _jid_eh_telefone(telefone_confirmado):
                 salvo, criado = IdentidadeContatoWhatsApp.objects.get_or_create(
-                    sessao=settings.WA_AKG_SESSION_ID,
+                    sessao=sessao_atual_id(),
                     jid=jid,
                     defaults={
                         "telefone_jid": telefone_confirmado,
@@ -1190,7 +1191,7 @@ def _enriquecer_chats(chats):
     # API remota uma vez para cada botão ou conversa (a lista pode ser grande).
     estados = {
         obj.jid: obj for obj in EstadoConversaWhatsApp.objects.filter(
-            sessao=settings.WA_AKG_SESSION_ID,
+            sessao=sessao_atual_id(),
             jid__in=[item["jid"] for item in resultado],
         )
     }
@@ -1359,7 +1360,7 @@ def whatsapp_identificar_contato_api(request):
             jid in _jids_do_registro(contato) for contato in _contatos_wa()
         )
         ja_registrado = IdentidadeContatoWhatsApp.objects.filter(
-            sessao=settings.WA_AKG_SESSION_ID, jid=jid
+            sessao=sessao_atual_id(), jid=jid
         ).exists()
         if not (ja_registrado or registro_contato):
             return JsonResponse({"ok": False, "erro": "Contato não encontrado nas conversas."}, status=400)
@@ -1372,7 +1373,7 @@ def whatsapp_identificar_contato_api(request):
     with transaction.atomic():
         if nome or telefone:
             IdentidadeContatoWhatsApp.objects.update_or_create(
-                sessao=settings.WA_AKG_SESSION_ID,
+                sessao=sessao_atual_id(),
                 jid=jid,
                 defaults={
                     "telefone_jid": telefone,
@@ -1382,7 +1383,7 @@ def whatsapp_identificar_contato_api(request):
             )
         else:
             IdentidadeContatoWhatsApp.objects.filter(
-                sessao=settings.WA_AKG_SESSION_ID, jid=jid, origem="MANUAL"
+                sessao=sessao_atual_id(), jid=jid, origem="MANUAL"
             ).delete()
     if jid.endswith("@lid"):
         cache.delete("emeca:whatsapp:lid:" + sha256(jid.encode("utf-8")).hexdigest())
@@ -1565,7 +1566,7 @@ def whatsapp_perfil_api(request):
     )
     nome_agenda = (
         ContatoAgendaWhatsApp.objects.filter(
-            sessao=settings.WA_AKG_SESSION_ID, telefone_jid=telefone_jid
+            sessao=sessao_atual_id(), telefone_jid=telefone_jid
         ).values_list("nome", flat=True).first() if telefone_jid else ""
     ) or ""
     nome_salvo = next(
@@ -1699,7 +1700,7 @@ def whatsapp_gerenciar_chat_api(request):
             _marcar_como_vista_no_emeca(request.user, jid)
             return JsonResponse({"ok": True, "resposta": resposta, "acao": acao})
         estado, _ = EstadoConversaWhatsApp.objects.get_or_create(
-            sessao=settings.WA_AKG_SESSION_ID, jid=jid
+            sessao=sessao_atual_id(), jid=jid
         )
         campo = campos[acao]
         setattr(estado, campo, ativo)
@@ -1918,7 +1919,7 @@ def whatsapp_bloqueio_api(request):
     try:
         resposta = bloquear_contato(jid, bloquear)
         estado, _ = EstadoConversaWhatsApp.objects.get_or_create(
-            sessao=settings.WA_AKG_SESSION_ID, jid=jid
+            sessao=sessao_atual_id(), jid=jid
         )
         estado.bloqueado = bloquear
         estado.save(update_fields=["bloqueado", "atualizado_em"])
@@ -2036,7 +2037,7 @@ def whatsapp_importar_agenda(request):
     if request.method == "GET":
         return render(request, "whatsapp_importar_agenda.html", {
             "total_agenda": ContatoAgendaWhatsApp.objects.filter(
-                sessao=settings.WA_AKG_SESSION_ID
+                sessao=sessao_atual_id()
             ).count(),
         })
     if request.method != "POST":
@@ -2056,7 +2057,7 @@ def whatsapp_importar_agenda(request):
     try:
         resultado = processar_agenda_vcf(
             arquivo.read(),
-            sessao=settings.WA_AKG_SESSION_ID,
+            sessao=sessao_atual_id(),
             aplicar=(modo == "importar"),
         )
     except AgendaImportError as exc:
