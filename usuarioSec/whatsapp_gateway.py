@@ -245,3 +245,22 @@ def obter_foto_perfil(jid):
         f"chat/{session_id}/{jid_codificado}/profile-picture",
         {},
     )
+
+
+def verificar_numeros(numbers):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    return _request("POST", f"chat/{session_id}/check", {"numbers": numbers})
+
+
+def gerenciar_chat(jid, acao, ativo=True):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    if acao == "pin":
+        return _request("PUT", f"chat/{session_id}/{jid_codificado}/pin", {"pin": bool(ativo)})
+    if acao == "archive":
+        return _request("PUT", f"chat/{session_id}/{jid_codificado}/archive", {"archive": bool(ativo)})
+    if acao == "mute":
+        return _request("PUT", f"chat/{session_id}/{jid_codificado}/mute", {"mute": bool(ativo)})
+    if acao == "read":
+        return marcar_chat_como_lido(jid)
+    raise WhatsAppGatewayError("Ação de conversa inválida.")
