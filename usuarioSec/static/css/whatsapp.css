@@ -1403,3 +1403,23 @@ textarea.wa-new-chat-input{resize:vertical;min-height:94px}
   .wa-color-palette{grid-template-columns:repeat(3,minmax(0,1fr))}
   .wa-manager-group-actions{width:100%;justify-content:flex-end}
 }
+
+
+/* Filtro rápido para localizar grupos mesmo quando nunca receberam mensagens. */
+.wa-chat-filter-row {
+  display:flex; gap:7px; align-items:center;
+  padding:0 12px 9px; flex:0 0 auto;
+  border-bottom:1px solid #e8eef0;
+}
+.wa-chat-filter {
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  padding:5px 11px;border:1px solid #d8e5e5;border-radius:8px;
+  background:#f6f9fb;color:#566774;font-size:.75rem;font-weight:700;
+  cursor:pointer;
+}
+.wa-chat-filter svg{width:14px;height:14px}
+.wa-chat-filter:hover{background:#e8f2f7}
+.wa-chat-filter.active {
+  color:#0d5673;border-color:#89bfd3;background:#dff2fb;
+}
+.wa-chat-filter span {font-size:.7rem;font-variant-numeric:tabular-nums;}
