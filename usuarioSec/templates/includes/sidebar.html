@@ -51,9 +51,19 @@
     {% endif %}
 
     {% if acessos_emeca.whatsapp %}
-      <a class="nav-item{% if request.resolver_match.url_name == 'whatsapp' %} active{% endif %}" href="{% url 'whatsapp' %}">
+      <a class="nav-item{% if 'whatsapp' in request.resolver_match.url_name %} active{% endif %}" href="{% url 'whatsapp' %}">
         <i data-lucide="message-circle-more"></i><span>WhatsApp</span>
       </a>
+      {% if 'whatsapp' in request.resolver_match.url_name %}
+        <div class="sidebar-subnav" aria-label="Atalhos do WhatsApp">
+          <a class="sidebar-subitem{% if request.resolver_match.url_name == 'whatsapp' %} active{% endif %}" href="{% url 'whatsapp' %}">
+            <span>Envios</span>
+          </a>
+          <a class="sidebar-subitem{% if request.resolver_match.url_name == 'whatsapp_mensagens' %} active{% endif %}" href="{% url 'whatsapp_mensagens' %}">
+            <span>Mensagens</span>
+          </a>
+        </div>
+      {% endif %}
     {% endif %}
 
     {% if acessos_emeca.site %}

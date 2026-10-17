@@ -23,7 +23,11 @@ from .whatsapp_gateway import (
     WhatsAppGatewayError,
     configurado as gateway_configurado,
     enviar_broadcast,
+    enviar_mensagem_chat,
     iniciar_sessao,
+    listar_chats,
+    marcar_chat_como_lido,
+    obter_mensagens_chat,
     obter_qr,
     obter_sessao,
 )
@@ -557,3 +561,108 @@ def whatsapp_enviar(request):
         ),
     )
     return redirect("whatsapp")
+
+
+
+@login_required
+def whatsapp_mensagens(request):
+    status = "NAO_CONFIGURADO"
+    status_detalhe = ""
+    chats = []
+
+    if gateway_configurado():
+        try:
+            resposta = obter_sessao()
+            status = str(
+                resposta.get("data", {}).get("status")
+                or resposta.get("status")
+                or "DESCONHECIDO"
+            ).upper()
+            if status == "CONNECTED":
+                payload = listar_chats()
+                chats = payload.get("data") if isinstance(payload, dict) else []
+                if not isinstance(chats, list):
+                    chats = []
+        except WhatsAppGatewayError as exc:
+            status = "INDISPONIVEL"
+            status_detalhe = str(exc)
+
+    return render(
+        request,
+        "whatsapp_mensagens.html",
+        {
+            "gateway_configurado": gateway_configurado(),
+            "gateway_status": status,
+            "gateway_status_detalhe": status_detalhe,
+            "chats_iniciais": chats[:50],
+        },
+    )
+
+
+@login_required
+@require_GET
+def whatsapp_chats_api(request):
+    if not gateway_configurado():
+        return JsonResponse(
+            {"ok": False, "erro": "Integração ainda não configurada."},
+            status=503,
+        )
+    try:
+        payload = listar_chats()
+        chats = payload.get("data") if isinstance(payload, dict) else []
+        return JsonResponse({"ok": True, "chats": chats if isinstance(chats, list) else []})
+    except WhatsAppGatewayError as exc:
+        return JsonResponse(
+            {"ok": False, "erro": str(exc)},
+            status=exc.status_code or 502,
+        )
+
+
+@login_required
+@require_GET
+def whatsapp_chat_api(request):
+    jid = (request.GET.get("jid") or "").strip()
+    if not jid or len(jid) > 120:
+        return JsonResponse({"ok": False, "erro": "Conversa inválida."}, status=400)
+    try:
+        payload = obter_mensagens_chat(jid)
+        mensagens = payload.get("data") if isinstance(payload, dict) else []
+        if isinstance(mensagens, dict):
+            mensagens = mensagens.get("messages") or []
+        try:
+            marcar_chat_como_lido(jid)
+        except WhatsAppGatewayError:
+            pass
+        return JsonResponse(
+            {"ok": True, "mensagens": mensagens if isinstance(mensagens, list) else []}
+        )
+    except WhatsAppGatewayError as exc:
+        return JsonResponse(
+            {"ok": False, "erro": str(exc)},
+            status=exc.status_code or 502,
+        )
+
+
+@login_required
+@require_POST
+def whatsapp_responder_api(request):
+    try:
+        dados = request.POST
+        jid = (dados.get("jid") or "").strip()
+        texto = (dados.get("mensagem") or "").strip()
+        if not jid or len(jid) > 120:
+            raise ValueError("Conversa inválida.")
+        if not texto:
+            raise ValueError("Digite uma mensagem.")
+        if len(texto) > 4000:
+            raise ValueError("A mensagem deve ter no máximo 4.000 caracteres.")
+
+        resposta = enviar_mensagem_chat(jid, texto)
+        return JsonResponse({"ok": True, "resposta": resposta})
+    except ValueError as exc:
+        return JsonResponse({"ok": False, "erro": str(exc)}, status=400)
+    except WhatsAppGatewayError as exc:
+        return JsonResponse(
+            {"ok": False, "erro": str(exc)},
+            status=exc.status_code or 502,
+        )

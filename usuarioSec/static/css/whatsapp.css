@@ -109,3 +109,89 @@
 .status-job-com_erros,.status-job-falhou{background:#fee2e2;color:#991b1b!important}
 @media(max-width:1000px){.bulletin-period-grid{grid-template-columns:1fr 1fr}.history-item{align-items:flex-start}.history-numbers{align-items:flex-start}}
 @media(max-width:640px){.content-mode-grid,.bulletin-period-grid{grid-template-columns:1fr}.bulletin-preview,.history-item{align-items:flex-start;flex-direction:column}.bulletin-preview p{text-align:left}.history-numbers{width:100%}}
+
+
+/* ===== Caixa de entrada WhatsApp ===== */
+.whatsapp-inbox-main{max-width:none}
+.whatsapp-inbox-header{max-width:1500px;margin-left:auto;margin-right:auto}
+.inbox-back-send{margin-left:auto}
+.wa-inbox-shell{
+  max-width:1500px;
+  height:calc(100vh - 185px);
+  min-height:620px;
+  margin:0 auto;
+  display:grid;
+  grid-template-columns:360px minmax(0,1fr);
+  overflow:hidden;
+  border:1px solid #dbe3ee;
+  border-radius:20px;
+  background:#fff;
+  box-shadow:0 10px 30px rgba(15,23,42,.07);
+}
+.wa-inbox-shell.is-disabled{opacity:.55;pointer-events:none}
+.wa-chat-list-panel{min-width:0;display:flex;flex-direction:column;border-right:1px solid #e2e8f0;background:#f8fafc}
+.wa-chat-list-head{min-height:68px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e2e8f0;background:#fff}
+.wa-chat-list-head>div{display:grid;gap:2px}
+.wa-chat-list-head strong{font-size:.96rem;color:#0f172a}
+.wa-chat-list-head small{font-size:.75rem;color:#64748b}
+.wa-icon-button{width:36px;height:36px;display:grid;place-items:center;border:1px solid #dbe3ee;border-radius:10px;background:#fff;color:#475569;cursor:pointer}
+.wa-icon-button:hover{background:#f1f5f9}
+.wa-icon-button svg{width:17px;height:17px}
+.wa-chat-search{position:relative;padding:12px;border-bottom:1px solid #e2e8f0}
+.wa-chat-search svg{position:absolute;left:24px;top:50%;transform:translateY(-50%);width:17px;color:#94a3b8}
+.wa-chat-search input{width:100%;height:42px;margin:0;padding:0 12px 0 38px;border:1px solid #dbe3ee;border-radius:11px;background:#fff;font:inherit;outline:none}
+.wa-chat-search input:focus{border-color:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.09)}
+.wa-chat-list{min-height:0;flex:1;overflow-y:auto}
+.wa-empty-list{padding:28px 18px;color:#64748b;font-size:.85rem;text-align:center}
+.wa-chat-item{width:100%;min-height:74px;padding:11px 13px;display:flex;align-items:center;gap:11px;border:0;border-bottom:1px solid #edf2f7;background:transparent;text-align:left;cursor:pointer}
+.wa-chat-item:hover{background:#f1f5f9}
+.wa-chat-item.active{background:#ecfdf5;box-shadow:inset 3px 0 #22c55e}
+.wa-chat-avatar,.wa-contact-avatar{width:44px;height:44px;flex:0 0 44px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(135deg,#dcfce7,#bbf7d0);color:#166534;font-weight:800}
+.wa-chat-item-body{min-width:0;flex:1;display:grid;gap:5px}
+.wa-chat-item-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.wa-chat-item-row strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#0f172a;font-size:.86rem}
+.wa-chat-item-row time{flex:0 0 auto;color:#94a3b8;font-size:.7rem}
+.wa-chat-preview{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b;font-size:.76rem}
+.wa-conversation-panel{min-width:0;min-height:0;background:#efeae2}
+.wa-conversation-empty{height:100%;display:grid;place-content:center;place-items:center;padding:32px;text-align:center;background:#f8fafc}
+.wa-empty-icon{width:68px;height:68px;display:grid;place-items:center;border-radius:50%;background:#dcfce7;color:#15803d}
+.wa-empty-icon svg{width:32px;height:32px}
+.wa-conversation-empty h3{margin:15px 0 4px;color:#0f172a}
+.wa-conversation-empty p{margin:0;color:#64748b}
+.wa-conversation{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto auto}
+.wa-conversation-head{min-height:68px;padding:10px 16px;display:flex;align-items:center;gap:11px;border-bottom:1px solid #e2e8f0;background:#fff}
+.wa-contact-avatar{width:42px;height:42px;flex-basis:42px}
+.wa-conversation-head>div:nth-child(2){min-width:0;display:grid;gap:2px}
+.wa-conversation-head strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#0f172a}
+.wa-conversation-head small{color:#64748b;font-size:.75rem}
+.wa-live-badge{margin-left:auto;display:inline-flex;align-items:center;gap:6px;color:#64748b;font-size:.72rem;white-space:nowrap}
+.wa-live-badge>span{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.12)}
+.wa-message-thread{min-height:0;padding:22px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;background-color:#efeae2;background-image:radial-gradient(rgba(15,23,42,.025) 1px,transparent 1px);background-size:18px 18px}
+.wa-message{max-width:min(72%,680px);padding:8px 10px 6px;border-radius:10px;box-shadow:0 1px 2px rgba(15,23,42,.08)}
+.wa-message.incoming{align-self:flex-start;border-top-left-radius:3px;background:#fff}
+.wa-message.outgoing{align-self:flex-end;border-top-right-radius:3px;background:#d9fdd3}
+.wa-message-text{color:#172033;font-size:.9rem;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+.wa-message-meta{margin-top:4px;display:flex;justify-content:flex-end;gap:8px;color:#718096;font-size:.64rem}
+.wa-message-meta span{margin-right:auto;color:#15803d;font-weight:700}
+.wa-reply-form{padding:10px 12px;display:grid;grid-template-columns:minmax(0,1fr) 46px;gap:9px;align-items:end;border-top:1px solid #e2e8f0;background:#f8fafc}
+.wa-reply-form textarea{width:100%;min-height:44px;max-height:140px;margin:0;padding:11px 13px;resize:none;border:1px solid #dbe3ee;border-radius:13px;background:#fff;font:inherit;line-height:1.4;outline:none}
+.wa-reply-form textarea:focus{border-color:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.09)}
+.wa-send-reply{width:46px;height:46px;display:grid;place-items:center;border:0;border-radius:50%;background:#16a34a;color:#fff;cursor:pointer}
+.wa-send-reply:hover:not(:disabled){background:#15803d}
+.wa-send-reply:disabled{opacity:.5;cursor:wait}
+.wa-send-reply svg{width:19px;height:19px}
+.wa-reply-status{min-height:0;padding:0 15px;background:#f8fafc;color:#64748b;font-size:.72rem}
+.wa-reply-status:not(:empty){padding-bottom:8px}
+.wa-reply-status.success{color:#15803d}.wa-reply-status.error{color:#b91c1c}
+@media(max-width:1000px){
+  .wa-inbox-shell{height:auto;min-height:0;grid-template-columns:1fr}
+  .wa-chat-list-panel{max-height:350px;border-right:0;border-bottom:1px solid #e2e8f0}
+  .wa-conversation-panel{min-height:560px}
+  .inbox-back-send{margin-left:0}
+}
+@media(max-width:640px){
+  .wa-inbox-shell{border-radius:14px}
+  .wa-conversation-panel{min-height:500px}
+  .wa-message{max-width:88%}
+  .wa-live-badge{display:none}
+}

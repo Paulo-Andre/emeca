@@ -189,3 +189,44 @@ def enviar_documento(jid, conteudo_pdf, nome_arquivo, legenda=""):
         "application/pdf",
         conteudo_pdf,
     )
+
+
+def listar_chats():
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    return _request("GET", f"chat/{session_id}")
+
+
+def obter_mensagens_chat(jid):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    return _request("GET", f"chat/{session_id}/{jid_codificado}")
+
+
+def enviar_mensagem_chat(jid, texto):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    return _request(
+        "POST",
+        f"messages/{session_id}/{jid_codificado}/send",
+        {"message": {"text": texto}},
+    )
+
+
+def marcar_chat_como_lido(jid):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    return _request(
+        "PUT",
+        f"chat/{session_id}/{jid_codificado}/read",
+        {},
+    )
+
+
+def status_sessao():
+    resposta = obter_sessao()
+    dados = resposta.get("data") if isinstance(resposta, dict) else None
+    if isinstance(dados, dict):
+        bruto = dados.get("status")
+    else:
+        bruto = resposta.get("status") if isinstance(resposta, dict) else ""
+    return str(bruto or "").upper()

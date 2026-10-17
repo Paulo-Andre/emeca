@@ -1,0 +1,361 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secretaria Escolar · Mensagens WhatsApp</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+  <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-unified-03">
+  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-inbox-02">
+</head>
+<body>
+  {% include 'includes/sidebar.html' %}
+
+  <main class="main whatsapp-main whatsapp-inbox-main">
+    <header class="header whatsapp-inbox-header">
+      <div class="header-icon whatsapp-icon"><i data-lucide="messages-square"></i></div>
+      <div>
+        <h2>Mensagens do WhatsApp</h2>
+        <p>Leia e responda aos pais e responsáveis pelo número institucional da escola.</p>
+      </div>
+      <a class="btn-secondary inbox-back-send" href="{% url 'whatsapp' %}">
+        <i data-lucide="send"></i> Envios
+      </a>
+    </header>
+
+    {% if gateway_status != "CONNECTED" %}
+      <section class="connection-card">
+        <div class="connection-copy">
+          <div class="status-line">
+            <span class="status-dot status-{{ gateway_status|lower }}"></span>
+            <strong>
+              {% if gateway_status == "NAO_CONFIGURADO" %}Integração ainda não configurada
+              {% elif gateway_status == "INDISPONIVEL" %}WA-AKG indisponível
+              {% else %}WhatsApp não conectado
+              {% endif %}
+            </strong>
+          </div>
+          <p>
+            {% if gateway_status_detalhe %}{{ gateway_status_detalhe }}{% else %}
+              Conecte o WhatsApp para carregar as conversas recebidas.
+            {% endif %}
+          </p>
+        </div>
+        <div class="connection-actions">
+          <form method="post" action="{% url 'whatsapp_conectar' %}">
+            {% csrf_token %}
+            <button class="btn-primary" type="submit"><i data-lucide="power"></i> Conectar WhatsApp</button>
+          </form>
+          <a class="btn-secondary" href="{% url 'whatsapp' %}"><i data-lucide="qr-code"></i> Tela de conexão</a>
+        </div>
+      </section>
+    {% endif %}
+
+    <section class="wa-inbox-shell{% if gateway_status != 'CONNECTED' %} is-disabled{% endif %}">
+      <aside class="wa-chat-list-panel">
+        <div class="wa-chat-list-head">
+          <div>
+            <strong>Conversas</strong>
+            <small id="chatCount">Carregando…</small>
+          </div>
+          <button type="button" class="wa-icon-button" id="refreshChats" aria-label="Atualizar conversas" title="Atualizar">
+            <i data-lucide="refresh-cw"></i>
+          </button>
+        </div>
+
+        <div class="wa-chat-search">
+          <i data-lucide="search"></i>
+          <input id="chatSearch" type="search" placeholder="Buscar conversa" autocomplete="off">
+        </div>
+
+        <div class="wa-chat-list" id="chatList">
+          <div class="wa-empty-list">Nenhuma conversa carregada.</div>
+        </div>
+      </aside>
+
+      <section class="wa-conversation-panel">
+        <div class="wa-conversation-empty" id="conversationEmpty">
+          <div class="wa-empty-icon"><i data-lucide="message-circle"></i></div>
+          <h3>Selecione uma conversa</h3>
+          <p>As mensagens recebidas e enviadas aparecerão aqui.</p>
+        </div>
+
+        <div class="wa-conversation" id="conversation" hidden>
+          <header class="wa-conversation-head">
+            <div class="wa-contact-avatar" id="contactAvatar">?</div>
+            <div>
+              <strong id="contactName">Contato</strong>
+              <small id="contactNumber"></small>
+            </div>
+            <span class="wa-live-badge"><span></span> Atualização automática</span>
+          </header>
+
+          <div class="wa-message-thread" id="messageThread" aria-live="polite"></div>
+
+          <form class="wa-reply-form" id="replyForm">
+            {% csrf_token %}
+            <input type="hidden" id="replyJid" name="jid">
+            <textarea id="replyMessage" name="mensagem" rows="1" maxlength="4000" placeholder="Digite uma mensagem…" aria-label="Mensagem"></textarea>
+            <button type="submit" class="wa-send-reply" id="sendReply" aria-label="Enviar mensagem">
+              <i data-lucide="send"></i>
+            </button>
+          </form>
+          <div class="wa-reply-status" id="replyStatus" aria-live="polite"></div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  {{ chats_iniciais|json_script:"wa-chats-iniciais" }}
+  <script>
+    lucide.createIcons();
+
+    const connected = {% if gateway_status == "CONNECTED" %}true{% else %}false{% endif %};
+    const initialChats = JSON.parse(document.getElementById("wa-chats-iniciais").textContent || "[]");
+    const chatList = document.getElementById("chatList");
+    const chatSearch = document.getElementById("chatSearch");
+    const chatCount = document.getElementById("chatCount");
+    const conversation = document.getElementById("conversation");
+    const conversationEmpty = document.getElementById("conversationEmpty");
+    const thread = document.getElementById("messageThread");
+    const replyForm = document.getElementById("replyForm");
+    const replyJid = document.getElementById("replyJid");
+    const replyMessage = document.getElementById("replyMessage");
+    const replyStatus = document.getElementById("replyStatus");
+    const contactName = document.getElementById("contactName");
+    const contactNumber = document.getElementById("contactNumber");
+    const contactAvatar = document.getElementById("contactAvatar");
+
+    let chats = Array.isArray(initialChats) ? initialChats : [];
+    let activeJid = "";
+    let refreshTimer = null;
+
+    function phoneFromJid(jid) {
+      return String(jid || "").split("@")[0].replace(/\D/g, "");
+    }
+
+    function prettyPhone(jid) {
+      const digits = phoneFromJid(jid);
+      if (digits.startsWith("55") && digits.length >= 12) {
+        const n = digits.slice(2);
+        const ddd = n.slice(0, 2);
+        const local = n.slice(2);
+        if (local.length === 9) return `+${digits.slice(0,2)} (${ddd}) ${local.slice(0,5)}-${local.slice(5)}`;
+        if (local.length === 8) return `+${digits.slice(0,2)} (${ddd}) ${local.slice(0,4)}-${local.slice(4)}`;
+      }
+      return digits ? "+" + digits : jid;
+    }
+
+    function chatDisplayName(chat) {
+      return chat.name || chat.notify || prettyPhone(chat.jid) || "Contato";
+    }
+
+    function previewText(chat) {
+      const last = chat.lastMessage || {};
+      const content = String(last.content || "").trim();
+      if (content) return content;
+      const type = String(last.type || "").toLowerCase();
+      return type ? "[" + type + "]" : "Sem prévia";
+    }
+
+    function formatDate(value) {
+      if (!value) return "";
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return "";
+      const today = new Date();
+      if (d.toDateString() === today.toDateString()) {
+        return d.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"});
+      }
+      return d.toLocaleDateString("pt-BR", {day:"2-digit", month:"2-digit"});
+    }
+
+    function createChatItem(chat) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "wa-chat-item" + (chat.jid === activeJid ? " active" : "");
+      button.dataset.jid = chat.jid || "";
+
+      const avatar = document.createElement("span");
+      avatar.className = "wa-chat-avatar";
+      const name = chatDisplayName(chat);
+      avatar.textContent = name.trim().charAt(0).toUpperCase() || "?";
+
+      const body = document.createElement("span");
+      body.className = "wa-chat-item-body";
+      const row = document.createElement("span");
+      row.className = "wa-chat-item-row";
+      const strong = document.createElement("strong");
+      strong.textContent = name;
+      const time = document.createElement("time");
+      time.textContent = formatDate(chat.lastMessage?.timestamp);
+      row.append(strong, time);
+
+      const preview = document.createElement("span");
+      preview.className = "wa-chat-preview";
+      preview.textContent = previewText(chat);
+      body.append(row, preview);
+      button.append(avatar, body);
+      button.addEventListener("click", () => openChat(chat));
+      return button;
+    }
+
+    function renderChats() {
+      const q = chatSearch.value.trim().toLowerCase();
+      const filtered = chats.filter(chat => {
+        if (!q) return true;
+        return [chatDisplayName(chat), chat.jid, previewText(chat)]
+          .join(" ").toLowerCase().includes(q);
+      });
+      chatList.innerHTML = "";
+      if (!filtered.length) {
+        const empty = document.createElement("div");
+        empty.className = "wa-empty-list";
+        empty.textContent = q ? "Nenhuma conversa encontrada." : "Nenhuma conversa recebida ainda.";
+        chatList.appendChild(empty);
+      } else {
+        filtered.forEach(chat => chatList.appendChild(createChatItem(chat)));
+      }
+      chatCount.textContent = `${filtered.length} conversa(s)`;
+    }
+
+    function messageText(msg) {
+      const content = String(msg.content || "").trim();
+      if (content) return content;
+      const type = String(msg.type || "").toLowerCase();
+      if (type === "image") return "📷 Imagem";
+      if (type === "audio") return "🎵 Áudio";
+      if (type === "video") return "🎥 Vídeo";
+      if (type === "document") return "📄 Documento";
+      if (type === "sticker") return "Sticker";
+      if (type === "location") return "📍 Localização";
+      return type ? "[" + type + "]" : "Mensagem";
+    }
+
+    function renderMessages(messages) {
+      thread.innerHTML = "";
+      (messages || []).forEach(msg => {
+        const bubble = document.createElement("article");
+        bubble.className = "wa-message " + (msg.fromMe ? "outgoing" : "incoming");
+
+        const text = document.createElement("div");
+        text.className = "wa-message-text";
+        text.textContent = messageText(msg);
+
+        const meta = document.createElement("div");
+        meta.className = "wa-message-meta";
+        if (!msg.fromMe && msg.pushName) {
+          const sender = document.createElement("span");
+          sender.textContent = msg.pushName;
+          meta.appendChild(sender);
+        }
+        const time = document.createElement("time");
+        const d = msg.timestamp ? new Date(msg.timestamp) : null;
+        time.textContent = d && !Number.isNaN(d.getTime())
+          ? d.toLocaleString("pt-BR", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"})
+          : "";
+        meta.appendChild(time);
+
+        bubble.append(text, meta);
+        thread.appendChild(bubble);
+      });
+      thread.scrollTop = thread.scrollHeight;
+    }
+
+    async function openChat(chat, quiet=false) {
+      activeJid = chat.jid;
+      replyJid.value = chat.jid;
+      const name = chatDisplayName(chat);
+      contactName.textContent = name;
+      contactNumber.textContent = prettyPhone(chat.jid);
+      contactAvatar.textContent = name.trim().charAt(0).toUpperCase() || "?";
+      conversationEmpty.hidden = true;
+      conversation.hidden = false;
+      renderChats();
+
+      try {
+        const resp = await fetch("{% url 'whatsapp_chat_api' %}?jid=" + encodeURIComponent(chat.jid), {
+          headers: {"Accept":"application/json"}
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) throw new Error(data.erro || "Não foi possível carregar a conversa.");
+        renderMessages(data.mensagens);
+        if (!quiet) replyStatus.textContent = "";
+      } catch (err) {
+        if (!quiet) {
+          replyStatus.textContent = err.message;
+          replyStatus.className = "wa-reply-status error";
+        }
+      }
+    }
+
+    async function refreshChats() {
+      if (!connected) return;
+      try {
+        const resp = await fetch("{% url 'whatsapp_chats_api' %}", {headers: {"Accept":"application/json"}});
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) throw new Error(data.erro || "Falha ao atualizar conversas.");
+        chats = Array.isArray(data.chats) ? data.chats : [];
+        renderChats();
+        if (activeJid) {
+          const current = chats.find(c => c.jid === activeJid);
+          if (current) await openChat(current, true);
+        }
+      } catch (err) {
+        chatCount.textContent = "Erro ao atualizar";
+      }
+    }
+
+    chatSearch.addEventListener("input", renderChats);
+    document.getElementById("refreshChats").addEventListener("click", refreshChats);
+
+    replyMessage.addEventListener("input", () => {
+      replyMessage.style.height = "auto";
+      replyMessage.style.height = Math.min(replyMessage.scrollHeight, 140) + "px";
+    });
+
+    replyForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const text = replyMessage.value.trim();
+      if (!activeJid || !text) return;
+
+      const button = document.getElementById("sendReply");
+      button.disabled = true;
+      replyStatus.textContent = "Enviando…";
+      replyStatus.className = "wa-reply-status";
+
+      const formData = new FormData(replyForm);
+      try {
+        const resp = await fetch("{% url 'whatsapp_responder_api' %}", {
+          method: "POST",
+          body: formData,
+          headers: {"X-CSRFToken": formData.get("csrfmiddlewaretoken")}
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) throw new Error(data.erro || "Não foi possível enviar.");
+        replyMessage.value = "";
+        replyMessage.style.height = "auto";
+        replyStatus.textContent = "Mensagem enviada.";
+        replyStatus.className = "wa-reply-status success";
+        const current = chats.find(c => c.jid === activeJid) || {jid:activeJid};
+        setTimeout(() => openChat(current, true), 500);
+        setTimeout(refreshChats, 900);
+      } catch (err) {
+        replyStatus.textContent = err.message;
+        replyStatus.className = "wa-reply-status error";
+      } finally {
+        button.disabled = false;
+        replyMessage.focus();
+      }
+    });
+
+    renderChats();
+    if (connected) {
+      refreshTimer = window.setInterval(refreshChats, 5000);
+    }
+  </script>
+</body>
+</html>
