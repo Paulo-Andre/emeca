@@ -1098,3 +1098,22 @@ textarea.wa-new-chat-input{resize:vertical;min-height:94px}
 .wa-reply-form,
 .wa-reply-status{flex-shrink:0}
 .wa-conversation .wa-message-thread{flex:1 1 0;min-height:0;overflow-y:auto}
+
+
+/* Etiquetas confirmadas do WA-AKG na lista de conversas */
+.wa-chat-labels{
+  display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden;
+  white-space:nowrap;
+}
+.wa-chat-labels[hidden]{display:none!important}
+.wa-chat-label-chip{
+  display:inline-block;max-width:125px;overflow:hidden;
+  white-space:nowrap;text-overflow:ellipsis;
+  padding:3px 6px;background:#f3f8f5;color:#315f47;
+  border:1px solid #dfebe3;border-left:3px solid #94a3b8;
+  border-radius:5px;font-size:.67rem;font-weight:650;line-height:1.15;
+}
+.wa-chat-label-more{font-size:.68rem;color:#64748b}
+.wa-chat-item.is-pinned{border-left:3px solid #16a34a;background:#f1fbf5}
+.wa-chat-list .wa-chat-item{flex-shrink:0}
+.wa-chat-list{overflow-anchor:none}
