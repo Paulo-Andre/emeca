@@ -1262,7 +1262,9 @@ def _sincronizar_nao_lidas(usuario, chats):
     jids = [str(chat["jid"]) for chat in chats]
     estados = {
         estado.jid: estado
-        for estado in LeituraChatWhatsApp.objects.filter(usuario=usuario, jid__in=jids)
+        for estado in LeituraChatWhatsApp.objects.filter(
+            usuario=usuario, sessao=sessao_atual_id(), jid__in=jids
+        )
     }
     for chat in chats:
         jid = str(chat["jid"])
@@ -1273,6 +1275,7 @@ def _sincronizar_nao_lidas(usuario, chats):
         if estado is None:
             estado, _ = LeituraChatWhatsApp.objects.get_or_create(
                 usuario=usuario,
+                sessao=sessao_atual_id(),
                 jid=jid,
                 defaults={"ultima_verificacao_em": ultima},
             )
@@ -1309,7 +1312,7 @@ def _marcar_como_vista_no_emeca(usuario, jid, mensagens=None):
     vistos = [item for item in instantes if item is not None]
     ultimo = max(vistos) if vistos else timezone.now()
     estado, _ = LeituraChatWhatsApp.objects.get_or_create(
-        usuario=usuario, jid=jid,
+        usuario=usuario, sessao=sessao_atual_id(), jid=jid,
         defaults={"ultima_verificacao_em": ultimo},
     )
     if estado.ultima_verificacao_em and estado.ultima_verificacao_em > ultimo:
