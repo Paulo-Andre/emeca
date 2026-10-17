@@ -336,7 +336,9 @@ def whatsapp(request):
         {
             "turmas": turmas,
             "anos_boletim": anos_boletim,
-            "envios_boletim": EnvioBoletimWhatsApp.objects.select_related("usuario")[:8],
+            "envios_boletim": EnvioBoletimWhatsApp.objects.filter(
+                sessao=sessao_atual_id()
+            ).select_related("usuario")[:8],
             "gateway_configurado": gateway_configurado(),
             "gateway_status": status,
             "gateway_status_detalhe": status_detalhe,
