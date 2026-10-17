@@ -640,7 +640,16 @@
         const data = await resp.json();
         if (!resp.ok || !data.ok) throw new Error(data.erro || "Falha ao atualizar conversas.");
         const incoming = Array.isArray(data.chats) ? data.chats : [];
-        const previousActive = chats.find(chat => chat.jid === activeJid);
+        const previousByJid = new Map(chats.map(chat => [chat.jid, chat]));
+        const previousActive = previousByJid.get(activeJid);
+        // Preservar o nome descoberto no histórico quando o WA-AKG ainda
+        // não atualizou sua lista de contatos (evita atualizar fotos em loop).
+        incoming.forEach(chat => {
+          const previous = previousByJid.get(chat.jid);
+          if (previous && !contactLabel(chat.name) && !realPhone(chat) && contactLabel(previous.name)) {
+            chat.name = previous.name;
+          }
+        });
         const changed = chatListSignature(incoming) !== chatListSignature(chats);
         chats = incoming;
 
