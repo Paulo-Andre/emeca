@@ -79,3 +79,44 @@ class AgendaAndroidTests(TestCase):
         saved = self.client.post(url, payload("importar"))
         self.assertEqual(saved.status_code, 200)
         self.assertEqual(saved.json()["resultado"]["importados"], 2)
+
+    @patch("usuarioSec.whatsapp_views.listar_contatos")
+    def test_busca_unifica_agenda_e_contatos_wa(self, listar):
+        processar_agenda_vcf(VCF, sessao="teste-agenda", aplicar=True)
+        listar.return_value = {"data": [{
+            "jid": "5538999991234@s.whatsapp.net", "name": "Nome antigo",
+        }]}
+        user = get_user_model().objects.create_user(username="busca_agenda")
+        self.client.force_login(user)
+        response = self.client.get(
+            reverse("whatsapp_buscar_contatos_wa"), {"q": "Maria"}
+        )
+        self.assertEqual(response.status_code, 200)
+        results = response.json()["results"]
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["nome"], "Maria Escola")
+        self.assertEqual(results[0]["jid"], "5538999991234@s.whatsapp.net")
+
+    def test_nome_anterior_nao_e_sobrescrito(self):
+        ContatoAgendaWhatsApp.objects.create(
+            sessao="teste-agenda",
+            telefone_jid="5538999991234@s.whatsapp.net",
+            nome="Nome revisado",
+        )
+        result = processar_agenda_vcf(VCF, sessao="teste-agenda", aplicar=True)
+        self.assertEqual(result["nomes_diferentes_preservados"], 1)
+        self.assertEqual(
+            ContatoAgendaWhatsApp.objects.get(
+                telefone_jid="5538999991234@s.whatsapp.net"
+            ).nome, "Nome revisado"
+        )
+
+    def test_vcf_acentuado_e_multiplos_telefones(self):
+        data = (
+            "BEGIN:VCARD\nVERSION:3.0\nFN:José Maria\n"
+            "TEL:38 99999-1234\nTEL:38 98888-5678\nEND:VCARD\n"
+        ).encode("utf-8")
+        contacts, summary = ler_agenda_vcf(data)
+        self.assertEqual(len(contacts), 2)
+        self.assertEqual(summary["cartoes"], 1)
+        self.assertIn("José Maria", contacts.values())
