@@ -336,6 +336,8 @@ class BoletimConsultaForm(forms.Form):
                 "inputmode": "numeric",
                 "autocomplete": "off",
                 "placeholder": "000.000.000-00",
+                "maxlength": "14",
+                "data-cpf-mask": "true",
             }
         ),
     )
