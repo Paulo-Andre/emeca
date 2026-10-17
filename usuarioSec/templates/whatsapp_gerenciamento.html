@@ -33,6 +33,25 @@
 
     <section class="wa-manager-grid">
       <article class="wa-manager-card">
+        <div class="wa-manager-card-head"><i data-lucide="clock-3"></i><div><h3>Configuração regional</h3><p>O agendador do WA-AKG usa este fuso horário.</p></div></div>
+        <form method="post" class="wa-manager-form">
+          {% csrf_token %}
+          <input type="hidden" name="acao" value="configurar_sistema">
+          <label>Fuso horário
+            <select name="timezone">
+              <option value="America/Sao_Paulo" {% if config_sistema.timezone == "America/Sao_Paulo" %}selected{% endif %}>America/Sao_Paulo (Brasil)</option>
+              <option value="America/Manaus" {% if config_sistema.timezone == "America/Manaus" %}selected{% endif %}>America/Manaus</option>
+              <option value="America/Rio_Branco" {% if config_sistema.timezone == "America/Rio_Branco" %}selected{% endif %}>America/Rio_Branco</option>
+            </select>
+          </label>
+          {% if config_sistema.timezone and config_sistema.timezone != "America/Sao_Paulo" %}
+            <div class="wa-manager-warning">O WA-AKG está usando <strong>{{ config_sistema.timezone }}</strong>. Para Montes Claros/MG, altere para America/Sao_Paulo para os agendamentos saírem no horário correto.</div>
+          {% endif %}
+          <button class="btn-primary" type="submit"><i data-lucide="save"></i> Salvar configuração</button>
+        </form>
+      </article>
+
+      <article class="wa-manager-card">
         <div class="wa-manager-card-head"><i data-lucide="tags"></i><div><h3>Etiquetas</h3><p>Organize conversas por assunto, prioridade ou situação.</p></div></div>
         <form method="post" class="wa-manager-form">
           {% csrf_token %}
