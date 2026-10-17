@@ -1580,6 +1580,30 @@ class WhatsAppExclusaoMensagemTests(TestCase):
         self.assertEqual(len(resposta_outro.json()["mensagens"]), 2)
 
     @patch("usuarioSec.whatsapp_views._aliases_contato_wa")
+    @patch("usuarioSec.whatsapp_views.buscar_mensagens")
+    def test_pesquisa_respeita_mensagem_oculta(self, buscar, aliases):
+        aliases.return_value = [self.jid]
+        buscar.return_value = {
+            "status": True,
+            "data": [
+                {"keyId": self.message_id, "content": "Segredo"},
+                {"keyId": "OUTRA", "content": "Visível"},
+            ],
+            "pagination": {"total": 2}
+        }
+        self.client.post(reverse("whatsapp_acao_mensagem_api"), {
+            "jid": self.jid, "message_id": self.message_id,
+            "acao": "hide_local"
+        })
+        resposta = self.client.get(reverse("whatsapp_buscar_mensagens_api"), {
+            "jid": self.jid, "q": "texto"
+        })
+        self.assertEqual(resposta.status_code, 200, resposta.content)
+        self.assertEqual(
+            [msg["keyId"] for msg in resposta.json()["mensagens"]], ["OUTRA"]
+        )
+
+    @patch("usuarioSec.whatsapp_views._aliases_contato_wa")
     @patch("usuarioSec.whatsapp_views.obter_mensagens_chat")
     @patch("usuarioSec.whatsapp_views.apagar_mensagem")
     def test_apagar_para_todos_valida_remetente_no_servidor(
