@@ -414,8 +414,8 @@ class BoletimAlunoManualForm(forms.Form):
             }
         ),
         help_text=(
-            "Data de nascimento e CPF não são digitados aqui. "
-            "Eles são vinculados automaticamente pelo nome usando os dados de Declarações."
+            "Os dados de identificação necessários à consulta são vinculados "
+            "automaticamente pelo nome usando a base de Declarações."
         ),
     )
     numero_chamada = forms.IntegerField(
