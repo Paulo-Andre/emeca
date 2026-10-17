@@ -51,27 +51,35 @@
             A conexão fica salva no servidor. Você pode sair do EMECA ou trocar de usuário sem desconectar o WhatsApp.
           {% else %}
             O envio usa o WA-AKG no servidor. A chave de API não é exposta no navegador.
+            {% if not gateway_configurado %}
+              Clique em “Conectar WhatsApp”. Se a configuração do servidor ainda estiver incompleta, o sistema mostrará exatamente o que precisa ser configurado.
+            {% endif %}
           {% endif %}
           {% if gateway_status_detalhe %}<br>{{ gateway_status_detalhe }}{% endif %}
         </p>
       </div>
       <div class="connection-actions">
-        {% if gateway_configurado and gateway_status != "CONNECTED" %}
-          <form method="post" action="{% url 'whatsapp_conectar' %}">
-            {% csrf_token %}
-            <button class="btn-secondary" type="submit">
-              <i data-lucide="power"></i>
-              Iniciar conexão
-            </button>
-          </form>
-          <button class="btn-primary" type="button" id="btnQr">
-            <i data-lucide="qr-code"></i> Exibir QR
-          </button>
-        {% elif gateway_status == "CONNECTED" %}
+        {% if gateway_status == "CONNECTED" %}
+          <a class="btn-primary" href="{% url 'whatsapp_mensagens' %}">
+            <i data-lucide="messages-square"></i> Abrir mensagens
+          </a>
           <span class="persistent-session-badge">
             <i data-lucide="server"></i>
             Sessão persistente no servidor
           </span>
+        {% else %}
+          <form method="post" action="{% url 'whatsapp_conectar' %}">
+            {% csrf_token %}
+            <button class="btn-primary" type="submit">
+              <i data-lucide="power"></i>
+              Conectar WhatsApp
+            </button>
+          </form>
+          {% if gateway_configurado %}
+            <button class="btn-secondary" type="button" id="btnQr">
+              <i data-lucide="qr-code"></i> Mostrar QR
+            </button>
+          {% endif %}
         {% endif %}
       </div>
     </section>
