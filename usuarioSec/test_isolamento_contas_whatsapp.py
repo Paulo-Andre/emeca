@@ -158,3 +158,47 @@ class IsolamentoContasWhatsAppTests(TestCase):
         )
         self.assertEqual(resposta.status_code, 409)
         listar.assert_not_called()
+
+    @patch("usuarioSec.whatsapp_views.enviar_broadcast")
+    @patch("usuarioSec.whatsapp_views.enviar_mensagem_chat")
+    def test_formulario_antigo_nao_pode_enviar_campanhas(
+        self, enviar, broadcast
+    ):
+        criar_sessao_isolada()
+        resposta = self.client.post(reverse("whatsapp_enviar"), {
+            "wa_session_id": "emeca-legado",
+            "mensagem": "Texto fictício",
+            "modo": "todos",
+        })
+        self.assertEqual(resposta.status_code, 302)
+        enviar.assert_not_called()
+        broadcast.assert_not_called()
+
+    def test_lote_antigo_nao_e_processado_na_conta_nova(self):
+        from .models import EnvioBoletimWhatsApp
+        from .management.commands.processar_envios_whatsapp import claim_proximo_lote
+        antigo = EnvioBoletimWhatsApp.objects.create(
+            tipo_periodo="TRIMESTRE", numero_periodo=1, ano=2026,
+            modo="todos", sessao="emeca-legado", status="PENDENTE",
+        )
+        criar_sessao_isolada()
+        self.assertIsNone(claim_proximo_lote())
+        antigo.refresh_from_db()
+        self.assertEqual(antigo.status, "PENDENTE")
+        novo = EnvioBoletimWhatsApp.objects.create(
+            tipo_periodo="TRIMESTRE", numero_periodo=1, ano=2026,
+            modo="todos", sessao=sessao_atual_id(), status="PENDENTE",
+        )
+        self.assertEqual(claim_proximo_lote().pk, novo.pk)
+
+    @patch("usuarioSec.whatsapp_gateway._request_multipart")
+    def test_pdf_da_fila_utiliza_sessao_original(self, request):
+        from .whatsapp_gateway import enviar_documento
+        request.return_value = {"status": True}
+        criar_sessao_isolada()
+        enviar_documento(
+            self.jid, b"%PDF-1.4 exemplo", "teste.pdf",
+            sessao_id="emeca-legado"
+        )
+        self.assertIn("emeca-legado", request.call_args.args[0])
+        self.assertNotIn(sessao_atual_id(), request.call_args.args[0])
