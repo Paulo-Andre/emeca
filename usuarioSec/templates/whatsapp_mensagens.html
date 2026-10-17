@@ -390,7 +390,12 @@
 
     function mediaUrl(msg) {
       const id = encodeURIComponent(String(msg.id || ""));
-      return id ? "{% url 'whatsapp_midia_recebida' '__ID__' %}".replace("__ID__", id) : "";
+      if (!id) return "";
+      let url = "{% url 'whatsapp_midia_recebida' '__ID__' %}".replace("__ID__", id);
+      if (msg.mediaUrl) {
+        url += "?media=" + encodeURIComponent(String(msg.mediaUrl));
+      }
+      return url;
     }
 
     async function messageAction(action, msg, extra={}) {
