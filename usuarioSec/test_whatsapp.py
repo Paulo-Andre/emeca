@@ -1494,3 +1494,8 @@ class WhatsAppAcoesCabecalhoTests(TestCase):
         self.assertContains(response, 'id="createChatLabel"')
         self.assertContains(response, 'id="blockContactButton"')
         self.assertContains(response, 'data-chat-action="pin"')
+        self.assertContains(response, "const chatElements = new Map()")
+        self.assertContains(response, "const canAppend = quiet")
+        self.assertContains(response, 'className = "wa-chat-labels"')
+        self.assertNotContains(response, 'chatList.innerHTML = ""')
+
