@@ -1921,13 +1921,40 @@ def whatsapp_etiquetas_api(request):
     jid = (request.GET.get("jid") or "").strip()
     try:
         gerais = listar_etiquetas()
-        todas = gerais.get("data", {}).get("labels", []) if isinstance(gerais, dict) else []
+        if not isinstance(gerais, dict) or gerais.get("status") is False:
+            raise WhatsAppGatewayError(
+                str((gerais or {}).get("message") or "WA-AKG não retornou etiquetas.")
+            )
+        todas = gerais.get("data", {}).get("labels", []) or []
         atuais = []
         if jid:
             payload = listar_etiquetas_chat(jid)
             if isinstance(payload, dict):
+                if payload.get("status") is False:
+                    raise WhatsAppGatewayError(str(payload.get("message") or "Erro ao consultar etiquetas da conversa."))
                 atuais = payload.get("data", {}).get("labels", []) or payload.get("labels", []) or []
         return JsonResponse({"ok": True, "etiquetas": todas, "atuais": atuais})
+    except WhatsAppGatewayError as exc:
+        return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
+
+
+@login_required
+@require_POST
+def whatsapp_etiquetas_criar_api(request):
+    """Permite criar etiquetas dentro da conversa sem sair da caixa de entrada."""
+    nome = (request.POST.get("nome") or "").strip()
+    try:
+        cor = int(request.POST.get("cor") or 0)
+    except (ValueError, TypeError):
+        return JsonResponse({"ok": False, "erro": "Cor inválida."}, status=400)
+    if not 1 <= len(nome) <= 50 or not 0 <= cor <= 19:
+        return JsonResponse({"ok": False, "erro": "Informe nome (até 50 caracteres) e cor válida."}, status=400)
+    try:
+        resposta = criar_etiqueta(nome, cor)
+        return JsonResponse({
+            "ok": True,
+            "etiqueta": (resposta.get("data") or {}).get("label"),
+        })
     except WhatsAppGatewayError as exc:
         return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
 
