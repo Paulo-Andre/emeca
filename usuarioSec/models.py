@@ -176,6 +176,7 @@ class LeituraChatWhatsApp(models.Model):
         on_delete=models.CASCADE,
         related_name="leituras_chats_whatsapp",
     )
+    sessao = models.CharField(max_length=120, default="")
     jid = models.CharField(max_length=120)
     ultima_verificacao_em = models.DateTimeField(blank=True, null=True)
     nao_lidas = models.PositiveIntegerField(default=0)
@@ -183,8 +184,8 @@ class LeituraChatWhatsApp(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["usuario", "jid"],
-                name="uniq_leitura_whatsapp_usuario_jid",
+                fields=["usuario", "sessao", "jid"],
+                name="uniq_leitura_whatsapp_usuario_sessao_jid",
             )
         ]
         verbose_name = "Leitura de conversa WhatsApp"
@@ -277,3 +278,18 @@ class EstadoConversaWhatsApp(models.Model):
         ]
         verbose_name = "Estado de conversa WhatsApp"
         verbose_name_plural = "Estados de conversas WhatsApp"
+
+
+class SessaoWhatsAppAtiva(models.Model):
+    """Aponta para a sessão isolada atualmente usada pela Secretaria.
+
+    Ao trocar de conta o apontador muda; o banco antigo do WA-AKG permanece
+    arquivado na sessão anterior, sem copiar conversas para a nova.
+    """
+    chave = models.CharField(max_length=40, primary_key=True, default="secretaria")
+    sessao_id = models.CharField(max_length=120, unique=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Sessão WhatsApp ativa"
+        verbose_name_plural = "Sessões WhatsApp ativas"
