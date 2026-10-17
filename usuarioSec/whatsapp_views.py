@@ -1154,13 +1154,13 @@ def whatsapp_identificar_contato_api(request):
     telefone = (request.POST.get("telefone_jid") or "").strip().replace(
         "@c.us", "@s.whatsapp.net"
     )
-    if not re.fullmatch(r"[0-9]{5,25}@(lid|s\\.whatsapp\\.net)", jid):
+    if not re.fullmatch(r"[0-9]{5,25}@(lid|s\.whatsapp\.net)", jid):
         return JsonResponse({"ok": False, "erro": "Contato inválido."}, status=400)
     if len(nome) > 160 or any(ord(char) < 32 for char in nome):
         return JsonResponse({"ok": False, "erro": "Nome inválido."}, status=400)
     if telefone and (
         not jid.endswith("@lid")
-        or not re.fullmatch(r"[0-9]{10,15}@s\\.whatsapp\\.net", telefone)
+        or not re.fullmatch(r"[0-9]{10,15}@s\.whatsapp\.net", telefone)
     ):
         return JsonResponse({"ok": False, "erro": "Selecione uma conversa telefônica válida."}, status=400)
 
