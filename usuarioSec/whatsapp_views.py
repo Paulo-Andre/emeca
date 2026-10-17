@@ -900,6 +900,117 @@ def _enriquecer_chats(chats):
     return resultado
 
 
+def _instante_mensagem_whatsapp(valor):
+    """Converte timestamp ISO/epoch sem supor fuso horário local."""
+    if valor in (None, ""):
+        return None
+    if isinstance(valor, (int, float)):
+        try:
+            return timezone.datetime.fromtimestamp(float(valor), tz=datetime_timezone.utc)
+        except (ValueError, OverflowError, OSError):
+            return None
+    data = parse_datetime(str(valor))
+    if data is None:
+        return None
+    if timezone.is_naive(data):
+        data = timezone.make_aware(data, datetime_timezone.utc)
+    return data
+
+
+def _mensagens_para_contar(aliases):
+    """Busca mensagens recentes em todos os JIDs vinculados, sem duplicar IDs."""
+    unicas = {}
+    disponivel = False
+    for alias in dict.fromkeys(aliases):
+        try:
+            payload = obter_mensagens_chat(alias)
+        except WhatsAppGatewayError:
+            continue
+        disponivel = True
+        mensagens = payload.get("data") if isinstance(payload, dict) else []
+        if isinstance(mensagens, dict):
+            mensagens = mensagens.get("messages") or []
+        if not isinstance(mensagens, list):
+            continue
+        for msg in mensagens:
+            if not isinstance(msg, dict):
+                continue
+            chave = (msg.get("keyId") or msg.get("id")
+                     or f'{msg.get("timestamp")}-{msg.get("content")}-{msg.get("fromMe")}')
+            unicas[str(chave)] = msg
+    return list(unicas.values()), disponivel
+
+
+def _sincronizar_nao_lidas(usuario, chats):
+    """Notificações por operador a partir da primeira sincronização do EMECA.
+
+    O endpoint de chats do WA-AKG não traz unreadCount. A primeira leitura
+    registra somente a referência; mensagens posteriores são computadas pelo
+    histórico, considerando apenas mensagens recebidas e distintas.
+    """
+    if not chats:
+        return chats
+
+    jids = [str(chat["jid"]) for chat in chats]
+    estados = {
+        estado.jid: estado
+        for estado in LeituraChatWhatsApp.objects.filter(usuario=usuario, jid__in=jids)
+    }
+    for chat in chats:
+        jid = str(chat["jid"])
+        ultima = _instante_mensagem_whatsapp(
+            (chat.get("lastMessage") or {}).get("timestamp")
+        )
+        estado = estados.get(jid)
+        if estado is None:
+            estado, _ = LeituraChatWhatsApp.objects.get_or_create(
+                usuario=usuario,
+                jid=jid,
+                defaults={"ultima_verificacao_em": ultima},
+            )
+            estados[jid] = estado
+        elif ultima and (not estado.ultima_verificacao_em or ultima > estado.ultima_verificacao_em):
+            anterior = estado.ultima_verificacao_em
+            mensagens, disponivel = _mensagens_para_contar(chat.get("aliases") or [jid])
+            if disponivel:
+                recebidas = 0
+                for msg in mensagens:
+                    instante = _instante_mensagem_whatsapp(msg.get("timestamp"))
+                    if not instante or (anterior and instante <= anterior):
+                        continue
+                    if msg.get("fromMe") is True:
+                        continue
+                    # Não contar envelopes técnicos TEXT sem conteúdo.
+                    if str(msg.get("type") or "").upper() == "TEXT" and not str(msg.get("content") or "").strip():
+                        continue
+                    recebidas += 1
+                estado.nao_lidas += recebidas
+                estado.ultima_verificacao_em = ultima
+                estado.save(update_fields=["nao_lidas", "ultima_verificacao_em"])
+        chat["naoLidas"] = estado.nao_lidas
+    return chats
+
+
+def _marcar_como_vista_no_emeca(usuario, jid, mensagens=None):
+    """Limpa notificações do operador após abrir uma conversa com sucesso."""
+    instantes = [
+        _instante_mensagem_whatsapp(msg.get("timestamp"))
+        for msg in (mensagens or [])
+        if isinstance(msg, dict)
+    ]
+    vistos = [item for item in instantes if item is not None]
+    ultimo = max(vistos) if vistos else timezone.now()
+    estado, _ = LeituraChatWhatsApp.objects.get_or_create(
+        usuario=usuario, jid=jid,
+        defaults={"ultima_verificacao_em": ultimo},
+    )
+    if estado.ultima_verificacao_em and estado.ultima_verificacao_em > ultimo:
+        ultimo = estado.ultima_verificacao_em
+    estado.ultima_verificacao_em = ultimo
+    estado.nao_lidas = 0
+    estado.save(update_fields=["ultima_verificacao_em", "nao_lidas"])
+
+
 @login_required
 def whatsapp_mensagens(request):
     status = "NAO_CONFIGURADO"
@@ -919,7 +1030,7 @@ def whatsapp_mensagens(request):
                 chats = payload.get("data") if isinstance(payload, dict) else []
                 if not isinstance(chats, list):
                     chats = []
-                chats = _enriquecer_chats(chats)
+                chats = _sincronizar_nao_lidas(request.user, _enriquecer_chats(chats))
         except WhatsAppGatewayError as exc:
             status = "INDISPONIVEL"
             status_detalhe = str(exc)
@@ -947,8 +1058,15 @@ def whatsapp_chats_api(request):
     try:
         payload = listar_chats()
         chats = payload.get("data") if isinstance(payload, dict) else []
-        chats = _enriquecer_chats(chats if isinstance(chats, list) else [])
-        return JsonResponse({"ok": True, "chats": chats})
+        chats = _sincronizar_nao_lidas(
+            request.user,
+            _enriquecer_chats(chats if isinstance(chats, list) else []),
+        )
+        return JsonResponse({
+            "ok": True,
+            "chats": chats,
+            "totalNaoLidas": sum(chat.get("naoLidas", 0) for chat in chats),
+        })
     except WhatsAppGatewayError as exc:
         return JsonResponse(
             {"ok": False, "erro": str(exc)},
@@ -1016,6 +1134,7 @@ def whatsapp_chat_api(request):
         "",
     )
 
+    _marcar_como_vista_no_emeca(request.user, jid, mensagens)
     return JsonResponse(
         {
             "ok": True,
