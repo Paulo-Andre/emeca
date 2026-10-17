@@ -10,7 +10,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
   <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-unified-05">
-  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-disconnect-13">
+  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-management-palette-21">
 </head>
 <body>
   {% include 'includes/sidebar.html' %}
@@ -103,16 +103,40 @@
           <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
           <input type="hidden" name="acao" value="criar_etiqueta">
           <label>Nome da etiqueta<input name="nome" required maxlength="80" placeholder="Ex.: Matrícula pendente"></label>
-          <label>Cor
-            <select name="cor">
-              {% for i in "01234567890123456789" %}<option value="{{ forloop.counter0 }}">Cor {{ forloop.counter }}</option>{% endfor %}
-            </select>
-          </label>
+          <fieldset class="wa-color-fieldset">
+            <legend>Cor da etiqueta</legend>
+            <p class="wa-color-help">Clique na cor desejada. Todas permanecem visíveis até concluir a escolha.</p>
+            <div class="wa-color-palette" role="group" aria-label="Escolha a cor da etiqueta">
+              {% for cor in cores_etiquetas %}
+                <label class="wa-color-choice" title="{{ cor.nome }} ({{ cor.hex }})">
+                  <input type="radio" name="cor" value="{{ cor.id }}" {% if cor.id == 4 %}checked{% endif %}>
+                  <span class="wa-color-swatch" style="--wa-option-color:{{ cor.hex }}"></span>
+                  <span class="wa-color-name">{{ cor.nome }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          </fieldset>
           <button class="btn-primary" type="submit"><i data-lucide="plus"></i> Criar etiqueta</button>
         </form>
         <div class="wa-manager-list">
           {% for item in etiquetas %}
-            <div class="wa-manager-list-row"><span class="wa-label-dot" style="background:{{ item.colorHex|default:'#94a3b8' }}"></span><strong>{{ item.name }}</strong></div>
+            <div class="wa-manager-list-row wa-manager-list-row--actions">
+              <div class="wa-label-manager-identification">
+                <span class="wa-label-dot" style="background:{{ item.colorHex|default:'#94a3b8' }}"></span>
+                <strong>{{ item.name }}</strong>
+              </div>
+              {% if pode_desconectar %}
+                <form method="post" class="wa-manager-action-form"
+                  onsubmit="return confirm('Excluir definitivamente a etiqueta «{{ item.name|escapejs }}» do WA-AKG? Ela será retirada das conversas, mas as mensagens serão preservadas.');">
+                  {% csrf_token %}
+                  <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
+                  <input type="hidden" name="acao" value="apagar_etiqueta">
+                  <input type="hidden" name="id" value="{{ item.id }}">
+                  <input type="hidden" name="confirmacao" value="EXCLUIR">
+                  <button class="wa-danger-icon" type="submit" aria-label="Excluir etiqueta {{ item.name }}" title="Excluir etiqueta"><i data-lucide="trash-2"></i></button>
+                </form>
+              {% endif %}
+            </div>
           {% empty %}<p class="wa-manager-empty">Nenhuma etiqueta cadastrada.</p>{% endfor %}
         </div>
       </article>
@@ -165,7 +189,7 @@
       </article>
 
       <article class="wa-manager-card">
-        <div class="wa-manager-card-head"><i data-lucide="users"></i><div><h3>Grupos</h3><p>Visualize grupos sincronizados e crie novos grupos da escola.</p></div></div>
+        <div class="wa-manager-card-head"><i data-lucide="users"></i><div><h3>Grupos</h3><p>Visualize, crie ou gerencie os grupos vinculados ao WhatsApp da escola.</p></div></div>
         <form method="post" class="wa-manager-form">
           {% csrf_token %}
           <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
@@ -176,9 +200,37 @@
         </form>
         <div class="wa-manager-list">
           {% for item in grupos %}
-            <div class="wa-manager-list-row"><strong>{{ item.subject|default:"Grupo sem nome" }}</strong><small>{{ item.size|default:"" }} participante(s)</small></div>
+            <div class="wa-manager-list-row wa-manager-group-row">
+              <div class="wa-manager-group-description">
+                <strong>{{ item.subject|default:"Grupo sem nome" }}</strong>
+                <small>{{ item.size|default:"" }} participante(s)</small>
+              </div>
+              {% if pode_desconectar and item.jid %}
+                <div class="wa-manager-group-actions">
+                  <form method="post" class="wa-manager-action-form"
+                    onsubmit="return confirm('Sair do grupo «{{ item.subject|default:"Grupo sem nome"|escapejs }}» usando o WhatsApp da escola? O número institucional perderá o acesso ao grupo e só voltará mediante novo convite.');">
+                    {% csrf_token %}
+                    <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
+                    <input type="hidden" name="acao" value="sair_grupo">
+                    <input type="hidden" name="jid" value="{{ item.jid }}">
+                    <input type="hidden" name="confirmacao" value="SAIR">
+                    <button type="submit" class="wa-manager-leave-button" title="Sair do grupo no WhatsApp"><i data-lucide="log-out"></i> Sair</button>
+                  </form>
+                  <form method="post" class="wa-manager-action-form"
+                    onsubmit="return confirm('Remover «{{ item.subject|default:"Grupo sem nome"|escapejs }}» somente da lista do EMECA? O WhatsApp continuará participando do grupo e o histórico será preservado.');">
+                    {% csrf_token %}
+                    <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
+                    <input type="hidden" name="acao" value="remover_grupo">
+                    <input type="hidden" name="jid" value="{{ item.jid }}">
+                    <input type="hidden" name="confirmacao" value="REMOVER">
+                    <button type="submit" class="wa-danger-icon" title="Remover grupo do EMECA" aria-label="Remover grupo {{ item.subject|default:'Grupo sem nome' }} da lista EMECA"><i data-lucide="trash-2"></i></button>
+                  </form>
+                </div>
+              {% endif %}
+            </div>
           {% empty %}<p class="wa-manager-empty">Nenhum grupo sincronizado.</p>{% endfor %}
         </div>
+        <p class="wa-manager-group-note"><strong>Sair</strong> retira o número da escola do grupo no WhatsApp. <strong>Remover</strong> apenas oculta o grupo no EMECA, sem apagar mensagens nem remover participantes.</p>
       </article>
     </section>
 
