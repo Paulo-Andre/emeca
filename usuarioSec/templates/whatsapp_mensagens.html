@@ -697,6 +697,15 @@
 
     function updateChatItem(node, chat) {
       const unread = Math.max(0, Number(chat.naoLidas || 0));
+      const signature = JSON.stringify([
+        chatDisplayName(chat), previewText(chat),
+        formatDate(chat.lastMessage?.timestamp), unread,
+        chat.fixado, chat.silenciado, chat.arquivado, chat.bloqueado,
+        chat.jid === activeJid, chat.profilePic, chat.photoJid, chat.phoneJid,
+        (chat.etiquetas || []).map(label => [label.id, label.name, label.colorHex])
+      ]);
+      if (node.dataset.renderSignature === signature) return;
+      node.dataset.renderSignature = signature;
       node.classList.toggle("active", chat.jid === activeJid);
       node.classList.toggle("has-unread", unread > 0);
       node.classList.toggle("is-pinned", Boolean(chat.fixado));
