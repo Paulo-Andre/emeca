@@ -54,10 +54,15 @@ export function bindEmecaContactIdentity(sock: WASocket, sessionId: string): voi
         const savedName = String(contact.name || contact.verifiedName || "").trim();
         const notify = String(contact.notify || contact.pushName || "").trim();
         const picture = typeof contact.imgUrl === "string" ? contact.imgUrl : "";
+        // Persist only serializable identity fields, never full Baileys objects
+        // (which may include binary payloads not accepted by Prisma JSON).
         const original = {
-            ...contact,
-            // Raw Baileys contact data remains available for future compatibility.
-            phoneNumber: phoneJid || contact.phoneNumber || undefined
+            id: jid,
+            lid: lid || null,
+            phoneNumber: phoneJid ? phone(phoneJid) : null,
+            name: savedName || null,
+            verifiedName: contact.verifiedName || null,
+            notify: notify || null
         };
 
         await prisma.contact.upsert({
