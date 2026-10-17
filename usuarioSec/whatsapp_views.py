@@ -55,6 +55,8 @@ from .whatsapp_gateway import (
     favoritar_mensagem,
     gerenciar_chat,
     iniciar_sessao,
+    pausar_sessao,
+    desvincular_sessao,
     listar_agendamentos,
     listar_chats,
     listar_contatos,
@@ -525,6 +527,70 @@ def whatsapp_conectar(request):
     except WhatsAppGatewayError as exc:
         messages.error(request, f"Não foi possível iniciar o WhatsApp: {exc}")
     return redirect("whatsapp")
+
+
+@login_required
+@require_POST
+def whatsapp_desconectar(request):
+    """Interrompe a sessão atual sem apagar histórico ou autenticação Django.
+
+    Pausar preserva credenciais WhatsApp; desvincular invalida o aparelho
+    associado e exige um novo QR Code para voltar a enviar mensagens.
+    """
+    if not request.user.is_staff:
+        return HttpResponseForbidden("Somente administradores podem desconectar o WhatsApp.")
+
+    destino = "whatsapp_gerenciamento" if request.POST.get("origem") == "gerenciamento" else (
+        "whatsapp_mensagens" if request.POST.get("origem") == "mensagens" else "whatsapp"
+    )
+    acao = (request.POST.get("acao") or "").strip()
+    if acao not in ("pausar", "desvincular"):
+        messages.error(request, "Ação de desconexão inválida.")
+        return redirect(destino)
+    if acao == "desvincular" and request.POST.get("confirmacao") != "DESVINCULAR":
+        messages.error(request, "Confirme a desvinculação do WhatsApp para continuar.")
+        return redirect(destino)
+    if not gateway_configurado():
+        messages.error(request, "Integração do WhatsApp não configurada.")
+        return redirect(destino)
+
+    try:
+        sessao = obter_sessao()
+        status = str(
+            (sessao.get("data") or {}).get("status")
+            or sessao.get("status") or ""
+        ).upper()
+        if acao == "desvincular":
+            # O WA-AKG só remove o vínculo real via socket.logout() quando
+            # a sessão estiver ativa; offline ele apenas troca o status no DB.
+            if status != "CONNECTED":
+                messages.error(
+                    request,
+                    "Para desvincular o número, conecte primeiro a sessão. "
+                    "O WA-AKG não confirma logout real quando está offline.",
+                )
+                return redirect(destino)
+            resposta = desvincular_sessao()
+            texto = (
+                "Desvinculação solicitada ao WhatsApp. Aguarde o encerramento "
+                "e conecte novamente pelo QR Code para usar outro número. "
+                "As mensagens já armazenadas foram preservadas."
+            )
+        else:
+            if status in {"STOPPED", "LOGGED_OUT", "NAO_CRIADA"}:
+                messages.info(request, "O WhatsApp já está desconectado.")
+                return redirect(destino)
+            resposta = pausar_sessao()
+            texto = (
+                "Conexão do WhatsApp pausada. Mensagens e credenciais mantidas; "
+                "use Conectar WhatsApp para retomar."
+            )
+        if not isinstance(resposta, dict) or resposta.get("status") is not True:
+            raise WhatsAppGatewayError("O WA-AKG não confirmou a operação.")
+        messages.success(request, texto)
+    except WhatsAppGatewayError as exc:
+        messages.error(request, f"Não foi possível desconectar o WhatsApp: {exc}")
+    return redirect(destino)
 
 
 @login_required
