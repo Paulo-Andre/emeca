@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import pathlib
 import shutil
 import sys
@@ -41,10 +42,20 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
     if missing:
         raise RuntimeError("Arquivos não encontrados: " + ", ".join(missing))
     if target_file.exists() and target_file.read_bytes() != overlay_file.read_bytes():
-        raise RuntimeError(
-            "O módulo emeca-identity.ts já existe com outro conteúdo; "
-            "faça backup/revisão manual antes de continuar."
-        )
+        # Only upgrade the exact v1 overlay previously delivered by EMECA.
+        # Other custom local changes are NEVER overwritten automatically.
+        old = target_file.read_bytes()
+        git_blob = hashlib.sha1(
+            b"blob " + str(len(old)).encode() + b"\\0" + old
+        ).hexdigest()
+        approved_prior_versions = {
+            "3e44cfba9b5ea22bdbab55cdd6bbe7342244cb58",
+        }
+        if git_blob not in approved_prior_versions:
+            raise RuntimeError(
+                "emeca-identity.ts contém alterações locais desconhecidas. "
+                "Nenhum arquivo foi modificado; revise o backup e o diff."
+            )
 
     edits: dict[pathlib.Path, str] = {}
 
