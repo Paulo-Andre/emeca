@@ -52,10 +52,10 @@ export async function POST(
                 where: { sessionId_jid: { sessionId: session.id, jid: group.id } },
                 create: {
                     sessionId: session.id, jid: group.id,
-                    subject, participants: group.participants || []
+                    subject, participants: JSON.parse(JSON.stringify(group.participants || []))
                 },
                 update: {
-                    subject, participants: group.participants || []
+                    subject, participants: JSON.parse(JSON.stringify(group.participants || []))
                 }
             });
         }
