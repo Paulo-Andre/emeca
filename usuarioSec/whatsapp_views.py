@@ -1998,6 +1998,21 @@ def whatsapp_buscar_mensagens_api(request):
             mensagens_por_id.values(),
             key=lambda msg: str(msg.get("timestamp") or ""),
         )
+        ids = [
+            str(msg.get("keyId") or msg.get("id") or "")
+            for msg in mensagens
+        ]
+        ocultas = set(
+            MensagemOcultaWhatsApp.objects.filter(
+                usuario=request.user, sessao=sessao_atual_id(),
+                mensagem_id__in=ids
+            ).values_list("mensagem_id", flat=True)
+        )
+        if ocultas:
+            mensagens = [
+                msg for msg in mensagens
+                if str(msg.get("keyId") or msg.get("id") or "") not in ocultas
+            ]
         return JsonResponse({
             "ok": True,
             "mensagens": mensagens,
