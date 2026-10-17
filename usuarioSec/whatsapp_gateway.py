@@ -300,6 +300,13 @@ def obter_foto_perfil(jid):
     )
 
 
+def obter_perfil_contato(jid):
+    """Dados de perfil que o WhatsApp autoriza a sessão WA-AKG a consultar."""
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    return _request("GET", f"chat/{session_id}/{jid_codificado}/contact-profile")
+
+
 def verificar_numeros(numbers):
     session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
     return _request("POST", f"chat/{session_id}/check", {"numbers": numbers})
