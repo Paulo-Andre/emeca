@@ -47,6 +47,7 @@ urlpatterns = [
     path('whatsapp/nova-conversa/', whatsapp_views.whatsapp_nova_conversa_api, name='whatsapp_nova_conversa_api'),
     path('whatsapp/gerenciar-chat/', whatsapp_views.whatsapp_gerenciar_chat_api, name='whatsapp_gerenciar_chat_api'),
     path('whatsapp/foto-api/', whatsapp_views.whatsapp_foto_api, name='whatsapp_foto_api'),
+    path('whatsapp/foto-imagem/', whatsapp_views.whatsapp_foto_imagem, name='whatsapp_foto_imagem'),
     path('whatsapp/midia-api/', whatsapp_views.whatsapp_enviar_midia_api, name='whatsapp_enviar_midia_api'),
     path('whatsapp/responder-api/', whatsapp_views.whatsapp_responder_api, name='whatsapp_responder_api'),
     path('whatsapp/buscar-mensagens/', whatsapp_views.whatsapp_buscar_mensagens_api, name='whatsapp_buscar_mensagens_api'),
