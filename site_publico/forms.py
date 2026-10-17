@@ -403,20 +403,7 @@ class BoletimImportacaoForm(forms.Form):
     )
 
 
-class AlunoMatriculaChoiceField(forms.ModelChoiceField):
-    def label_from_instance(self, obj):
-        data = obj.dataNascimentoAluno.strftime("%d/%m/%Y") if obj.dataNascimentoAluno else "sem data"
-        return f"{obj.nomeDoAluno} · {data}"
-
-
 class BoletimAlunoManualForm(forms.Form):
-    aluno = AlunoMatriculaChoiceField(
-        queryset=matricula.objects.none(),
-        required=False,
-        label="Vincular a um aluno de Matrículas (opcional)",
-        empty_label="Adicionar manualmente / não vincular",
-        widget=forms.Select(attrs={"class": "site-manager-input"}),
-    )
     nome_aluno = forms.CharField(
         max_length=255,
         label="Nome do aluno",
@@ -424,38 +411,12 @@ class BoletimAlunoManualForm(forms.Form):
             attrs={
                 "class": "site-manager-input",
                 "placeholder": "Nome completo do aluno",
+                "autocomplete": "off",
             }
         ),
-    )
-    data_nascimento = forms.DateField(
-        required=False,
-        label="Data de nascimento",
-        widget=forms.DateInput(
-            attrs={"class": "site-manager-input", "type": "date"}
-        ),
-    )
-    cpf_mae = forms.CharField(
-        required=False,
-        max_length=20,
-        label="CPF da mãe",
-        widget=forms.TextInput(
-            attrs={
-                "class": "site-manager-input",
-                "inputmode": "numeric",
-                "placeholder": "000.000.000-00",
-            }
-        ),
-    )
-    cpf_responsavel = forms.CharField(
-        required=False,
-        max_length=20,
-        label="CPF do responsável",
-        widget=forms.TextInput(
-            attrs={
-                "class": "site-manager-input",
-                "inputmode": "numeric",
-                "placeholder": "000.000.000-00",
-            }
+        help_text=(
+            "Data de nascimento e CPF não são digitados aqui. "
+            "Eles são vinculados automaticamente pelo nome usando os dados de Declarações."
         ),
     )
     numero_chamada = forms.IntegerField(
@@ -471,27 +432,22 @@ class BoletimAlunoManualForm(forms.Form):
         widget=forms.NumberInput(
             attrs={"class": "site-manager-input", "min": 0, "inputmode": "numeric"}
         ),
-        help_text="Informe somente o total de faltas do aluno neste bimestre/trimestre.",
+        help_text=(
+            "Na importação, este valor vem exclusivamente da coluna F da planilha. "
+            "Não é feita soma de faltas por disciplina."
+        ),
     )
 
     def __init__(self, *args, **kwargs):
-        aluno_fixo = kwargs.pop("aluno_fixo", None)
         perfil_fixo = kwargs.pop("perfil_fixo", None)
         super().__init__(*args, **kwargs)
-        self.fields["aluno"].queryset = matricula.objects.order_by("nomeDoAluno")
-
-        if aluno_fixo is not None:
-            self.fields["aluno"].initial = aluno_fixo.pk
-            self.fields["aluno"].disabled = True
 
         if perfil_fixo is not None and not self.is_bound:
             self.fields["nome_aluno"].initial = perfil_fixo.nome
-            self.fields["data_nascimento"].initial = perfil_fixo.data_nascimento
-            self.fields["cpf_mae"].initial = perfil_fixo.cpf_mae
-            self.fields["cpf_responsavel"].initial = perfil_fixo.cpf_responsavel
 
     def clean_nome_aluno(self):
         nome = " ".join((self.cleaned_data.get("nome_aluno") or "").split()).strip()
         if not nome:
             raise forms.ValidationError("Informe o nome do aluno.")
         return nome
+
