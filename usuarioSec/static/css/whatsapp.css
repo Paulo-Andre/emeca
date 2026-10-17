@@ -1075,3 +1075,13 @@ textarea.wa-new-chat-input{resize:vertical;min-height:94px}
   .wa-labels-new button{width:100%;justify-content:center}
   .wa-message-searchbar .wa-search-submit{min-width:36px;padding:0 7px;font-size:.7rem}
 }
+
+
+.wa-action-notice{
+  padding:10px 16px;border-bottom:1px solid #b1ddbf;
+  background:#eaf8ef;color:#135a35;font-weight:650;
+  font-size:.8rem;line-height:1.4;overflow-wrap:anywhere;
+}
+.wa-action-notice.is-error{
+  background:#fff2f0;color:#a33228;border-color:#f0c1bb;
+}
