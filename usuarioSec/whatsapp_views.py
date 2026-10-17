@@ -1623,6 +1623,42 @@ def _limite_exclusao_conversa_wa(usuario, aliases):
     return max((data for data in datas if data is not None), default=None)
 
 
+def _combinar_chats_e_grupos_wa(chats):
+    """Inclui grupos existentes ainda sem mensagens na caixa de entrada.
+
+    O endpoint chat do WA-AKG só enumera JIDs que já possuem mensagem,
+    enquanto o endpoint de grupos guarda metadados inclusive após criação.
+    """
+    existentes = list(chats) if isinstance(chats, list) else []
+    jids = {str(chat.get("jid") or "") for chat in existentes
+            if isinstance(chat, dict)}
+    try:
+        payload = listar_grupos()
+        grupos = payload.get("data") if isinstance(payload, dict) else []
+        if not isinstance(grupos, list):
+            return existentes
+        ocultos = set(GrupoOcultoWhatsApp.objects.filter(
+            sessao=sessao_atual_id()
+        ).values_list("jid", flat=True))
+        for grupo in grupos:
+            if not isinstance(grupo, dict):
+                continue
+            jid = str(grupo.get("jid") or "")
+            if not jid.endswith("@g.us") or jid in jids or jid in ocultos:
+                continue
+            existentes.append({
+                "jid": jid, "name": grupo.get("subject") or "Grupo sem nome",
+                "notify": grupo.get("subject") or "Grupo sem nome",
+                "lastMessage": {}, "profilePic": "",
+                "groupChat": True,
+            })
+            jids.add(jid)
+    except WhatsAppGatewayError:
+        # Sem impedir a leitura das mensagens se a rota de grupos falhar.
+        pass
+    return existentes
+
+
 def _filtrar_conversas_excluidas_wa(usuario, chats):
     """Oculta até chegar mensagem posterior ao momento da exclusão."""
     if not chats:
@@ -1688,7 +1724,8 @@ def whatsapp_mensagens(request):
                 chats = _sincronizar_nao_lidas(
                     request.user,
                     _filtrar_conversas_excluidas_wa(
-                        request.user, _enriquecer_chats(chats)
+                        request.user,
+                        _enriquecer_chats(_combinar_chats_e_grupos_wa(chats))
                     )
                 )
         except WhatsAppGatewayError as exc:
@@ -1727,7 +1764,9 @@ def whatsapp_chats_api(request):
             request.user,
             _filtrar_conversas_excluidas_wa(
                 request.user,
-                _enriquecer_chats(chats if isinstance(chats, list) else []),
+                _enriquecer_chats(_combinar_chats_e_grupos_wa(
+                    chats if isinstance(chats, list) else []
+                )),
             ),
         )
         return JsonResponse({
@@ -2659,8 +2698,25 @@ def whatsapp_gerenciamento(request):
                 participantes = [item for item in numeros if item]
                 if not assunto or not participantes:
                     raise ValueError("Informe o nome do grupo e pelo menos um telefone válido.")
-                criar_grupo(assunto, participantes)
-                messages.success(request, "Grupo criado.")
+                criado = criar_grupo(assunto, participantes)
+                if not isinstance(criado, dict) or (
+                    criado.get("status") is not True
+                    and criado.get("success") is not True
+                ):
+                    raise WhatsAppGatewayError(
+                        str((criado or {}).get("message") or
+                            "O WA-AKG não confirmou a criação do grupo.")
+                    )
+                dados = criado.get("data") or {}
+                jid_novo = (dados.get("group") or {}).get("id") if isinstance(dados, dict) else ""
+                if jid_novo:
+                    messages.success(
+                        request,
+                        "Grupo criado no WhatsApp. Abra Mensagens e atualize "
+                        "a lista para iniciar o atendimento."
+                    )
+                else:
+                    messages.success(request, "Grupo criado. Aguarde a sincronização.")
             elif acao in {"sair_grupo", "remover_grupo"}:
                 jid = (request.POST.get("jid") or "").strip()
                 if not re.fullmatch(r"[0-9-]{5,85}@g\.us", jid):
