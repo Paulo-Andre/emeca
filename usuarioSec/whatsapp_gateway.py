@@ -176,6 +176,21 @@ def _request_multipart(path, fields, filename, content_type, content):
         ) from exc
 
 
+def enviar_midia(jid, conteudo, nome_arquivo, content_type, tipo, legenda=""):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    return _request_multipart(
+        f"messages/{session_id}/{jid_codificado}/media",
+        {
+            "type": tipo,
+            "caption": legenda,
+        },
+        nome_arquivo,
+        content_type or "application/octet-stream",
+        conteudo,
+    )
+
+
 def enviar_documento(jid, conteudo_pdf, nome_arquivo, legenda=""):
     session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
     jid_codificado = quote(jid, safe="")
