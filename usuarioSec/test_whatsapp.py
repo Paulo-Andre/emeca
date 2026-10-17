@@ -283,3 +283,105 @@ class WhatsAppWorkerConcorrenciaTests(TestCase):
 
         recente.refresh_from_db()
         self.assertEqual(recente.status, "PROCESSANDO")
+
+
+
+class WhatsAppInboxTests(TestCase):
+    def setUp(self):
+        self.usuario = get_user_model().objects.create_user(
+            username="atendimento_whatsapp",
+            password="Senha-Sintetica-2026!",
+        )
+        self.client.force_login(self.usuario)
+
+    @patch("usuarioSec.whatsapp_views.listar_chats")
+    @patch("usuarioSec.whatsapp_views.obter_sessao")
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
+    def test_tela_mensagens_lista_conversas(
+        self,
+        _configurado,
+        obter_sessao_mock,
+        listar_chats_mock,
+    ):
+        obter_sessao_mock.return_value = {"data": {"status": "CONNECTED"}}
+        listar_chats_mock.return_value = {
+            "status": True,
+            "data": [
+                {
+                    "jid": "5538999990000@s.whatsapp.net",
+                    "name": "RESPONSAVEL SINTETICO",
+                    "lastMessage": {
+                        "content": "Olá",
+                        "timestamp": "2026-10-17T01:00:00.000Z",
+                        "type": "TEXT",
+                    },
+                }
+            ],
+        }
+
+        response = self.client.get(reverse("whatsapp_mensagens"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Mensagens do WhatsApp")
+        self.assertContains(response, "RESPONSAVEL SINTETICO")
+        self.assertContains(response, "Envios")
+
+    @patch("usuarioSec.whatsapp_views.marcar_chat_como_lido")
+    @patch("usuarioSec.whatsapp_views.obter_mensagens_chat")
+    def test_api_carrega_mensagens_e_marca_como_lidas(
+        self,
+        obter_mensagens_mock,
+        marcar_lido_mock,
+    ):
+        jid = "5538999990000@s.whatsapp.net"
+        obter_mensagens_mock.return_value = {
+            "status": True,
+            "data": [
+                {
+                    "keyId": "msg-sintetica-1",
+                    "fromMe": False,
+                    "content": "Preciso de uma informação.",
+                    "type": "TEXT",
+                    "timestamp": "2026-10-17T01:00:00.000Z",
+                }
+            ],
+        }
+
+        response = self.client.get(reverse("whatsapp_chat_api"), {"jid": jid})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        self.assertEqual(
+            response.json()["mensagens"][0]["content"],
+            "Preciso de uma informação.",
+        )
+        marcar_lido_mock.assert_called_once_with(jid)
+
+    @patch("usuarioSec.whatsapp_views.enviar_mensagem_chat")
+    def test_api_responde_conversa(self, enviar_mock):
+        enviar_mock.return_value = {
+            "status": True,
+            "data": {"key": {"id": "msg-sintetica-2"}},
+        }
+
+        response = self.client.post(
+            reverse("whatsapp_responder_api"),
+            {
+                "jid": "5538999990000@s.whatsapp.net",
+                "mensagem": "Resposta da secretaria.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        enviar_mock.assert_called_once_with(
+            "5538999990000@s.whatsapp.net",
+            "Resposta da secretaria.",
+        )
+
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=False)
+    def test_tela_envios_exibe_botao_conectar_mesmo_sem_configuracao(self, _configurado):
+        response = self.client.get(reverse("whatsapp"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Conectar WhatsApp")
