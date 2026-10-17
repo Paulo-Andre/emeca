@@ -67,7 +67,7 @@
             <i data-lucide="server"></i>
             Sessão persistente no servidor
           </span>
-          {% if request.user.is_staff %}
+          {% if pode_desconectar %}
             <form method="post" action="{% url 'whatsapp_desconectar' %}"
               onsubmit="return confirm('Pausar a conexão do WhatsApp? A sessão e as mensagens serão preservadas.');">
               {% csrf_token %}
@@ -95,7 +95,7 @@
               Conectar WhatsApp
             </button>
           </form>
-          {% if gateway_status == "SCAN_QR" and request.user.is_staff %}
+          {% if gateway_status == "SCAN_QR" and pode_desconectar %}
             <form method="post" action="{% url 'whatsapp_desconectar' %}"
               onsubmit="return confirm('Cancelar a conexão e interromper a leitura do QR Code?');">
               {% csrf_token %}
