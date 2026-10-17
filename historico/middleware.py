@@ -1,3 +1,5 @@
+import re
+import secrets
 import uuid
 
 from django.db import DatabaseError
@@ -16,7 +18,35 @@ class SecurityAuditMiddleware:
 
     def __call__(self, request):
         request.audit_request_id = uuid.uuid4()
+        request.csp_nonce = secrets.token_urlsafe(18)
         response = self.get_response(request)
+        content_type = response.get("Content-Type", "")
+
+        if (
+            content_type.startswith("text/html")
+            and not getattr(response, "streaming", False)
+            and getattr(response, "content", None)
+        ):
+            try:
+                html = response.content.decode(response.charset or "utf-8")
+                nonce = request.csp_nonce
+                html = re.sub(
+                    r"<script(?![^>]*\\bnonce=)",
+                    f'<script nonce="{nonce}"',
+                    html,
+                    flags=re.IGNORECASE,
+                )
+                html = re.sub(
+                    r"<style(?![^>]*\\bnonce=)",
+                    f'<style nonce="{nonce}"',
+                    html,
+                    flags=re.IGNORECASE,
+                )
+                response.content = html.encode(response.charset or "utf-8")
+                if response.has_header("Content-Length"):
+                    response["Content-Length"] = str(len(response.content))
+            except (UnicodeDecodeError, AttributeError):
+                pass
 
         response["X-Request-ID"] = str(request.audit_request_id)
         response["X-Content-Type-Options"] = "nosniff"
@@ -25,13 +55,13 @@ class SecurityAuditMiddleware:
             "camera=(), microphone=(), geolocation=(), payment=()"
         )
         response["Cross-Origin-Resource-Policy"] = "same-origin"
-        content_type = response.get("Content-Type", "")
         if (
             content_type.startswith("text/html")
             or content_type.startswith("application/json")
         ):
             response["Cache-Control"] = "no-store, max-age=0"
             response["Pragma"] = "no-cache"
+        nonce = request.csp_nonce
         response["Content-Security-Policy"] = (
             "default-src 'self'; "
             "base-uri 'self'; "
@@ -40,8 +70,10 @@ class SecurityAuditMiddleware:
             "object-src 'none'; "
             "img-src 'self' data:; "
             "font-src 'self' data: https://fonts.gstatic.com; "
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-            "script-src 'self' 'unsafe-inline' https://unpkg.com"
+            f"style-src 'self' https://fonts.googleapis.com 'nonce-{nonce}'; "
+            "style-src-attr 'unsafe-inline'; "
+            f"script-src 'self' https://unpkg.com 'nonce-{nonce}'; "
+            "script-src-attr 'unsafe-inline'"
         )
 
         if (

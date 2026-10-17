@@ -17,6 +17,8 @@ jobs:
       DJANGO_SECRET_KEY: "ci-django-secret-key-0123456789-abcdefghijklmnopqrstuvwxyz"
       DOCUMENT_SIGNING_KEY: "ci-document-signing-key-0123456789-abcdefghijklmnopqrstuvwxyz"
       DJANGO_ALLOWED_HOSTS: "127.0.0.1,localhost,testserver"
+      DJANGO_RBAC_STRICT: "0"
+      DJANGO_RATE_LIMIT_ENABLED: "0"
 
     steps:
       - uses: actions/checkout@v4
@@ -46,8 +48,8 @@ jobs:
       - name: Compilar e auditar área pública
         working-directory: frontend_publico
         run: |
-          npm install
-          npm audit --omit=dev --audit-level=high
+          npm ci
+          npm audit --audit-level=high
           npm run build
 
       - name: Verificar Django
@@ -74,4 +76,6 @@ jobs:
           DJANGO_SECURE_COOKIES: "1"
           DJANGO_SECURE_SSL_REDIRECT: "1"
           DJANGO_HSTS_SECONDS: "31536000"
+          DJANGO_CSRF_TRUSTED_ORIGINS: "https://testserver"
+          DJANGO_REQUIRE_SECURE_PRODUCTION: "1"
         run: python manage.py check --deploy

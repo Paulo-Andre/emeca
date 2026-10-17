@@ -146,3 +146,18 @@ class ItemEnvioBoletimWhatsApp(models.Model):
 
     def __str__(self):
         return f"{self.boletim.aluno.nome} - {self.get_status_display()}"
+
+
+class SecurityRateLimit(models.Model):
+    chave = models.CharField(max_length=64, unique=True)
+    janela_inicio = models.DateTimeField()
+    contador = models.PositiveIntegerField(default=0)
+    bloqueado_ate = models.DateTimeField(blank=True, null=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Limite de segurança"
+        verbose_name_plural = "Limites de segurança"
+
+    def __str__(self):
+        return f"{self.chave[:12]}… ({self.contador})"

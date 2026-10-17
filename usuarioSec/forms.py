@@ -2,10 +2,20 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 
+from .access_control import ROTULOS_PERFIS
+
 User = get_user_model()
 
 
 class AccountSignupForm(forms.ModelForm):
+    perfis = forms.MultipleChoiceField(
+        label="Acessos permitidos",
+        choices=ROTULOS_PERFIS,
+        widget=forms.CheckboxSelectMultiple(),
+        initial=["secretaria"],
+        required=True,
+        help_text="Conceda somente os módulos necessários para este usuário.",
+    )
     password = forms.CharField(
         label="Senha",
         max_length=128,

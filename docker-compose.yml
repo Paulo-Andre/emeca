@@ -10,6 +10,10 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - emeca_data:/data
+      - /srv/backups/emeca:/backups
+    networks:
+      - default
+      - emeca_private
 
   whatsapp-worker:
     build: .
@@ -25,6 +29,13 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - emeca_data:/data
+    networks:
+      - default
+      - emeca_private
 
 volumes:
   emeca_data:
+
+networks:
+  emeca_private:
+    name: emeca_private

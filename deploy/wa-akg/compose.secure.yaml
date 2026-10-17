@@ -1,0 +1,70 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: wa-akg-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-wa_akg}
+    expose:
+      - "3306"
+    volumes:
+      - wa_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+    networks:
+      - wa_internal
+
+  app:
+    build:
+      context: ../../../wa-akg
+      dockerfile: Dockerfile
+    container_name: wa-akg-app
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3100:3000"
+    environment:
+      DATABASE_URL: mysql://root:${MYSQL_ROOT_PASSWORD}@db:3306/${MYSQL_DATABASE:-wa_akg}
+      AUTH_SECRET: ${AUTH_SECRET}
+      BASE_URL: ${BASE_URL:-http://127.0.0.1:3100}
+      NEXTAUTH_URL: ${BASE_URL:-http://127.0.0.1:3100}
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      NEXT_PUBLIC_APP_URL: ${BASE_URL:-http://127.0.0.1:3100}
+      NEXT_PUBLIC_API_URL: ${BASE_URL:-http://127.0.0.1:3100}/api
+      BAILEYS_LOG_LEVEL: error
+      NEXT_PUBLIC_SWAGGER_ENABLED: "false"
+      NEXT_PUBLIC_ALLOW_INDEXING: "false"
+      ENABLE_RATE_LIMITING: "true"
+      RATE_LIMIT_PER_MINUTE: "60"
+      SESSION_TIMEOUT_HOURS: "12"
+      MAX_UPLOAD_SIZE_MB: "25"
+      TZ: America/Sao_Paulo
+      LOCALE: pt-BR
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - wa_app_data:/app/data
+      - wa_uploads_data:/app/uploads
+    networks:
+      - wa_internal
+      - emeca_private
+
+volumes:
+  wa_mysql_data:
+  wa_app_data:
+  wa_uploads_data:
+
+networks:
+  wa_internal:
+    internal: true
+  emeca_private:
+    external: true
+    name: emeca_private

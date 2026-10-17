@@ -3,17 +3,24 @@ from datetime import date
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.test import Client, RequestFactory, TestCase
+from django.contrib.auth.models import Group
+from django.test import Client, RequestFactory, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
+from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from cadastro.models import matricula
 from historico.auditoria import detalhes_seguros, registrar_auditoria
 from historico.models import AuditoriaEvento
 from site_publico.forms import get_content_form
-from site_publico.models import Noticia
+from site_publico.models import Noticia, validar_imagem_upload
 from usuarioSec.forms import AccountSignupForm
-from usuarioSec.models import declaracao
+from usuarioSec.access_control import (
+    GRUPO_HISTORICO,
+    GRUPO_SECRETARIA,
+)
+from usuarioSec.models import SecurityRateLimit, declaracao
 
 
 class SecurityValidationTests(TestCase):
@@ -188,3 +195,111 @@ class SecurityValidationTests(TestCase):
         evento.refresh_from_db()
         self.assertNotIn("NOME SINTETICO", evento.objeto_repr)
         self.assertTrue(evento.objeto_repr.startswith("ref:"))
+
+    @override_settings(EMECA_RBAC_STRICT=True)
+    def test_rbac_bloqueia_modulo_sem_perfil(self):
+        self.client.force_login(self.user)
+
+        negado = self.client.get(reverse("dashboard"))
+        self.assertEqual(negado.status_code, 403)
+
+        self.user.groups.add(Group.objects.get(name=GRUPO_SECRETARIA))
+        permitido = self.client.get(reverse("dashboard"))
+        self.assertEqual(permitido.status_code, 200)
+
+        historico = self.client.get(reverse("historico:inicio"))
+        self.assertEqual(historico.status_code, 403)
+
+    @override_settings(EMECA_RBAC_STRICT=True)
+    def test_rbac_permite_modulo_historico_quando_concedido(self):
+        self.user.groups.add(Group.objects.get(name=GRUPO_HISTORICO))
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("historico:inicio"))
+        self.assertEqual(response.status_code, 200)
+
+    @override_settings(
+        RATE_LIMIT_ENABLED=True,
+        LOGIN_RATE_LIMIT_ACCOUNT=2,
+        LOGIN_RATE_LIMIT_IP=50,
+        LOGIN_RATE_LIMIT_WINDOW=900,
+        EMECA_RBAC_STRICT=False,
+    )
+    def test_rate_limit_bloqueia_brute_force_de_login(self):
+        for _ in range(2):
+            response = self.client.post(
+                reverse("login"),
+                {"username": "alvo_sintetico", "password": "senha-incorreta"},
+                REMOTE_ADDR="198.51.100.10",
+            )
+            self.assertEqual(response.status_code, 200)
+
+        bloqueado = self.client.post(
+            reverse("login"),
+            {"username": "alvo_sintetico", "password": "senha-incorreta"},
+            REMOTE_ADDR="198.51.100.10",
+        )
+        self.assertEqual(bloqueado.status_code, 429)
+        self.assertIn("Retry-After", bloqueado)
+        self.assertGreaterEqual(SecurityRateLimit.objects.count(), 1)
+
+    @override_settings(
+        RATE_LIMIT_ENABLED=True,
+        BOLETIM_RATE_LIMIT_IP=2,
+        BOLETIM_RATE_LIMIT_WINDOW=900,
+        EMECA_RBAC_STRICT=False,
+    )
+    def test_rate_limit_publico_bloqueia_abuso_no_boletim(self):
+        payload = {
+            "cpf": "11111111111",
+            "data_nascimento": "2017-01-01",
+        }
+        for _ in range(2):
+            response = self.client.post(
+                reverse("site_publico:boletim"),
+                payload,
+                REMOTE_ADDR="198.51.100.20",
+            )
+            self.assertNotEqual(response.status_code, 429)
+
+        bloqueado = self.client.post(
+            reverse("site_publico:boletim"),
+            payload,
+            REMOTE_ADDR="198.51.100.20",
+        )
+        self.assertEqual(bloqueado.status_code, 429)
+
+    def test_upload_com_extensao_de_imagem_e_conteudo_invalido_e_rejeitado(self):
+        arquivo = SimpleUploadedFile(
+            "imagem.jpg",
+            b"isto-nao-e-uma-imagem",
+            content_type="image/jpeg",
+        )
+        with self.assertRaises(ValidationError):
+            validar_imagem_upload(arquivo)
+
+    def test_cadastro_usuario_aplica_perfis_selecionados(self):
+        admin = get_user_model().objects.create_superuser(
+            username="admin_perfis",
+            email="admin-perfis@example.invalid",
+            password="Senha-Admin-Perfis-2026!",
+        )
+        self.client.force_login(admin)
+
+        response = self.client.post(
+            reverse("cadastro"),
+            {
+                "username": "servidor_limitado",
+                "email": "servidor@example.invalid",
+                "password": "Senha-Forte-Servidor-2026!",
+                "perfis": ["secretaria", "historico"],
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        criado = get_user_model().objects.get(username="servidor_limitado")
+        grupos = set(criado.groups.values_list("name", flat=True))
+        self.assertIn(GRUPO_SECRETARIA, grupos)
+        self.assertIn(GRUPO_HISTORICO, grupos)
+        self.assertNotIn("EMECA - Administração", grupos)
+

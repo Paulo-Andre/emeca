@@ -1,0 +1,33 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sair · Secretaria Digital</title>
+  <link rel="stylesheet" href="{% static 'css/school-ui.css' %}">
+  <style>
+    body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f4f7f8;font-family:Inter,system-ui,sans-serif;color:#1f2937}
+    .logout-card{width:min(430px,calc(100% - 32px));padding:28px;border:1px solid #dbe4e8;border-radius:18px;background:#fff;box-shadow:0 18px 45px rgba(15,23,42,.08)}
+    h1{margin:0 0 8px;font-size:1.45rem}
+    p{margin:0 0 22px;color:#64748b;line-height:1.55}
+    .actions{display:flex;gap:10px;justify-content:flex-end}
+    .actions a,.actions button{min-height:42px;padding:0 16px;border-radius:10px;font:inherit;font-weight:750;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+    .actions a{border:1px solid #cbd5e1;color:#334155;background:#fff}
+    .actions button{border:0;background:#b42318;color:#fff}
+  </style>
+</head>
+<body>
+  <section class="logout-card">
+    <h1>Encerrar sessão?</h1>
+    <p>Confirme para sair da Secretaria Digital. A sessão institucional do WhatsApp continuará conectada no servidor.</p>
+    <form method="post">
+      {% csrf_token %}
+      <div class="actions">
+        <a href="{% url 'entrada' %}">Cancelar</a>
+        <button type="submit">Sair</button>
+      </div>
+    </form>
+  </section>
+</body>
+</html>

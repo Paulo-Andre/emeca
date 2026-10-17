@@ -5,7 +5,15 @@ from django.urls import reverse_lazy
 from django.contrib.auth.hashers import make_password
 from django.contrib import messages
 from django.contrib.auth import get_user_model
+from django.conf import settings
 from .forms import AccountSignupForm
+from .access_control import (
+    GRUPOS_EMECA,
+    ROTULOS_PERFIS,
+    atribuir_perfis,
+    nomes_grupos_usuario,
+    usuario_tem_modulo,
+)
 from cadastro.models import matricula
 from django.contrib.auth import logout
 import re
@@ -33,7 +41,11 @@ def usuario_administrador(view_func):
     def _wrapped_view(request, *args, **kwargs):
         if not (
             request.user.is_authenticated
-            and (request.user.is_superuser or request.user.has_perm("auth.add_user"))
+            and usuario_tem_modulo(
+                request.user,
+                "administracao",
+                strict=getattr(settings, "EMECA_RBAC_STRICT", True),
+            )
         ):
             return HttpResponseForbidden("Acesso negado")
         return view_func(request, *args, **kwargs)
@@ -44,14 +56,85 @@ class AccountCreateView(CreateView):
     model = User
     template_name = 'registration/signup_form.html'
     form_class = AccountSignupForm
-    success_url = reverse_lazy('login')
+    success_url = reverse_lazy('dashboard')
     success_message = 'Funcionário cadastrado com sucesso!'
 
     def form_valid(self, form) -> HttpResponse:
         form.instance.password = make_password(form.instance.password)
+        response = super().form_valid(form)
+        atribuir_perfis(self.object, form.cleaned_data["perfis"])
         messages.success(self.request, self.success_message)
-        return super().form_valid(form)
+        return response
     
+
+
+
+@usuario_administrador
+def gerenciar_acessos(request):
+    if request.method == "POST":
+        usuario_id = request.POST.get("usuario_id")
+        alvo = get_object_or_404(User, pk=usuario_id)
+
+        if alvo.is_superuser:
+            messages.error(
+                request,
+                "Superusuários possuem acesso total e não podem ser limitados por esta tela.",
+            )
+            return redirect("gerenciar_acessos")
+
+        perfis = request.POST.getlist("perfis")
+        if not perfis:
+            messages.error(request, "Selecione pelo menos um módulo de acesso.")
+            return redirect("gerenciar_acessos")
+
+        if alvo.pk == request.user.pk and "administracao" not in perfis:
+            messages.error(
+                request,
+                "Você não pode remover seu próprio acesso de Administração.",
+            )
+            return redirect("gerenciar_acessos")
+
+        atribuir_perfis(alvo, perfis)
+        messages.success(request, f"Acessos de {alvo.username} atualizados.")
+        return redirect("gerenciar_acessos")
+
+    usuarios = []
+    for usuario in User.objects.order_by("username"):
+        grupos = nomes_grupos_usuario(usuario)
+        perfis = set()
+        if usuario.is_superuser or GRUPOS_EMECA["administracao"] in grupos:
+            perfis.add("administracao")
+        else:
+            for chave, nome in GRUPOS_EMECA.items():
+                if nome in grupos:
+                    perfis.add(chave)
+        usuarios.append({"usuario": usuario, "perfis": perfis})
+
+    return render(
+        request,
+        "registration/user_access.html",
+        {
+            "usuarios_acesso": usuarios,
+            "perfis_disponiveis": ROTULOS_PERFIS,
+        },
+    )
+
+def entrada(request):
+    strict = getattr(settings, "EMECA_RBAC_STRICT", True)
+    destinos = [
+        ("secretaria", "dashboard"),
+        ("historico", "historico:inicio"),
+        ("boletins", "site_publico:gestao_boletins"),
+        ("site", "site_publico:gestao_site"),
+        ("whatsapp", "whatsapp"),
+        ("administracao", "gerenciar_acessos"),
+    ]
+    for modulo, destino in destinos:
+        if usuario_tem_modulo(request.user, modulo, strict=strict):
+            return redirect(destino)
+    return HttpResponseForbidden("Seu usuário não possui módulos liberados. Procure um administrador.")
+
+
 def dashboard(request):
     return render(request, "dashboard.html", {
         "alunos": None,
@@ -233,8 +316,10 @@ def matriculaimpressao(request,  id):
     return render(request, "matriculaimpressao.html", contexto)
 
 def sair(request):
-    logout(request)
-    return redirect('login')  
+    if request.method == "POST":
+        logout(request)
+        return redirect("login")
+    return render(request, "registration/logout_confirm.html")
 
 def declaracoes(request):
     return render(request, "declaracoes.html")

@@ -1,0 +1,85 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerenciar acessos · Secretaria</title>
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+  <link rel="stylesheet" href="{% static 'css/school-ui.css' %}">
+  <style>
+    body{background:#f4f7f8;color:#1f2937}
+    .access-main{max-width:1180px;margin:0 auto;padding:28px 18px 50px}
+    .access-head{display:flex;justify-content:space-between;gap:18px;align-items:center;margin-bottom:20px}
+    .access-head h1{margin:0 0 6px;font-size:1.8rem}
+    .access-head p{margin:0;color:#64748b}
+    .access-back{padding:10px 14px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;text-decoration:none;color:#0f5f78;font-weight:700}
+    .access-card{background:#fff;border:1px solid #dbe4e8;border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(15,23,42,.06)}
+    .access-user{display:grid;grid-template-columns:minmax(180px,260px) 1fr auto;gap:18px;align-items:center;padding:18px;border-bottom:1px solid #e5edf0}
+    .access-user:last-child{border-bottom:0}
+    .access-user h2{margin:0 0 4px;font-size:1rem}
+    .access-user small{color:#64748b}
+    .access-options{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:8px}
+    .access-options label{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid #dbe4e8;border-radius:9px;background:#f8fafc;font-size:.84rem;font-weight:650}
+    .access-options input{width:16px;height:16px}
+    .save-access{border:0;border-radius:10px;padding:11px 15px;background:#0f5f78;color:#fff;font-weight:800;cursor:pointer}
+    .superuser{display:inline-block;padding:7px 10px;border-radius:999px;background:#ecfdf5;color:#166534;font-size:.78rem;font-weight:800}
+    .messages{margin-bottom:16px}
+    .messages div{padding:11px 13px;border-radius:10px;background:#eef6f8;border:1px solid #c9dfe6}
+    @media(max-width:850px){.access-user{grid-template-columns:1fr}.access-options{grid-template-columns:1fr 1fr}.save-access{width:100%}}
+    @media(max-width:560px){.access-options{grid-template-columns:1fr}.access-head{align-items:flex-start;flex-direction:column}}
+  </style>
+</head>
+<body>
+  <main class="access-main">
+    <div class="access-head">
+      <div>
+        <h1>Gerenciar acessos</h1>
+        <p>Defina quais módulos cada servidor pode utilizar. Conceda somente o necessário.</p>
+      </div>
+      <a class="access-back" href="{% url 'entrada' %}">Voltar</a>
+    </div>
+
+    {% if messages %}
+      <div class="messages">
+        {% for message in messages %}<div>{{ message }}</div>{% endfor %}
+      </div>
+    {% endif %}
+
+    <section class="access-card">
+      {% for item in usuarios_acesso %}
+        <form class="access-user" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="usuario_id" value="{{ item.usuario.pk }}">
+          <div>
+            <h2>{{ item.usuario.username }}</h2>
+            <small>{{ item.usuario.email|default:"Sem e-mail cadastrado" }}</small>
+          </div>
+
+          {% if item.usuario.is_superuser %}
+            <div><span class="superuser">Superusuário · acesso total</span></div>
+            <div></div>
+          {% else %}
+            <div class="access-options">
+              {% for chave, rotulo in perfis_disponiveis %}
+                <label>
+                  <input
+                    type="checkbox"
+                    name="perfis"
+                    value="{{ chave }}"
+                    {% if chave in item.perfis %}checked{% endif %}
+                  >
+                  <span>{{ rotulo }}</span>
+                </label>
+              {% endfor %}
+            </div>
+            <button class="save-access" type="submit">Salvar acessos</button>
+          {% endif %}
+        </form>
+      {% empty %}
+        <div style="padding:22px">Nenhum usuário cadastrado.</div>
+      {% endfor %}
+    </section>
+  </main>
+</body>
+</html>

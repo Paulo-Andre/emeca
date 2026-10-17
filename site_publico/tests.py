@@ -1,8 +1,10 @@
 from datetime import date, timedelta
 from decimal import Decimal
+from io import BytesIO
 from unittest.mock import patch
 
 import pandas as pd
+from PIL import Image
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -22,6 +24,21 @@ from .forms import (
     PeriodoBoletimForm,
     get_content_form,
 )
+
+
+def imagem_sintetica(nome, formato):
+    buffer = BytesIO()
+    Image.new("RGB", (2, 2), "white").save(buffer, format=formato)
+    return SimpleUploadedFile(
+        nome,
+        buffer.getvalue(),
+        content_type={
+            "JPEG": "image/jpeg",
+            "PNG": "image/png",
+            "WEBP": "image/webp",
+        }[formato],
+    )
+
 from .models import (
     AlbumGaleria,
     AlunoBoletim,
@@ -283,7 +300,7 @@ class SitePublicoTests(TestCase):
         )
         arquivo2 = SimpleUploadedFile(
             "calendario.xlsx",
-            b"planilha-teste",
+            b"PK\x03\x04planilha-sintetica",
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
 
@@ -435,21 +452,9 @@ class SitePublicoTests(TestCase):
         )
         self.client.force_login(usuario)
 
-        foto1 = SimpleUploadedFile(
-            "foto-1.jpg",
-            b"imagem-1",
-            content_type="image/jpeg",
-        )
-        foto2 = SimpleUploadedFile(
-            "foto-2.png",
-            b"imagem-2",
-            content_type="image/png",
-        )
-        foto3 = SimpleUploadedFile(
-            "foto-3.webp",
-            b"imagem-3",
-            content_type="image/webp",
-        )
+        foto1 = imagem_sintetica("foto-1.jpg", "JPEG")
+        foto2 = imagem_sintetica("foto-2.png", "PNG")
+        foto3 = imagem_sintetica("foto-3.webp", "WEBP")
 
         response = self.client.post(
             reverse("site_publico:gestao_conteudo_novo", args=["fotos"]),
@@ -477,16 +482,8 @@ class SitePublicoTests(TestCase):
         self.client.force_login(usuario)
         album = AlbumGaleria.objects.create(titulo="Feira Cultural", ativo=True)
 
-        foto1 = SimpleUploadedFile(
-            "feira-1.jpg",
-            b"imagem-1",
-            content_type="image/jpeg",
-        )
-        foto2 = SimpleUploadedFile(
-            "feira-2.jpg",
-            b"imagem-2",
-            content_type="image/jpeg",
-        )
+        foto1 = imagem_sintetica("feira-1.jpg", "JPEG")
+        foto2 = imagem_sintetica("feira-2.jpg", "JPEG")
 
         response = self.client.post(
             reverse("site_publico:gestao_conteudo_novo", args=["fotos"]),

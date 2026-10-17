@@ -9,6 +9,8 @@ from django.shortcuts import redirect
 urlpatterns = [
     path('', lambda request: redirect('dashboard/')),  # 👈 AQUI
     path('cadastro', AccountCreateView.as_view(), name="cadastro"),
+    path('usuarios/acessos/', views.gerenciar_acessos, name="gerenciar_acessos"),
+    path('entrada/', views.entrada, name="entrada"),
     path('dashboard/',views.dashboard, name="dashboard"),
     path('buscar/', views.buscar_cadrasto, name="buscar_cadrasto"),
     path('editAluno/<int:id>/', views.edit_aluno, name="edit_aluno"),

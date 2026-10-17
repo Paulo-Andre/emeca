@@ -1,13 +1,91 @@
+from pathlib import Path
+
 from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
+from PIL import Image, UnidentifiedImageError
 from django.db import models
 from django.urls import reverse
 from django.utils.text import slugify
 
 
-IMAGEM_VALIDATOR = FileExtensionValidator(["jpg", "jpeg", "png", "webp"])
-PAGINA_ARQUIVO_VALIDATOR = FileExtensionValidator(["jpg", "jpeg", "png", "webp", "pdf"])
-DOCUMENTO_VALIDATOR = FileExtensionValidator(["pdf", "doc", "docx", "xls", "xlsx", "odt"])
+EXT_IMAGEM_VALIDATOR = FileExtensionValidator(["jpg", "jpeg", "png", "webp"])
+EXT_PAGINA_VALIDATOR = FileExtensionValidator(["jpg", "jpeg", "png", "webp", "pdf"])
+EXT_DOCUMENTO_VALIDATOR = FileExtensionValidator(["pdf", "doc", "docx", "xls", "xlsx", "odt"])
+
+
+def _limitar_tamanho(arquivo, max_mb):
+    tamanho = getattr(arquivo, "size", 0) or 0
+    if tamanho > max_mb * 1024 * 1024:
+        raise ValidationError(f"O arquivo deve ter no máximo {max_mb} MB.")
+
+
+def _assinatura(arquivo, tamanho=12):
+    posicao = arquivo.tell() if hasattr(arquivo, "tell") else 0
+    try:
+        arquivo.seek(0)
+        return arquivo.read(tamanho)
+    finally:
+        try:
+            arquivo.seek(posicao)
+        except Exception:
+            pass
+
+
+def validar_imagem_upload(arquivo):
+    EXT_IMAGEM_VALIDATOR(arquivo)
+    _limitar_tamanho(arquivo, 10)
+    posicao = arquivo.tell() if hasattr(arquivo, "tell") else 0
+    try:
+        arquivo.seek(0)
+        imagem = Image.open(arquivo)
+        if imagem.format not in {"JPEG", "PNG", "WEBP"}:
+            raise ValidationError("O arquivo enviado não é uma imagem JPG, PNG ou WEBP válida.")
+        largura, altura = imagem.size
+        if largura <= 0 or altura <= 0 or largura * altura > 25_000_000:
+            raise ValidationError("A imagem possui dimensões inválidas ou excessivas.")
+        imagem.verify()
+    except (UnidentifiedImageError, OSError, ValueError) as exc:
+        raise ValidationError("O conteúdo do arquivo não corresponde a uma imagem válida.") from exc
+    finally:
+        try:
+            arquivo.seek(posicao)
+        except Exception:
+            pass
+
+
+def validar_pagina_upload(arquivo):
+    EXT_PAGINA_VALIDATOR(arquivo)
+    extensao = Path(getattr(arquivo, "name", "")).suffix.lower()
+    if extensao == ".pdf":
+        _limitar_tamanho(arquivo, 25)
+        if not _assinatura(arquivo, 5).startswith(b"%PDF-"):
+            raise ValidationError("O conteúdo do arquivo não corresponde a um PDF válido.")
+        return
+    validar_imagem_upload(arquivo)
+
+
+def validar_documento_upload(arquivo):
+    EXT_DOCUMENTO_VALIDATOR(arquivo)
+    _limitar_tamanho(arquivo, 25)
+    extensao = Path(getattr(arquivo, "name", "")).suffix.lower()
+    cabecalho = _assinatura(arquivo, 12)
+
+    if extensao == ".pdf":
+        valido = cabecalho.startswith(b"%PDF-")
+    elif extensao in {".doc", ".xls"}:
+        valido = cabecalho.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1")
+    else:
+        valido = cabecalho.startswith(b"PK\x03\x04") or cabecalho.startswith(b"PK\x05\x06")
+
+    if not valido:
+        raise ValidationError(
+            "O conteúdo do arquivo não corresponde ao formato informado pela extensão."
+        )
+
+
+IMAGEM_VALIDATOR = validar_imagem_upload
+PAGINA_ARQUIVO_VALIDATOR = validar_pagina_upload
+DOCUMENTO_VALIDATOR = validar_documento_upload
 
 
 def _slug_unico(instance, valor):
