@@ -1024,3 +1024,23 @@ textarea.wa-new-chat-input{resize:vertical;min-height:94px}
   .wa-conversation-head .wa-profile-header-btn{padding:0;justify-content:center}
   .wa-profile-picture{width:126px;height:126px}
 }
+
+
+/* Gestão explícita da sessão WhatsApp */
+.wa-disconnect-btn {
+  border-color:#f1c6c6!important;
+  background:#fff7f7!important;
+  color:#9e2c2c!important;
+}
+.wa-disconnect-btn:hover { background:#fde8e8!important; }
+.wa-disconnect-header-form { display:inline-flex;align-items:center;margin:0; }
+.wa-session-action-row { display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 5px; }
+.wa-session-action-row form { margin:0; }
+.wa-session-action-row button { display:inline-flex;align-items:center;gap:7px; }
+.wa-session-action-row svg { width:17px;height:17px; }
+.wa-connection-warning { font-size:.8rem;color:#835647;line-height:1.55;margin:12px 0 0; }
+.wa-connection-management { margin-bottom:16px; }
+@media(max-width:720px) {
+  .wa-session-action-row form { flex:1 1 100%; }
+  .wa-session-action-row button { width:100%;justify-content:center; }
+}
