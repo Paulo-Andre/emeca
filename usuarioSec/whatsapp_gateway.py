@@ -205,8 +205,9 @@ def enviar_midia(jid, conteudo, nome_arquivo, content_type, tipo, legenda=""):
     )
 
 
-def enviar_documento(jid, conteudo_pdf, nome_arquivo, legenda=""):
-    session_id = quote(sessao_atual_id(), safe="")
+def enviar_documento(jid, conteudo_pdf, nome_arquivo, legenda="", *, sessao_id=None):
+    # Lotes antigos nunca devem passar a enviar pela conta nova.
+    session_id = quote(sessao_id or sessao_atual_id(), safe="")
     jid_codificado = quote(jid, safe="")
     return _request_multipart(
         f"messages/{session_id}/{jid_codificado}/media",
