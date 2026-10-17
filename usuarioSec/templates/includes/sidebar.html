@@ -65,6 +65,9 @@
           <a class="sidebar-subitem{% if request.resolver_match.url_name == 'whatsapp_mensagens' %} active{% endif %}" href="{% url 'whatsapp_mensagens' %}">
             <span>Mensagens</span>
           </a>
+          <a class="sidebar-subitem{% if request.resolver_match.url_name == 'whatsapp_gerenciamento' %} active{% endif %}" href="{% url 'whatsapp_gerenciamento' %}">
+            <span>Gerenciamento</span>
+          </a>
         </div>
       {% endif %}
     {% endif %}
