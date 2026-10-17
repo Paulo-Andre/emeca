@@ -95,10 +95,11 @@ def _mapa_declaracoes_por_nome(queryset=None):
 
 
 def sincronizar_perfil_declaracao(perfil, aluno_declaracao):
-    """Preenche dados de acesso do boletim a partir de Declarações.
+    """Sincroniza a identidade interna do boletim com Declarações.
 
-    O nome do boletim é preservado porque pode ter sido corrigido manualmente.
-    Campos vazios na declaração não apagam dados já existentes no boletim.
+    Data de nascimento e CPFs não são dados editáveis no módulo de boletim.
+    Quando existe uma declaração única para o mesmo nome, ela é a fonte
+    autoritativa desses campos, inclusive quando algum deles está vazio.
     """
     dados = {
         "data_nascimento": aluno_declaracao.dataNascimentoAluno,
@@ -107,13 +108,43 @@ def sincronizar_perfil_declaracao(perfil, aluno_declaracao):
     }
     alterados = []
     for campo, valor in dados.items():
-        if valor and getattr(perfil, campo) != valor:
+        if getattr(perfil, campo) != valor:
             setattr(perfil, campo, valor)
             alterados.append(campo)
 
     if alterados:
         perfil.save(update_fields=alterados + ["atualizado_em"])
     return perfil
+
+
+def sincronizar_perfil_com_declaracoes(perfil, registros):
+    """Vincula identidade por nome sem escolher silenciosamente homônimos."""
+    registros = list(registros)
+    if len(registros) == 1:
+        return sincronizar_perfil_declaracao(perfil, registros[0]), "vinculado"
+
+    # Sem correspondência única, remove dados de acesso antigos para evitar que
+    # CPF/data de outra criança permaneçam associados após mudança de nome.
+    dados_vazios = {
+        "data_nascimento": None,
+        "cpf_mae": "",
+        "cpf_responsavel": "",
+    }
+    alterados = []
+    for campo, valor in dados_vazios.items():
+        if getattr(perfil, campo) != valor:
+            setattr(perfil, campo, valor)
+            alterados.append(campo)
+    if alterados:
+        perfil.save(update_fields=alterados + ["atualizado_em"])
+
+    return perfil, "ambiguo" if len(registros) > 1 else "nao_encontrado"
+
+
+def sincronizar_perfil_por_nome_declaracao(perfil, nome=None):
+    chave = normalizar_nome(nome or perfil.nome)
+    registros = _mapa_declaracoes_por_nome().get(chave, [])
+    return sincronizar_perfil_com_declaracoes(perfil, registros)
 
 
 @transaction.atomic
@@ -214,14 +245,6 @@ def importar_dados_boletim(dados_planilha, dados_periodo=None):
             cadastro = candidatos[0]
             perfil = sincronizar_perfil_matricula(cadastro)
 
-            # Se Matrículas estiver incompleto, aproveita também os dados
-            # existentes em Declarações para CPF/data de nascimento.
-            if len(declaracoes_mesmo_nome) == 1:
-                perfil = sincronizar_perfil_declaracao(
-                    perfil,
-                    declaracoes_mesmo_nome[0],
-                )
-
             # O boletim deve refletir o nome existente no arquivo importado.
             # Isso não altera o cadastro mestre de Matrículas.
             if perfil.nome != linha["nome"]:
@@ -243,23 +266,14 @@ def importar_dados_boletim(dados_planilha, dados_periodo=None):
                 perfil = AlunoBoletim.objects.create(nome=linha["nome"])
                 perfis_avulsos[linha["nome_normalizado"]].append(perfil)
 
-            # Mesmo sem matrícula, um registro único em Declarações fornece
-            # automaticamente data de nascimento e CPF da mãe/responsável.
-            if len(declaracoes_mesmo_nome) == 1:
-                perfil = sincronizar_perfil_declaracao(
-                    perfil,
-                    declaracoes_mesmo_nome[0],
-                )
+        # A identidade usada para consulta pública vem sempre da base de
+        # Declarações, localizada pelo mesmo nome da criança.
+        perfil, _status_declaracao = sincronizar_perfil_com_declaracoes(
+            perfil,
+            declaracoes_mesmo_nome,
+        )
 
         faltas_totais = linha.get("faltas_totais")
-        if faltas_totais is None:
-            # Compatibilidade com outros modelos de planilha que não possuem
-            # o campo F. geral antes das disciplinas.
-            faltas_totais = sum(
-                item["faltas"] or 0
-                for item in linha["resultados"]
-                if item.get("faltas") is not None
-            )
 
         boletim = BoletimAluno.objects.create(
             periodo=periodo,

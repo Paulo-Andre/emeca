@@ -11,8 +11,6 @@ from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
-from cadastro.models import matricula
-
 from .forms import (
     CONTENT_FORMS,
     BoletimAlunoManualForm,
@@ -27,7 +25,10 @@ from .forms import (
     get_content_form,
 )
 from .boletim_importacao import ImportacaoBoletimErro, ler_planilha_boletim
-from .boletim_services import importar_dados_boletim, sincronizar_perfil_matricula
+from .boletim_services import (
+    importar_dados_boletim,
+    sincronizar_perfil_por_nome_declaracao,
+)
 
 from .models import (
     AlbumGaleria,
@@ -350,18 +351,16 @@ def gestao_boletim_aluno(request, periodo_pk, boletim_pk=None):
         pk=periodo_pk,
     )
     boletim_obj = None
-    aluno_fixo = None
     perfil_fixo = None
     resultados_atuais = {}
 
     if boletim_pk is not None:
         boletim_obj = get_object_or_404(
-            BoletimAluno.objects.select_related("aluno__matricula"),
+            BoletimAluno.objects.select_related("aluno"),
             pk=boletim_pk,
             periodo=periodo,
         )
         perfil_fixo = boletim_obj.aluno
-        aluno_fixo = boletim_obj.aluno.matricula
         resultados_atuais = {
             item.disciplina_id: item
             for item in boletim_obj.resultados.select_related("disciplina")
@@ -371,52 +370,45 @@ def gestao_boletim_aluno(request, periodo_pk, boletim_pk=None):
         "numero_chamada": boletim_obj.numero_chamada if boletim_obj else None,
         "faltas_totais": boletim_obj.faltas_totais if boletim_obj else None,
     }
-    if boletim_obj is None:
-        matricula_id = request.GET.get("matricula")
-        if matricula_id and matricula_id.isdigit():
-            cadastro = matricula.objects.filter(pk=int(matricula_id)).first()
-            if cadastro:
-                initial.update({
-                    "aluno": cadastro.pk,
-                    "nome_aluno": cadastro.nomeDoAluno,
-                    "data_nascimento": cadastro.dataNascimentoAluno,
-                    "cpf_mae": cadastro.cpfMae or "",
-                    "cpf_responsavel": cadastro.cpfResponsavel or "",
-                })
 
     form = BoletimAlunoManualForm(
         request.POST or None,
-        aluno_fixo=aluno_fixo,
         perfil_fixo=perfil_fixo,
         initial=initial,
     )
 
     if request.method == "POST" and form.is_valid():
+        status_declaracao = None
         try:
             with transaction.atomic():
-                cadastro = aluno_fixo or form.cleaned_data.get("aluno")
+                nome = form.cleaned_data["nome_aluno"]
 
                 if boletim_obj is not None:
                     perfil = boletim_obj.aluno
-                elif cadastro is not None:
-                    perfil = sincronizar_perfil_matricula(cadastro)
                 else:
-                    perfil = AlunoBoletim.objects.create(
-                        nome=form.cleaned_data["nome_aluno"],
-                        data_nascimento=form.cleaned_data.get("data_nascimento"),
-                        cpf_mae=form.cleaned_data.get("cpf_mae", "").strip(),
-                        cpf_responsavel=form.cleaned_data.get("cpf_responsavel", "").strip(),
+                    # Reutiliza um perfil inequívoco do mesmo aluno quando já
+                    # houver boletins de outros períodos; em caso de duplicidade,
+                    # cria um perfil novo e não escolhe silenciosamente.
+                    candidatos_perfil = list(
+                        AlunoBoletim.objects.filter(nome__iexact=nome).order_by("pk")[:2]
+                    )
+                    perfil = (
+                        candidatos_perfil[0]
+                        if len(candidatos_perfil) == 1
+                        else AlunoBoletim.objects.create(nome=nome)
                     )
 
-                # O nome e os dados de acesso do boletim podem ser corrigidos
-                # sem alterar o cadastro mestre de Matrículas.
-                perfil.nome = form.cleaned_data["nome_aluno"]
-                perfil.data_nascimento = form.cleaned_data.get("data_nascimento")
-                perfil.cpf_mae = form.cleaned_data.get("cpf_mae", "").strip()
-                perfil.cpf_responsavel = form.cleaned_data.get("cpf_responsavel", "").strip()
-                if cadastro is not None and perfil.matricula_id is None:
-                    perfil.matricula = cadastro
-                perfil.save()
+                if perfil.nome != nome:
+                    perfil.nome = nome
+                    perfil.save(update_fields=["nome", "atualizado_em"])
+
+                # CPF e data de nascimento não são editados no boletim.
+                # A identidade é sincronizada automaticamente com Declarações,
+                # usando o mesmo nome da criança.
+                perfil, status_declaracao = sincronizar_perfil_por_nome_declaracao(
+                    perfil,
+                    nome,
+                )
 
                 if boletim_obj is None:
                     boletim_obj, criado = BoletimAluno.objects.get_or_create(
@@ -462,6 +454,18 @@ def gestao_boletim_aluno(request, periodo_pk, boletim_pk=None):
                 request,
                 "Nome do aluno, notas e faltas totais foram salvos.",
             )
+            if status_declaracao == "nao_encontrado":
+                messages.warning(
+                    request,
+                    "Não foi encontrada uma declaração com esse mesmo nome. "
+                    "CPF e data de nascimento não foram vinculados ao boletim.",
+                )
+            elif status_declaracao == "ambiguo":
+                messages.warning(
+                    request,
+                    "Há mais de uma declaração com esse mesmo nome. "
+                    "CPF e data de nascimento não foram vinculados para evitar associação incorreta.",
+                )
             return redirect("site_publico:gestao_boletim_periodo", pk=periodo.pk)
 
     linhas_notas = []
@@ -469,7 +473,11 @@ def gestao_boletim_aluno(request, periodo_pk, boletim_pk=None):
         atual = resultados_atuais.get(disciplina.pk)
         linhas_notas.append({
             "disciplina": disciplina,
-            "nota": request.POST.get(f"nota_{disciplina.pk}") if request.method == "POST" else (atual.nota if atual else ""),
+            "nota": (
+                request.POST.get(f"nota_{disciplina.pk}")
+                if request.method == "POST"
+                else (atual.nota if atual else "")
+            ),
         })
 
     return render(request, "site_publico/gestao/boletim_aluno.html", {

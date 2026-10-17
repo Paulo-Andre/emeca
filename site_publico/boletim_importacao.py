@@ -233,31 +233,19 @@ def _disciplinas(df, cabecalho_idx, nome_col):
     )
 
 
+COLUNA_FALTAS_TOTAIS_EXCEL = 5  # coluna F (A=0)
+
+
 def _coluna_faltas_totais(df, cabecalho_idx, nome_col, componentes):
-    """Localiza a coluna de faltas totais do relatório Crystal.
+    """Usa exclusivamente a coluna F da planilha como faltas totais.
 
-    No arquivo usado pela escola existe um par N./F. geral antes da primeira
-    disciplina. O valor da coluna F. é o total correto de faltas do período.
+    A planilha oficial da escola registra na coluna F o total de faltas da
+    criança no período. Faltas presentes nos pares de cada disciplina não
+    devem ser somadas nem usadas como total do boletim.
     """
-    if not componentes:
+    if len(df.columns) <= COLUNA_FALTAS_TOTAIS_EXCEL:
         return None
-
-    primeira_disciplina = min(item["nota_col"] for item in componentes)
-    inicio_col = nome_col + 1
-    if primeira_disciplina <= inicio_col:
-        return None
-
-    marcadores_falta = {"F", "FALTA", "FALTAS"}
-    candidatos = []
-
-    # O Crystal pode colocar N./F. na própria linha de Num./Nome ou logo abaixo.
-    for linha in range(cabecalho_idx, min(cabecalho_idx + 3, len(df.index))):
-        for col in range(inicio_col, primeira_disciplina):
-            if normalizar(df.iat[linha, col]) in marcadores_falta:
-                candidatos.append(col)
-
-    return candidatos[-1] if candidatos else None
-
+    return COLUNA_FALTAS_TOTAIS_EXCEL
 
 def _metadados(df):
     blocos = []
