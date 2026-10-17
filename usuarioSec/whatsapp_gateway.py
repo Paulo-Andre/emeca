@@ -466,14 +466,6 @@ def listar_etiquetas():
     return _request("GET", f"labels/{session_id}")
 
 
-def criar_etiqueta(nome, cor=0):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
-    resposta = _request(
-        "POST", f"labels/{session_id}", {"name": nome, "color": int(cor)}
-    )
-    return confirmar_operacao_wa(resposta, "criação da etiqueta")
-
-
 def listar_etiquetas_chat(jid):
     session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
     jid_codificado = quote(jid, safe="")
