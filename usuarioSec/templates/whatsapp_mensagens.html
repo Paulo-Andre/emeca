@@ -796,7 +796,9 @@
             chatElements.set(chat.jid, node);
           }
           updateChatItem(node, chat);
-          if (node.nextSibling !== next) chatList.insertBefore(node, next);
+          if (node.parentNode !== chatList || node.nextSibling !== next) {
+            chatList.insertBefore(node, next);
+          }
           next = node;
         }
       }
@@ -1365,6 +1367,13 @@
         const data = await resp.json();
         if (!resp.ok || !data.ok) throw new Error(data.erro || "Falha ao carregar etiquetas.");
         const currentIds = new Set((data.atuais||[]).map(x=>String(x.id)));
+        const current = activeContact();
+        if (current) {
+          current.etiquetas = (data.atuais || []).map(label => ({
+            id: label.id, name: label.name, colorHex: label.colorHex
+          }));
+          renderChats();
+        }
         (data.etiquetas||[]).forEach(label => {
           const row = document.createElement("label");
           row.className = "wa-label-row";
@@ -1397,6 +1406,7 @@
         const body = new FormData();
         body.append("nome", nome);
         body.append("cor", cor);
+        body.append("jid", jid);
         body.append("csrfmiddlewaretoken", csrfToken());
         const response = await waFetch("{% url 'whatsapp_etiquetas_criar_api' %}", {
           method: "POST", body, headers: {"X-CSRFToken": csrfToken()}
@@ -1412,7 +1422,7 @@
         const input = document.createElement("input");
         input.type = "checkbox"; input.value = String(label.id);
         input.checked = true;
-        input.dataset.initial = "0";
+        input.dataset.initial = "1";
         const swatch = document.createElement("span");
         swatch.className = "wa-label-color";
         swatch.style.background = label.colorHex || "#22c55e";
@@ -1421,7 +1431,17 @@
         row.append(input, swatch, text);
         labelsList.appendChild(row);
         document.getElementById("newChatLabelName").value = "";
-        labelsStatus.textContent = "Etiqueta criada. Clique em Salvar etiquetas para associá-la à conversa.";
+        const current = chats.find(chat => chat.jid === jid);
+        if (current) {
+          current.etiquetas = Array.isArray(data.etiquetas_conversa)
+            ? data.etiquetas_conversa.map(label => ({
+                id: label.etiqueta_id, name: label.nome, colorHex: label.cor
+              }))
+            : [...(current.etiquetas || []), label];
+          renderChats();
+        }
+        labelsStatus.textContent = "Etiqueta criada e aplicada à conversa. Ela já aparece na lista."; 
+        showActionNotice("Etiqueta \"" + (label.name || nome) + "\" aplicada à conversa.");
       } catch(error) {
         labelsStatus.textContent = error.message || "Não foi possível criar a etiqueta.";
       } finally {
@@ -1430,21 +1450,45 @@
     });
     document.getElementById("closeLabels").addEventListener("click",()=>labelsDialog.close());
     document.getElementById("saveLabels").addEventListener("click", async () => {
+      const jid = activeJid;
+      if (!jid) return;
       const inputs=[...labelsList.querySelectorAll('input[type="checkbox"]')];
       const added=inputs.filter(x=>x.checked&&x.dataset.initial==="0").map(x=>x.value);
       const removed=inputs.filter(x=>!x.checked&&x.dataset.initial==="1").map(x=>x.value);
+      const save = document.getElementById("saveLabels");
+      save.disabled = true;
+      labelsStatus.textContent = "Aplicando etiquetas…";
+      let assigned = null;
       try {
         for (const [action, ids] of [["add",added],["remove",removed]]) {
           if (!ids.length) continue;
           const body=new FormData();
-          body.append("jid",activeJid); body.append("action",action); body.append("csrfmiddlewaretoken",csrfToken());
+          body.append("jid",jid); body.append("action",action);
+          body.append("csrfmiddlewaretoken",csrfToken());
           ids.forEach(id=>body.append("label_ids",id));
-          const resp=await waFetch("{% url 'whatsapp_etiquetas_atualizar_api' %}",{method:"POST",body,headers:{"X-CSRFToken":csrfToken()}});
+          const resp=await waFetch("{% url 'whatsapp_etiquetas_atualizar_api' %}",{
+            method:"POST",body,headers:{"X-CSRFToken":csrfToken()}
+          });
           const data=await resp.json();
           if(!resp.ok||!data.ok) throw new Error(data.erro||"Falha ao salvar etiquetas.");
+          assigned = data.etiquetas_conversa;
         }
+        if (activeJid !== jid) return;
+        const chat = chats.find(item => item.jid === jid);
+        if (chat && Array.isArray(assigned)) {
+          chat.etiquetas = assigned.map(label => ({
+            id: label.etiqueta_id, name: label.nome, colorHex: label.cor
+          }));
+          renderChats();
+        }
+        showActionNotice(assigned ? "Etiquetas da conversa atualizadas." : "Nenhuma alteração pendente.");
         labelsDialog.close();
-      } catch(err){ labelsStatus.textContent=err.message; }
+      } catch(err) {
+        labelsStatus.textContent=err.message || "Falha ao aplicar etiquetas.";
+        showActionNotice(labelsStatus.textContent, true);
+      } finally {
+        save.disabled = false;
+      }
     });
 
     document.getElementById("blockContactButton").addEventListener("click", async () => {
