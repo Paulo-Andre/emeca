@@ -10,7 +10,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
   <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-unified-05">
-  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-disconnect-13">
+  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-actions-14">
 </head>
 <body>
   {% include 'includes/sidebar.html' %}
@@ -122,18 +122,19 @@
               <button type="button" class="wa-icon-button wa-identify-button" id="identifyContactButton" title="Identificar contato ou unir conversas" aria-label="Identificar contato ou unir conversas"><i data-lucide="contact-round-pen"></i><span>Identificar</span></button>
               <button type="button" class="wa-icon-button" id="messageSearchButton" title="Buscar mensagens"><i data-lucide="search"></i></button>
               <button type="button" class="wa-icon-button" id="labelsButton" title="Etiquetas"><i data-lucide="tags"></i></button>
-              <button type="button" class="wa-icon-button" data-chat-action="read" title="Marcar como lida"><i data-lucide="check-check"></i></button>
-              <button type="button" class="wa-icon-button" data-chat-action="pin" title="Fixar conversa"><i data-lucide="pin"></i></button>
-              <button type="button" class="wa-icon-button" data-chat-action="mute" title="Silenciar conversa"><i data-lucide="bell-off"></i></button>
-              <button type="button" class="wa-icon-button" data-chat-action="archive" title="Arquivar conversa"><i data-lucide="archive"></i></button>
-              <button type="button" class="wa-icon-button" id="blockContactButton" title="Bloquear/desbloquear contato"><i data-lucide="shield-ban"></i></button>
+              <button type="button" class="wa-icon-button" data-chat-action="read" title="Marcar como lida" aria-label="Marcar conversa como lida"><i data-lucide="check-check"></i></button>
+              <button type="button" class="wa-icon-button" data-chat-action="pin" title="Fixar conversa" aria-label="Fixar conversa"><i data-lucide="pin"></i></button>
+              <button type="button" class="wa-icon-button" data-chat-action="mute" title="Silenciar conversa" aria-label="Silenciar conversa"><i data-lucide="bell-off"></i></button>
+              <button type="button" class="wa-icon-button" data-chat-action="archive" title="Arquivar conversa" aria-label="Arquivar conversa"><i data-lucide="archive"></i></button>
+              <button type="button" class="wa-icon-button" id="blockContactButton" title="Bloquear/desbloquear contato" aria-label="Bloquear ou desbloquear contato"><i data-lucide="shield-ban"></i></button>
             </div>
             <span class="wa-live-badge"><span></span> Atualização automática</span>
           </header>
 
           <div class="wa-message-searchbar" id="messageSearchBar" hidden>
             <i data-lucide="search"></i>
-            <input id="messageSearchInput" type="search" placeholder="Buscar no histórico desta conversa">
+            <input id="messageSearchInput" type="search" placeholder="Digite e clique em Buscar">
+            <button type="button" class="wa-icon-button wa-search-submit" id="runMessageSearch" title="Pesquisar nesta conversa"><i data-lucide="search"></i> Buscar</button>
             <button type="button" class="wa-icon-button" id="closeMessageSearch" title="Fechar busca"><i data-lucide="x"></i></button>
           </div>
 
@@ -237,6 +238,19 @@
         <button type="button" class="wa-icon-button" id="closeLabels"><i data-lucide="x"></i></button>
       </div>
       <div id="labelsList" class="wa-labels-list"></div>
+      <div class="wa-labels-new">
+        <label for="newChatLabelName">Nova etiqueta</label>
+        <input id="newChatLabelName" class="wa-new-chat-input" type="text" placeholder="Ex.: Matrículas, Urgente, Atendimento" maxlength="50">
+        <label for="newChatLabelColor">Cor</label>
+        <select id="newChatLabelColor" class="wa-new-chat-input">
+          <option value="3">Verde</option>
+          <option value="4">Azul</option>
+          <option value="2">Amarelo</option>
+          <option value="0">Vermelho</option>
+          <option value="14">Cinza</option>
+        </select>
+        <button type="button" class="btn-secondary" id="createChatLabel"><i data-lucide="plus"></i> Criar etiqueta</button>
+      </div>
       <div class="wa-new-chat-status" id="labelsStatus"></div>
       <button type="button" class="btn-primary" id="saveLabels">Salvar etiquetas</button>
     </div>
