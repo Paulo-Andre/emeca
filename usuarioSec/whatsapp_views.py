@@ -1418,6 +1418,7 @@ def _validar_sessao_cliente(request):
     informada = (
         request.headers.get("X-EMECA-WA-SESSION")
         or request.POST.get("wa_session_id")
+        or request.GET.get("wa_session_id")
         or ""
     ).strip()
     if informada and informada != sessao_atual_id():
@@ -2097,6 +2098,8 @@ def whatsapp_etiquetas_atualizar_api(request):
 @login_required
 @require_GET
 def whatsapp_midia_recebida(request, message_id):
+    if _validar_sessao_cliente(request) is not None:
+        return HttpResponse(status=409)
     try:
         media_url = (request.GET.get("media") or "").strip()
         if media_url:
@@ -2277,6 +2280,8 @@ def whatsapp_gerenciamento(request):
 @login_required
 @require_GET
 def whatsapp_foto_imagem(request):
+    if _validar_sessao_cliente(request) is not None:
+        return HttpResponse(status=409)
     jid = (request.GET.get("jid") or "").strip()
     if not jid or len(jid) > 120:
         return HttpResponse(status=404)
