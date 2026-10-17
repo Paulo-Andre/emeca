@@ -6,6 +6,8 @@ from urllib.request import Request, urlopen
 
 from django.conf import settings
 
+from .sessao_whatsapp import sessao_atual_id
+
 
 class WhatsAppGatewayError(RuntimeError):
     def __init__(self, message, status_code=None, payload=None):
@@ -63,7 +65,7 @@ def _request(method, path, payload=None):
 
 
 def obter_sessao():
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     return _request("GET", f"sessions/{session_id}")
 
 
@@ -79,7 +81,7 @@ def preparar_sessao():
         "sessions",
         {
             "name": "EMECA Secretaria",
-            "sessionId": settings.WA_AKG_SESSION_ID,
+            "sessionId": sessao_atual_id(),
         },
     )
     return criada
@@ -87,29 +89,29 @@ def preparar_sessao():
 
 def iniciar_sessao():
     preparar_sessao()
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     return _request("POST", f"sessions/{session_id}/start", {})
 
 
 def pausar_sessao():
     """Pausa o socket do WA-AKG sem apagar credenciais ou mensagens."""
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     return _request("POST", f"sessions/{session_id}/stop", {})
 
 
 def desvincular_sessao():
     """Faz logout do aparelho: revoga o vínculo, mas não apaga mensagens."""
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     return _request("POST", f"sessions/{session_id}/logout", {})
 
 
 def obter_qr():
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     return _request("GET", f"sessions/{session_id}/qr")
 
 
 def enviar_broadcast(recipients, message):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     return _request(
         "POST",
         f"messages/{session_id}/broadcast",
@@ -189,7 +191,7 @@ def _request_multipart(path, fields, filename, content_type, content):
 
 
 def enviar_midia(jid, conteudo, nome_arquivo, content_type, tipo, legenda=""):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     jid_codificado = quote(jid, safe="")
     return _request_multipart(
         f"messages/{session_id}/{jid_codificado}/media",
@@ -204,7 +206,7 @@ def enviar_midia(jid, conteudo, nome_arquivo, content_type, tipo, legenda=""):
 
 
 def enviar_documento(jid, conteudo_pdf, nome_arquivo, legenda=""):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     jid_codificado = quote(jid, safe="")
     return _request_multipart(
         f"messages/{session_id}/{jid_codificado}/media",
@@ -224,7 +226,7 @@ def listar_chats():
     O WA-AKG antigo só fornecia 50 conversas. A versão corrigida aceita
     ?limit=500&before=... e retorna meta.nextBefore.
     """
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     por_jid = {}
     cursors = set()
     cursor = ""
@@ -262,13 +264,13 @@ def listar_chats():
 
 
 def obter_mensagens_chat(jid):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     jid_codificado = quote(jid, safe="")
     return _request("GET", f"chat/{session_id}/{jid_codificado}")
 
 
 def enviar_mensagem_chat(jid, texto):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     jid_codificado = quote(jid, safe="")
     return _request(
         "POST",
@@ -278,7 +280,7 @@ def enviar_mensagem_chat(jid, texto):
 
 
 def marcar_chat_como_lido(jid):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     jid_codificado = quote(jid, safe="")
     return _request(
         "PUT",
@@ -298,12 +300,12 @@ def status_sessao():
 
 
 def listar_contatos():
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     return _request("GET", f"contacts/{session_id}?limit=all")
 
 
 def obter_foto_perfil(jid):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     jid_codificado = quote(jid, safe="")
     return _request(
         "POST",
@@ -314,13 +316,13 @@ def obter_foto_perfil(jid):
 
 def obter_perfil_contato(jid):
     """Dados de perfil que o WhatsApp autoriza a sessão WA-AKG a consultar."""
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     jid_codificado = quote(jid, safe="")
     return _request("GET", f"chat/{session_id}/{jid_codificado}/contact-profile")
 
 
 def verificar_numeros(numbers):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     return _request("POST", f"chat/{session_id}/check", {"numbers": numbers})
 
 
@@ -343,7 +345,7 @@ def confirmar_operacao_wa(resposta, descricao="ação"):
 
 
 def gerenciar_chat(jid, acao, ativo=True):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     jid_codificado = quote(jid, safe="")
     if acao == "pin":
         resposta = _request("PUT", f"chat/{session_id}/{jid_codificado}/pin", {"pin": bool(ativo)})
@@ -359,7 +361,7 @@ def gerenciar_chat(jid, acao, ativo=True):
 
 
 def buscar_mensagens(q="", jid="", tipo="", page=1, limit=50):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     params = []
     if q:
         params.append(f"q={quote(str(q), safe='')}")
@@ -373,7 +375,7 @@ def buscar_mensagens(q="", jid="", tipo="", page=1, limit=50):
 
 
 def responder_mensagem_citada(jid, message_id, texto):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     jid_codificado = quote(jid, safe="")
     message_id_codificado = quote(message_id, safe="")
     return _request(
@@ -384,7 +386,7 @@ def responder_mensagem_citada(jid, message_id, texto):
 
 
 def favoritar_mensagem(jid, message_id, star=True, from_me=False):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     jid_codificado = quote(jid, safe="")
     message_id_codificado = quote(message_id, safe="")
     return _request(
@@ -395,7 +397,7 @@ def favoritar_mensagem(jid, message_id, star=True, from_me=False):
 
 
 def reagir_mensagem(jid, message_id, emoji):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     jid_codificado = quote(jid, safe="")
     message_id_codificado = quote(message_id, safe="")
     return _request(
@@ -406,7 +408,7 @@ def reagir_mensagem(jid, message_id, emoji):
 
 
 def editar_mensagem(jid, message_id, texto):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     jid_codificado = quote(jid, safe="")
     message_id_codificado = quote(message_id, safe="")
     return _request(
@@ -417,7 +419,7 @@ def editar_mensagem(jid, message_id, texto):
 
 
 def apagar_mensagem(jid, message_id):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     jid_codificado = quote(jid, safe="")
     message_id_codificado = quote(message_id, safe="")
     return _request(
@@ -427,7 +429,7 @@ def apagar_mensagem(jid, message_id):
 
 
 def encaminhar_mensagem(from_jid, message_id, to_jids):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     return _request(
         "POST",
         f"messages/{session_id}/forward",
@@ -440,7 +442,7 @@ def encaminhar_mensagem(from_jid, message_id, to_jids):
 
 
 def bloquear_contato(jid, bloquear=True):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     jid_codificado = quote(jid, safe="")
     acao = "block" if bloquear else "unblock"
     resposta = _request(
@@ -452,7 +454,7 @@ def bloquear_contato(jid, bloquear=True):
 
 
 def enviar_presenca(jid, presence):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     jid_codificado = quote(jid, safe="")
     return _request(
         "POST",
@@ -462,18 +464,18 @@ def enviar_presenca(jid, presence):
 
 
 def listar_etiquetas():
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     return _request("GET", f"labels/{session_id}")
 
 
 def listar_etiquetas_chat(jid):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     jid_codificado = quote(jid, safe="")
     return _request("GET", f"labels/{session_id}/chat/{jid_codificado}/labels")
 
 
 def atualizar_etiquetas_chat(jid, label_ids, action):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     jid_codificado = quote(jid, safe="")
     resposta = _request(
         "PUT",
@@ -490,7 +492,7 @@ def baixar_midia_mensagem(message_id):
             "A integração com o WhatsApp ainda não foi configurada no servidor."
         )
 
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     message_id_codificado = quote(message_id, safe="")
     base_url = settings.WA_AKG_BASE_URL.rstrip("/")
     url = f"{base_url}/messages/{session_id}/download/{message_id_codificado}/media"
@@ -527,12 +529,12 @@ def baixar_midia_mensagem(message_id):
 
 
 def listar_grupos():
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     return _request("GET", f"groups/{session_id}")
 
 
 def criar_grupo(subject, participants):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     return _request(
         "POST",
         f"groups/{session_id}/create",
@@ -541,7 +543,7 @@ def criar_grupo(subject, participants):
 
 
 def criar_etiqueta(name, color=0):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     resposta = _request(
         "POST",
         f"labels/{session_id}",
@@ -551,12 +553,12 @@ def criar_etiqueta(name, color=0):
 
 
 def listar_respostas_automaticas():
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     return _request("GET", f"autoreplies/{session_id}")
 
 
 def criar_resposta_automatica(keyword, response, match_type="EXACT", trigger_type="ALL"):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     return _request(
         "POST",
         f"autoreplies/{session_id}",
@@ -571,18 +573,18 @@ def criar_resposta_automatica(keyword, response, match_type="EXACT", trigger_typ
 
 
 def apagar_resposta_automatica(reply_id):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     reply_id = quote(reply_id, safe="")
     return _request("DELETE", f"autoreplies/{session_id}/{reply_id}")
 
 
 def listar_agendamentos(tab="pending"):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     return _request("GET", f"scheduler/{session_id}?tab={quote(tab, safe='')}")
 
 
 def criar_agendamento(jid, content, send_at):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     return _request(
         "POST",
         f"scheduler/{session_id}",
@@ -595,7 +597,7 @@ def criar_agendamento(jid, content, send_at):
 
 
 def apagar_agendamento(schedule_id):
-    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    session_id = quote(sessao_atual_id(), safe="")
     schedule_id = quote(schedule_id, safe="")
     return _request("DELETE", f"scheduler/{session_id}/{schedule_id}")
 
