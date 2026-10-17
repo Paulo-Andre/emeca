@@ -207,8 +207,46 @@ def enviar_documento(jid, conteudo_pdf, nome_arquivo, legenda=""):
 
 
 def listar_chats():
+    """Recebe todas as páginas disponíveis, com proteção contra cursores repetidos.
+
+    O WA-AKG antigo só fornecia 50 conversas. A versão corrigida aceita
+    ?limit=500&before=... e retorna meta.nextBefore.
+    """
     session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
-    return _request("GET", f"chat/{session_id}")
+    por_jid = {}
+    cursors = set()
+    cursor = ""
+    for _ in range(25):
+        url = f"chat/{session_id}?limit=500"
+        if cursor:
+            url += "&before=" + quote(cursor, safe="")
+        resposta = _request("GET", url)
+        if not isinstance(resposta, dict) or resposta.get("status") is False:
+            return resposta
+        pagina = resposta.get("data")
+        if not isinstance(pagina, list):
+            return resposta
+        for chat in pagina:
+            if not isinstance(chat, dict) or not chat.get("jid"):
+                continue
+            jid = str(chat["jid"])
+            anterior = por_jid.get(jid)
+            if anterior is None or str(
+                (chat.get("lastMessage") or {}).get("timestamp") or ""
+            ) > str((anterior.get("lastMessage") or {}).get("timestamp") or ""):
+                por_jid[jid] = chat
+        meta = resposta.get("meta") or {}
+        proximo = meta.get("nextBefore") if isinstance(meta, dict) else None
+        if not pagina or not proximo or proximo in cursors:
+            break
+        cursors.add(proximo)
+        cursor = proximo
+    chats = sorted(
+        por_jid.values(),
+        key=lambda chat: str((chat.get("lastMessage") or {}).get("timestamp") or ""),
+        reverse=True,
+    )
+    return {"status": True, "data": chats}
 
 
 def obter_mensagens_chat(jid):
