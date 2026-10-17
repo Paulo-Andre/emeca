@@ -815,6 +815,12 @@ def _enriquecer_chats(chats):
             ),
             "",
         )
+        # O WA-AKG também armazena pushName em name ao receber mensagens.
+        # Se name e notify são iguais, não há confirmação de contato salvo:
+        # quando houver telefone real, apresentá-lo em vez do apelido.
+        apelido = str(contato.get("notify") or chat.get("notify") or "").strip()
+        if phone_jid and nome and apelido and nome.casefold() == apelido.casefold() and not contato.get("verifiedName"):
+            nome = ""
         if not nome and phone_jid:
             nome = _nome_local_por_telefone(phone_jid)
         # Sem JID telefônico, priorizar o apelido real informado pelo
