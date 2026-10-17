@@ -518,3 +518,21 @@ def apagar_agendamento(schedule_id):
     session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
     schedule_id = quote(schedule_id, safe="")
     return _request("DELETE", f"scheduler/{session_id}/{schedule_id}")
+
+
+def obter_config_sistema():
+    return _request("GET", "settings/system")
+
+
+def salvar_config_sistema(app_name, logo_url, favicon_url, timezone, enable_registration=False):
+    return _request(
+        "POST",
+        "settings/system",
+        {
+            "appName": app_name,
+            "logoUrl": logo_url,
+            "faviconUrl": favicon_url,
+            "timezone": timezone,
+            "enableRegistration": bool(enable_registration),
+        },
+    )
