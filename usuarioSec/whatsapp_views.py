@@ -2674,8 +2674,19 @@ def whatsapp_gerenciamento(request):
                 enviar_em = (request.POST.get("enviar_em") or "").strip()
                 if not jid or not conteudo or not enviar_em:
                     raise ValueError("Informe número válido, mensagem e data/hora.")
-                criar_agendamento(jid, conteudo, enviar_em)
-                messages.success(request, "Mensagem agendada.")
+                resposta = criar_agendamento(jid, conteudo, enviar_em)
+                if not isinstance(resposta, dict) or (
+                    resposta.get("status") is not True and resposta.get("success") is not True
+                ) or resposta.get("status") is False or resposta.get("success") is False:
+                    raise WhatsAppGatewayError(
+                        str((resposta or {}).get("message")
+                            or "WA-AKG não confirmou o agendamento.")
+                    )
+                messages.success(
+                    request,
+                    "Mensagem agendada e confirmada pelo WA-AKG. "
+                    "O envio depende de a conta continuar conectada no horário."
+                )
             elif acao == "apagar_agendamento":
                 apagar_agendamento((request.POST.get("id") or "").strip())
                 messages.success(request, "Agendamento removido.")
