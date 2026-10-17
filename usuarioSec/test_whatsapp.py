@@ -1038,3 +1038,40 @@ class WhatsAppIdentificacaoManualTests(TestCase):
         self.assertEqual(chats[0]["jid"], self.telefone)
         self.assertIn(self.lid, _aliases_contato_wa(self.telefone, []))
         self.assertEqual(chats[0]["phoneJid"], self.telefone)
+
+
+class WhatsAppMetadadosAlternativosTests(TestCase):
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=False)
+    @patch("usuarioSec.whatsapp_views.listar_contatos")
+    def test_nome_recuperado_de_metadados_internos_wa_akg(self, listar, _gateway):
+        listar.return_value = {"data": [{
+            "jid": "184774392074394@lid",
+            "name": None,
+            "notify": None,
+            "data": {"pushName": "Maria do WhatsApp"},
+        }]}
+        chats = _enriquecer_chats([{"jid": "184774392074394@lid"}])
+        self.assertEqual(len(chats), 1)
+        self.assertEqual(chats[0]["name"], "Maria do WhatsApp")
+        self.assertFalse(chats[0]["phoneJid"])
+
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=False)
+    @patch("usuarioSec.whatsapp_views.listar_contatos")
+    def test_telefone_recuperado_de_pn_jid_explicito_wa_akg(self, listar, _gateway):
+        listar.return_value = {"data": [{
+            "jid": "184774392074394@lid",
+            "data": {"pnJid": "5538999990000@s.whatsapp.net"},
+        }]}
+        chats = _enriquecer_chats([{"jid": "184774392074394@lid"}])
+        self.assertEqual(chats[0]["phoneJid"], "5538999990000@s.whatsapp.net")
+
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=False)
+    @patch("usuarioSec.whatsapp_views.listar_contatos")
+    def test_metadado_sem_nome_nao_inventa_numero(self, listar, _gateway):
+        listar.return_value = {"data": [{
+            "jid": "184774392074394@lid",
+            "data": {},
+        }]}
+        chats = _enriquecer_chats([{"jid": "184774392074394@lid"}])
+        self.assertEqual(chats[0]["name"], "")
+        self.assertEqual(chats[0]["phoneJid"], "")
