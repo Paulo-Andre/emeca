@@ -27,6 +27,7 @@ from .agenda_android import AgendaImportError, MAX_VCF_BYTES, processar_agenda_v
 from .models import (
     EnvioBoletimWhatsApp,
     ContatoAgendaWhatsApp,
+    ConversaExcluidaWhatsApp,
     EstadoConversaWhatsApp,
     EtiquetaConversaWhatsApp,
     ItemEnvioBoletimWhatsApp,
@@ -1508,6 +1509,49 @@ def _validar_sessao_cliente(request):
     return None
 
 
+def _limite_exclusao_conversa_wa(usuario, aliases):
+    """Maior corte já registrado para qualquer JID associado à conversa."""
+    limites = ConversaExcluidaWhatsApp.objects.filter(
+        usuario=usuario, sessao=sessao_atual_id(),
+        jid__in=aliases
+    ).values_list("ultima_mensagem_em", flat=True)
+    datas = [_instante_mensagem_whatsapp(valor) for valor in limites]
+    return max((data for data in datas if data is not None), default=None)
+
+
+def _filtrar_conversas_excluidas_wa(usuario, chats):
+    """Oculta até chegar mensagem posterior ao momento da exclusão."""
+    if not chats:
+        return chats
+    jids = {
+        identificador for chat in chats
+        for identificador in [chat.get("jid"), *(chat.get("aliases") or [])]
+        if identificador
+    }
+    cortes = {
+        linha.jid: _instante_mensagem_whatsapp(linha.ultima_mensagem_em)
+        for linha in ConversaExcluidaWhatsApp.objects.filter(
+            usuario=usuario, sessao=sessao_atual_id(), jid__in=jids
+        )
+    }
+    visiveis = []
+    for chat in chats:
+        aliases = [chat.get("jid"), *(chat.get("aliases") or [])]
+        limite = max(
+            (cortes[jid] for jid in aliases if jid in cortes and cortes[jid] is not None),
+            default=None,
+        )
+        if limite is None:
+            visiveis.append(chat)
+            continue
+        ultima = _instante_mensagem_whatsapp(
+            (chat.get("lastMessage") or {}).get("timestamp")
+        )
+        if ultima is not None and ultima > limite:
+            visiveis.append(chat)
+    return visiveis
+
+
 @login_required
 def whatsapp_mensagens(request):
     status = "NAO_CONFIGURADO"
@@ -1527,7 +1571,12 @@ def whatsapp_mensagens(request):
                 chats = payload.get("data") if isinstance(payload, dict) else []
                 if not isinstance(chats, list):
                     chats = []
-                chats = _sincronizar_nao_lidas(request.user, _enriquecer_chats(chats))
+                chats = _sincronizar_nao_lidas(
+                    request.user,
+                    _filtrar_conversas_excluidas_wa(
+                        request.user, _enriquecer_chats(chats)
+                    )
+                )
         except WhatsAppGatewayError as exc:
             status = "INDISPONIVEL"
             status_detalhe = str(exc)
@@ -1562,7 +1611,10 @@ def whatsapp_chats_api(request):
         chats = payload.get("data") if isinstance(payload, dict) else []
         chats = _sincronizar_nao_lidas(
             request.user,
-            _enriquecer_chats(chats if isinstance(chats, list) else []),
+            _filtrar_conversas_excluidas_wa(
+                request.user,
+                _enriquecer_chats(chats if isinstance(chats, list) else []),
+            ),
         )
         return JsonResponse({
             "ok": True,
@@ -1614,6 +1666,13 @@ def whatsapp_chat_api(request):
 
     mensagens = list(mensagens_por_id.values())
     mensagens.sort(key=lambda item: str(item.get("timestamp") or ""))
+    limite = _limite_exclusao_conversa_wa(request.user, aliases)
+    if limite is not None:
+        mensagens = [
+            msg for msg in mensagens
+            if (data := _instante_mensagem_whatsapp(msg.get("timestamp")))
+            is not None and data > limite
+        ]
     ocultas = set(
         MensagemOcultaWhatsApp.objects.filter(
             usuario=request.user, sessao=sessao_atual_id(),
@@ -1827,6 +1886,68 @@ def whatsapp_nova_conversa_api(request):
     try:
         resposta = enviar_mensagem_chat(jid, mensagem)
         return JsonResponse({"ok": True, "jid": jid, "resposta": resposta})
+    except WhatsAppGatewayError as exc:
+        return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
+
+
+@login_required
+@require_POST
+def whatsapp_excluir_conversa_api(request):
+    """Exclui a conversa apenas da visualização do operador no EMECA.
+
+    Sem DELETE no WA-AKG: preserva a caixa de outros atendentes, o histórico
+    auditável da escola e as mensagens no aparelho vinculado.
+    """
+    erro_sessao = _validar_sessao_cliente(request)
+    if erro_sessao is not None:
+        return erro_sessao
+    jid = (request.POST.get("jid") or "").strip()
+    if not jid or len(jid) > 120:
+        return JsonResponse({"ok": False, "erro": "Conversa inválida."}, status=400)
+    if request.POST.get("confirmacao") != "EXCLUIR":
+        return JsonResponse({"ok": False, "erro": "Confirme a exclusão da conversa."}, status=400)
+    if not gateway_configurado():
+        return JsonResponse({"ok": False, "erro": "WhatsApp indisponível."}, status=503)
+
+    try:
+        resposta = listar_chats()
+        if not isinstance(resposta, dict) or resposta.get("status") is False:
+            raise WhatsAppGatewayError("Não foi possível conferir a conversa no WA-AKG.")
+        brutos = resposta.get("data") or []
+        chats = _enriquecer_chats(brutos if isinstance(brutos, list) else [])
+        chat = next((
+            item for item in chats
+            if jid == item.get("jid") or jid in (item.get("aliases") or [])
+        ), None)
+        if chat is None:
+            return JsonResponse({"ok": False, "erro": "Conversa não localizada."}, status=404)
+        instante = _instante_mensagem_whatsapp(
+            (chat.get("lastMessage") or {}).get("timestamp")
+        )
+        # Evitar que repositórios sem timestamp façam o chat reaparecer sem
+        # nova mensagem; o momento da ação passa a ser o corte.
+        instante = max(
+            [instante, timezone.now()] if instante is not None else [timezone.now()]
+        ).isoformat()
+        aliases = [
+            alias for alias in dict.fromkeys(
+                [chat.get("jid"), *(chat.get("aliases") or [])]
+            ) if alias
+        ][:30]
+        with transaction.atomic():
+            for alias in aliases:
+                ConversaExcluidaWhatsApp.objects.update_or_create(
+                    usuario=request.user, sessao=sessao_atual_id(), jid=alias,
+                    defaults={"ultima_mensagem_em": instante},
+                )
+        return JsonResponse({
+            "ok": True,
+            "jid": chat["jid"],
+            "mensagem": (
+                "Conversa removida da sua lista. O histórico do WhatsApp "
+                "e dos demais operadores foi preservado."
+            ),
+        })
     except WhatsAppGatewayError as exc:
         return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
 
