@@ -97,7 +97,7 @@
               <small id="contactNumber"></small>
             </div>
             <div class="wa-chat-actions">
-              <button type="button" class="wa-icon-button" id="identifyContactButton" title="Identificar contato ou unir conversas" aria-label="Identificar contato ou unir conversas"><i data-lucide="contact-round-pen"></i></button>
+              <button type="button" class="wa-icon-button wa-identify-button" id="identifyContactButton" title="Identificar contato ou unir conversas" aria-label="Identificar contato ou unir conversas"><i data-lucide="contact-round-pen"></i><span>Identificar</span></button>
               <button type="button" class="wa-icon-button" id="messageSearchButton" title="Buscar mensagens"><i data-lucide="search"></i></button>
               <button type="button" class="wa-icon-button" id="labelsButton" title="Etiquetas"><i data-lucide="tags"></i></button>
               <button type="button" class="wa-icon-button" data-chat-action="read" title="Marcar como lida"><i data-lucide="check-check"></i></button>
@@ -808,7 +808,8 @@
         // não atualizou sua lista de contatos (evita atualizar fotos em loop).
         incoming.forEach(chat => {
           const previous = previousByJid.get(chat.jid);
-          if (previous && !contactLabel(chat.name) && !realPhone(chat) && contactLabel(previous.name)) {
+          if (previous && !previous.nomeManual && !chat.nomeManual &&
+              !contactLabel(chat.name) && !realPhone(chat) && contactLabel(previous.name)) {
             chat.name = previous.name;
           }
         });
