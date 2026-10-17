@@ -1435,6 +1435,96 @@ def whatsapp_chat_api(request):
 
 
 @login_required
+@require_GET
+def whatsapp_perfil_api(request):
+    """Perfil de conversa retornado pelo WA-AKG, sem adivinhar telefone pelo LID.
+
+    Dados privados só são entregues a usuários autenticados; não expomos
+    URLs remotas de mídia nem detalhes internos de autenticação do WA-AKG.
+    """
+    jid = (request.GET.get("jid") or "").strip()
+    if not jid or len(jid) > 120 or not re.fullmatch(
+        r"[0-9-]{5,85}@(lid|s\.whatsapp\.net|c\.us|g\.us)", jid
+    ):
+        return JsonResponse({"ok": False, "erro": "Contato inválido."}, status=400)
+
+    if not gateway_configurado():
+        return JsonResponse(
+            {"ok": False, "erro": "Integração WhatsApp não configurada."},
+            status=503,
+        )
+
+    contatos = _contatos_wa()
+    aliases = _aliases_contato_wa(jid, contatos)
+    ids = set(aliases)
+    localizados = [
+        contato for contato in contatos
+        if isinstance(contato, dict) and _jids_do_registro(contato).intersection(ids)
+    ]
+    identidades = _identidades_wa()
+    apelido_manual = next(
+        (item["nome_exibicao"] for item in identidades
+         if item["jid"] in ids and item["origem"] == "MANUAL"
+         and item["nome_exibicao"]),
+        "",
+    )
+    telefone_jid = next(
+        (item.replace("@c.us", "@s.whatsapp.net")
+         for item in aliases if _jid_eh_telefone(item)),
+        "",
+    )
+    nome_agenda = (
+        ContatoAgendaWhatsApp.objects.filter(
+            sessao=settings.WA_AKG_SESSION_ID, telefone_jid=telefone_jid
+        ).values_list("nome", flat=True).first() if telefone_jid else ""
+    ) or ""
+    nome_salvo = next(
+        (_nome_disponivel_no_wa(contato)
+         for contato in localizados
+         if _nome_disponivel_no_wa(contato)),
+        "",
+    )
+    nome_perfil = next(
+        (_nome_disponivel_no_wa(contato, perfil=True)
+         for contato in localizados
+         if _nome_disponivel_no_wa(contato, perfil=True)),
+        "",
+    )
+    sobre = ""
+    for contato in localizados:
+        for fonte in (contato, contato.get("data")):
+            if not isinstance(fonte, dict):
+                continue
+            for chave in ("about", "aboutText", "statusText", "description"):
+                valor = fonte.get(chave)
+                if isinstance(valor, str) and valor.strip():
+                    sobre = valor.strip()[:300]
+                    break
+            if sobre:
+                break
+        if sobre:
+            break
+    nome = apelido_manual or nome_agenda or nome_salvo or nome_perfil
+    return JsonResponse({
+        "ok": True,
+        "perfil": {
+            "jid": jid,
+            "nome": nome or (
+                ("+" + telefone_jid.split("@")[0]) if telefone_jid
+                else "Contato sem identificação"
+            ),
+            "nomeSalvo": nome_salvo,
+            "nomePerfil": nome_perfil,
+            "telefoneJid": telefone_jid,
+            "sobre": sobre,
+            "fotoDisponivel": any(
+                bool(contato.get("profilePic")) for contato in localizados
+            ),
+        },
+    })
+
+
+@login_required
 @require_POST
 def whatsapp_foto_api(request):
     jid = (request.POST.get("jid") or "").strip()
