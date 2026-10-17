@@ -2755,3 +2755,36 @@
     grid-column: auto;
   }
 }
+
+
+.manager-info-box {
+  margin: 14px 0 4px;
+  padding: 13px 15px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid #d6e6d2;
+  border-radius: 11px;
+  background: #f5faf3;
+  color: #35523a;
+}
+
+.manager-info-box > svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  margin-top: 1px;
+  color: var(--mgr-green);
+}
+
+.manager-info-box strong {
+  display: block;
+  font-size: 10px;
+}
+
+.manager-info-box p {
+  margin: 3px 0 0;
+  color: var(--mgr-muted);
+  font-size: 9px;
+  line-height: 1.5;
+}
