@@ -965,7 +965,7 @@ class SitePublicoTests(TestCase):
         self.assertEqual(boletim.numero_chamada, 7)
 
         boletim.refresh_from_db()
-        self.assertEqual(boletim.faltas_totais, 1)
+        self.assertIsNone(boletim.faltas_totais)
         notas = {
             item.disciplina.nome: (item.nota, item.faltas)
             for item in boletim.resultados.select_related("disciplina")
@@ -1390,14 +1390,14 @@ class SitePublicoTests(TestCase):
         self.assertEqual(dados["alunos"][0]["resultados"][0]["faltas"], 1)
 
     @patch("site_publico.boletim_importacao.pd.read_excel")
-    def test_leitor_usa_falta_total_do_campo_geral_do_crystal(self, read_excel):
+    def test_leitor_usa_exclusivamente_coluna_f_como_faltas_totais(self, read_excel):
         read_excel.return_value = pd.DataFrame([
-            ["E.M EGIDIO CORDEIRO AQUINO"] + [None] * 11,
-            ["Notas e Faltas do 2º Trimestre - Turma 1º Teste - 2026"] + [None] * 11,
-            [None, None, None, None, None, None, "Regente", None, "LÍNG. PORT.", None, "MATEMÁTICA", None],
-            ["Num.", None, "Nome", None, None, None, None, None, None, None, None, None],
-            [None, None, None, None, None, None, "N.", "F.", "N.", "F.", "N.", "F."],
-            [1, None, "Estudante Sintética Alfa", None, None, None, None, "3", "21,00", "0", "30,00", "1"],
+            ["E.M EGIDIO CORDEIRO AQUINO"] + [None] * 9,
+            ["Notas e Faltas do 2º Trimestre - Turma 1º Teste - 2026"] + [None] * 9,
+            [None, None, None, None, "Regente", None, "LÍNG. PORT.", None, "MATEMÁTICA", None],
+            ["Num.", None, "Nome", None, None, None, None, None, None, None],
+            [None, None, None, None, None, "F.", None, None, None, None],
+            [1, None, "Estudante Sintética Alfa", None, None, "3", "21,00", "9", "30,00", "8"],
         ])
         arquivo = SimpleUploadedFile(
             "NotaseFaltasdo2TrimestreTurma1Teste2026.xls",
@@ -1408,8 +1408,10 @@ class SitePublicoTests(TestCase):
         dados = ler_planilha_boletim(arquivo)
 
         self.assertEqual(dados["alunos"][0]["faltas_totais"], 3)
-        self.assertEqual(dados["alunos"][0]["resultados"][0]["faltas"], 0)
-        self.assertEqual(dados["alunos"][0]["resultados"][1]["faltas"], 1)
+        # Valores das colunas de falta por disciplina podem existir no arquivo,
+        # mas nunca são usados como o total do aluno.
+        self.assertEqual(dados["alunos"][0]["resultados"][0]["faltas"], 9)
+        self.assertEqual(dados["alunos"][0]["resultados"][1]["faltas"], 8)
 
     def test_consulta_combina_cpf_do_perfil_com_nascimento_de_declaracoes(self):
         periodo = PeriodoBoletim.objects.create(
@@ -1449,9 +1451,9 @@ class SitePublicoTests(TestCase):
         self.assertEqual(perfil.data_nascimento, date(2019, 8, 18))
 
     @patch("site_publico.boletim_importacao.pd.read_excel")
-    def test_layout_real_alice_usa_falta_total_3_do_campo_geral(self, read_excel):
-        # Espelha as posições do XLS real enviado pela escola:
-        # Regente em G, total de faltas em H e disciplinas iniciando em I.
+    def test_layout_real_usa_falta_total_da_coluna_f(self, read_excel):
+        # A regra oficial é fixa: coluna F (índice 5) contém as faltas totais.
+        # Valores de falta das disciplinas, à direita, não alteram esse total.
         read_excel.return_value = pd.DataFrame([
             [None] * 34,
             [None, None, None, None, None, "E.M EGIDIO CORDEIRO AQUINO"] + [None] * 28,
@@ -1463,14 +1465,14 @@ class SitePublicoTests(TestCase):
              "EDUCAÇÃO FÍSICA", None, "LEM - INGLES", None, "MATEMÁTICA", None,
              "CIÊN. NAT.", None, "GEOGRAFIA", None, "HISTORIA", None, "ENS. REL."] + [None] * 7,
             ["Num.", None, "Nome"] + [None] * 31,
-            [None, None, None, None, None, None, "N.", "F.",
+            [None, None, None, None, None, "F.", "N.", None,
              "N.", "F.", "N.", "F.", "N.", "F.", "N.", "F.", "N.", "F.",
              "N.", "F.", "N.", "F.", "N.", "F.", "N.", "F.", "N.", "F."] + [None] * 6,
             [None] * 34,
-            [1, None, "Estudante Sintética Alfa", None, None, None, None, "3",
-             "21,00", None, None, None, "30,00", "0", "29,00", "1",
-             "28,00", "0", "23,00", None, "25,00", None, "28,00", None,
-             "26,00", None, "30,00", "0"] + [None] * 6,
+            [1, None, "Estudante Sintética Alfa", None, None, "3", None, None,
+             "21,00", "7", None, None, "30,00", "5", "29,00", "4",
+             "28,00", "3", "23,00", None, "25,00", None, "28,00", None,
+             "26,00", None, "30,00", "2"] + [None] * 6,
         ])
         arquivo = SimpleUploadedFile(
             "NotaseFaltasdo2TrimestreTurma1Teste2026(1).xls",
@@ -1480,10 +1482,10 @@ class SitePublicoTests(TestCase):
 
         dados = ler_planilha_boletim(arquivo)
 
-        alice = dados["alunos"][0]
-        self.assertEqual(alice["nome"], "Estudante Sintética Alfa")
-        self.assertEqual(alice["faltas_totais"], 3)
-        self.assertEqual(alice["resultados"][0]["nota"], Decimal("21.00"))
+        aluno = dados["alunos"][0]
+        self.assertEqual(aluno["nome"], "Estudante Sintética Alfa")
+        self.assertEqual(aluno["faltas_totais"], 3)
+        self.assertEqual(aluno["resultados"][0]["nota"], Decimal("21.00"))
 
     def test_consulta_combina_cpf_e_nascimento_mesmo_com_registros_duplicados(self):
         periodo = PeriodoBoletim.objects.create(
@@ -1558,6 +1560,28 @@ class SitePublicoTests(TestCase):
         self.assertContains(response, "Editar dados")
         self.assertNotContains(response, "Cadastrar período")
 
+    def test_edicao_boletim_nao_exibe_cpf_nem_data_nascimento(self):
+        User = get_user_model()
+        usuario = User.objects.create_user(
+            username="gestor_tela_boletim_limpa",
+            password="senha-segura-123",
+        )
+        self.client.force_login(usuario)
+        _, _, periodo, boletim = self._criar_boletim_publicado()
+
+        response = self.client.get(
+            reverse(
+                "site_publico:gestao_boletim_aluno_editar",
+                args=[periodo.pk, boletim.pk],
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "CPF da mãe")
+        self.assertNotContains(response, "CPF do responsável")
+        self.assertNotContains(response, 'type="date"')
+        self.assertContains(response, "base de Declarações")
+
     def test_adicionar_aluno_manual_sem_matricula_e_lancar_notas(self):
         User = get_user_model()
         usuario = User.objects.create_user(
@@ -1573,14 +1597,16 @@ class SitePublicoTests(TestCase):
             ordem=0,
         )
 
+        declaracao.objects.create(
+            nomeDoAluno="Aluno Inserido Manualmente",
+            dataNascimentoAluno=date(2017, 5, 10),
+            cpfMae="555.555.555-55",
+        )
+
         response = self.client.post(
             reverse("site_publico:gestao_boletim_aluno_novo", args=[periodo.pk]),
             {
-                "aluno": "",
                 "nome_aluno": "Aluno Inserido Manualmente",
-                "data_nascimento": "2017-05-10",
-                "cpf_mae": "111.111.111-11",
-                "cpf_responsavel": "",
                 "numero_chamada": 30,
                 "faltas_totais": "2",
                 f"nota_{disciplina.pk}": "24,50",
@@ -1595,6 +1621,8 @@ class SitePublicoTests(TestCase):
         self.assertIsNone(boletim.aluno.matricula_id)
         self.assertEqual(boletim.numero_chamada, 30)
         self.assertEqual(boletim.faltas_totais, 2)
+        self.assertEqual(boletim.aluno.data_nascimento, date(2017, 5, 10))
+        self.assertEqual(boletim.aluno.cpf_mae, "555.555.555-55")
         resultado = NotaBoletim.objects.get(
             boletim=boletim,
             disciplina=disciplina,
@@ -1612,6 +1640,11 @@ class SitePublicoTests(TestCase):
 
         _, _, periodo, boletim = self._criar_boletim_publicado()
         disciplina = periodo.disciplinas.get(nome="Língua Portuguesa")
+        declaracao.objects.create(
+            nomeDoAluno="Estudante Sintética Alfa Corrigido",
+            dataNascimentoAluno=date(2018, 2, 3),
+            cpfMae="666.666.666-66",
+        )
 
         response = self.client.post(
             reverse(
@@ -1620,9 +1653,6 @@ class SitePublicoTests(TestCase):
             ),
             {
                 "nome_aluno": "Estudante Sintética Alfa Corrigido",
-                "data_nascimento": "2017-08-13",
-                "cpf_mae": "111.111.111-11",
-                "cpf_responsavel": "",
                 "numero_chamada": 1,
                 "faltas_totais": "3",
                 f"nota_{disciplina.pk}": "25",
@@ -1636,6 +1666,8 @@ class SitePublicoTests(TestCase):
             boletim.aluno.nome,
             "Estudante Sintética Alfa Corrigido",
         )
+        self.assertEqual(boletim.aluno.data_nascimento, date(2018, 2, 3))
+        self.assertEqual(boletim.aluno.cpf_mae, "666.666.666-66")
         resultado = NotaBoletim.objects.get(
             boletim=boletim,
             disciplina=disciplina,
