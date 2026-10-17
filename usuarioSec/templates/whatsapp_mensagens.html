@@ -10,7 +10,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
   <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-unified-05">
-  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-inbox-11">
+  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-profile-12">
 </head>
 <body>
   {% include 'includes/sidebar.html' %}
@@ -91,12 +91,13 @@
 
         <div class="wa-conversation" id="conversation" hidden>
           <header class="wa-conversation-head">
-            <div class="wa-contact-avatar" id="contactAvatar">?</div>
+            <button class="wa-contact-avatar wa-avatar-interactive" id="contactAvatar" type="button" title="Ampliar foto do contato" aria-label="Ampliar foto do contato">?</button>
             <div>
               <strong id="contactName">Contato</strong>
               <small id="contactNumber"></small>
             </div>
             <div class="wa-chat-actions">
+              <button type="button" class="wa-icon-button wa-profile-header-btn" id="viewContactProfile" title="Ver perfil do contato" aria-label="Ver perfil do contato"><i data-lucide="user-round"></i><span>Perfil</span></button>
               <button type="button" class="wa-icon-button wa-identify-button" id="identifyContactButton" title="Identificar contato ou unir conversas" aria-label="Identificar contato ou unir conversas"><i data-lucide="contact-round-pen"></i><span>Identificar</span></button>
               <button type="button" class="wa-icon-button" id="messageSearchButton" title="Buscar mensagens"><i data-lucide="search"></i></button>
               <button type="button" class="wa-icon-button" id="labelsButton" title="Etiquetas"><i data-lucide="tags"></i></button>
@@ -220,6 +221,38 @@
     </div>
   </dialog>
 
+  <dialog class="wa-profile-dialog" id="contactProfileDialog" aria-labelledby="profileDialogTitle">
+    <div class="wa-profile-card">
+      <header class="wa-profile-head">
+        <div><strong id="profileDialogTitle">Perfil do contato</strong><small>Dados disponíveis no WhatsApp e no EMECA</small></div>
+        <button type="button" class="wa-icon-button" id="closeContactProfile" aria-label="Fechar perfil"><i data-lucide="x"></i></button>
+      </header>
+      <div class="wa-profile-intro">
+        <button type="button" class="wa-profile-picture wa-avatar-interactive" id="profilePhotoButton" aria-label="Ampliar foto do perfil" title="Ampliar foto do perfil">?</button>
+        <h3 id="profileContactName">Contato</h3>
+        <div id="profileContactPhone" class="wa-profile-phone"></div>
+        <button type="button" class="wa-profile-enlarge" id="profileEnlargePhoto"><i data-lucide="expand"></i> Ampliar foto</button>
+      </div>
+      <div class="wa-profile-fields">
+        <div class="wa-profile-field"><span>Nome do perfil no WhatsApp</span><strong id="profileWhatsappName">Não disponibilizado</strong></div>
+        <div class="wa-profile-field"><span>Sobre / recado</span><p id="profileAbout">Não disponibilizado pelo WhatsApp</p></div>
+        <div class="wa-profile-field"><span>Identificação</span><p id="profileIdentification">Carregando…</p></div>
+      </div>
+      <p class="wa-profile-help" id="profileHelp">Algumas informações dependem das configurações de privacidade do contato e dos dados sincronizados pelo WhatsApp.</p>
+    </div>
+  </dialog>
+
+  <dialog class="wa-photo-dialog" id="contactPhotoDialog" aria-label="Foto do perfil ampliada">
+    <div class="wa-photo-dialog-card">
+      <header>
+        <strong id="zoomPhotoName">Foto do perfil</strong>
+        <button type="button" class="wa-icon-button" id="closeContactPhoto" aria-label="Fechar foto"><i data-lucide="x"></i></button>
+      </header>
+      <img id="contactPhotoLarge" alt="Foto do contato ampliada" referrerpolicy="no-referrer" hidden>
+      <p id="contactPhotoUnavailable" hidden>Este contato não disponibilizou uma foto de perfil acessível.</p>
+    </div>
+  </dialog>
+
   {{ chats_iniciais|json_script:"wa-chats-iniciais" }}
   <script>
     lucide.createIcons();
@@ -241,6 +274,13 @@
     const contactName = document.getElementById("contactName");
     const contactNumber = document.getElementById("contactNumber");
     const contactAvatar = document.getElementById("contactAvatar");
+    const viewContactProfile = document.getElementById("viewContactProfile");
+    const contactProfileDialog = document.getElementById("contactProfileDialog");
+    const profilePhotoButton = document.getElementById("profilePhotoButton");
+    const contactPhotoDialog = document.getElementById("contactPhotoDialog");
+    const contactPhotoLarge = document.getElementById("contactPhotoLarge");
+    const contactPhotoUnavailable = document.getElementById("contactPhotoUnavailable");
+    let profileRequestId = 0;
     const newChatDialog = document.getElementById("newChatDialog");
     const newChatForm = document.getElementById("newChatForm");
     const waContactSearch = document.getElementById("waContactSearch");
@@ -310,6 +350,96 @@
       if (known) return known;
       const jid = String(chat.jid || "");
       return "Contato sem identificação";
+    }
+
+    function activeContact() {
+      return chats.find(item => item.jid === activeJid) || null;
+    }
+
+    function profilePhotoUrl(chat) {
+      const photoJid = chat.photoJid || chat.phoneJid || chat.jid;
+      return photoJid ? "{% url 'whatsapp_foto_imagem' %}?jid=" + encodeURIComponent(photoJid) : "";
+    }
+
+    function openPhotoViewer() {
+      const chat = activeContact();
+      if (!chat) return;
+      document.getElementById("zoomPhotoName").textContent = chatDisplayName(chat);
+      const imageInHeader = contactAvatar.querySelector("img");
+      const imageInProfile = profilePhotoButton.querySelector("img");
+      const url = (imageInProfile && imageInProfile.complete && imageInProfile.naturalWidth ? imageInProfile.src : "") ||
+        (imageInHeader && imageInHeader.complete && imageInHeader.naturalWidth ? imageInHeader.src : "") ||
+        profilePhotoUrl(chat);
+      const fallback = /^https?:\/\//i.test(chat.profilePic || "") ? chat.profilePic : "";
+      contactPhotoUnavailable.hidden = true;
+      contactPhotoLarge.hidden = true;
+      contactPhotoLarge.removeAttribute("src");
+      let triedFallback = false;
+      contactPhotoLarge.onerror = () => {
+        if (!triedFallback && fallback && fallback !== url) {
+          triedFallback = true;
+          contactPhotoLarge.src = fallback;
+          return;
+        }
+        contactPhotoLarge.hidden = true;
+        contactPhotoUnavailable.hidden = false;
+      };
+      contactPhotoLarge.onload = () => {
+        contactPhotoLarge.hidden = false;
+        contactPhotoUnavailable.hidden = true;
+      };
+      if (url) {
+        contactPhotoLarge.src = url;
+      } else {
+        contactPhotoUnavailable.hidden = false;
+      }
+      if (!contactPhotoDialog.open) contactPhotoDialog.showModal();
+    }
+
+    async function openContactProfile() {
+      const chat = activeContact();
+      if (!chat) return;
+      const requestId = ++profileRequestId;
+      const chatJid = chat.jid;
+      document.getElementById("profileContactName").textContent = chatDisplayName(chat);
+      document.getElementById("profileContactPhone").textContent = realPhone(chat) || "Telefone não disponibilizado";
+      document.getElementById("profileWhatsappName").textContent = contactLabel(chat.notify) || "Não disponibilizado";
+      document.getElementById("profileAbout").textContent = "Carregando informações do perfil…";
+      document.getElementById("profileIdentification").textContent =
+        realPhone(chat) ? "Número confirmado pelo WhatsApp" : "Somente identificador interno LID; telefone não fornecido";
+      loadLivePhoto(chat, profilePhotoButton);
+      if (!contactProfileDialog.open) contactProfileDialog.showModal();
+      try {
+        const response = await fetch("{% url 'whatsapp_perfil_api' %}?jid=" + encodeURIComponent(chatJid), {
+          headers: {"Accept": "application/json"}
+        });
+        const json = await response.json();
+        if (!contactProfileDialog.open || requestId !== profileRequestId || activeJid !== chatJid) return;
+        if (!response.ok || !json.ok) throw new Error(json.erro || "Dados de perfil indisponíveis.");
+        const profile = json.perfil || {};
+        document.getElementById("profileContactName").textContent = contactLabel(profile.nome) || chatDisplayName(chat);
+        document.getElementById("profileContactPhone").textContent = prettyPhone(profile.telefoneJid) || realPhone(chat) || "Telefone não disponibilizado";
+        document.getElementById("profileWhatsappName").textContent = contactLabel(profile.nomePerfil) || "Não disponibilizado";
+        document.getElementById("profileAbout").textContent = profile.sobre || "Não disponibilizado pelo WhatsApp";
+        document.getElementById("profileIdentification").textContent = profile.telefoneJid || realPhone(chat)
+          ? "Número telefônico identificado" : "Apenas identificador LID disponível. Não é um telefone.";
+      } catch (error) {
+        if (!contactProfileDialog.open || requestId !== profileRequestId) return;
+        document.getElementById("profileAbout").textContent = "Não foi possível consultar os detalhes adicionais.";
+      }
+    }
+
+    contactAvatar.addEventListener("click", openPhotoViewer);
+    profilePhotoButton.addEventListener("click", openPhotoViewer);
+    document.getElementById("profileEnlargePhoto").addEventListener("click", openPhotoViewer);
+    viewContactProfile.addEventListener("click", openContactProfile);
+    document.getElementById("closeContactProfile").addEventListener("click", () => contactProfileDialog.close());
+    document.getElementById("closeContactPhoto").addEventListener("click", () => contactPhotoDialog.close());
+    contactProfileDialog.addEventListener("close", () => { ++profileRequestId; });
+    for (const dialog of [contactProfileDialog, contactPhotoDialog]) {
+      dialog.addEventListener("click", event => {
+        if (event.target === dialog) dialog.close();
+      });
     }
 
     function setAvatarContent(element, chat, url="", fallbackUrl="") {
