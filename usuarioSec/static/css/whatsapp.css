@@ -569,3 +569,235 @@ textarea.wa-new-chat-input{resize:vertical;min-height:94px}
   }
 }
 
+
+
+/* Aprimoramento da leitura do chat e identificação dos participantes */
+.wa-chat-list { overflow-x: hidden; }
+.wa-chat-item {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  transition: background .15s ease;
+}
+.wa-chat-item:focus-visible,
+.wa-message-more:focus-visible,
+.wa-message-action:focus-visible {
+  outline: 2px solid #059669;
+  outline-offset: 2px;
+}
+.wa-chat-item-body,
+.wa-chat-item-row { min-width: 0; }
+.wa-chat-item-row strong {
+  font-size: .86rem;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+.wa-chat-preview { line-height: 1.4; }
+.wa-chat-list-panel { background: #fbfcfd; }
+.wa-chat-item.active { background: #e7f8ee; }
+.wa-conversation-head {
+  padding: 11px 15px;
+  gap: 9px;
+  box-shadow: 0 1px 0 rgba(24, 43, 39, .05);
+}
+.wa-conversation-head > div:nth-child(2) { min-width: 0; flex: 1 1 130px; }
+.wa-conversation-head strong { font-size: .9rem; line-height: 1.25; }
+.wa-conversation-head small { line-height: 1.35; }
+.wa-chat-actions { gap: 4px; flex-shrink: 0; }
+.wa-chat-actions .wa-icon-button { width: 32px; height: 32px; border-radius: 9px; }
+.wa-live-badge { font-size: 0; margin-left: 4px; }
+.wa-live-badge > span { width: 9px; height: 9px; }
+
+.wa-message-thread {
+  padding: 18px clamp(14px, 3.5vw, 32px) 26px;
+  gap: 3px;
+  background-color: #e9efea;
+  background-image: radial-gradient(rgba(63, 91, 70, .075) .8px, transparent .8px);
+  background-size: 21px 21px;
+  scroll-padding: 20px;
+}
+.wa-message-day {
+  position: relative;
+  z-index: 1;
+  align-self: center;
+  width: fit-content;
+  max-width: 95%;
+  margin: 17px auto 11px;
+  padding: 6px 13px;
+  border: 1px solid rgba(213, 226, 217, .95);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .94);
+  color: #557064;
+  box-shadow: 0 2px 7px rgba(35, 59, 43, .05);
+  font-size: .7rem;
+  font-weight: 750;
+  text-align: center;
+}
+.wa-message {
+  box-sizing: border-box;
+  position: relative;
+  width: fit-content;
+  min-width: 68px;
+  max-width: min(77%, 620px);
+  margin-top: 11px;
+  padding: 9px 28px 7px 12px;
+  border-radius: 13px;
+  box-shadow: 0 1px 3px rgba(27, 47, 34, .075);
+  transition: box-shadow .14s ease;
+}
+.wa-message:hover { box-shadow: 0 3px 12px rgba(27, 47, 34, .09); }
+.wa-message.incoming {
+  background: #fff;
+  border: 1px solid #e0e9e1;
+  border-top-left-radius: 5px;
+}
+.wa-message.outgoing {
+  background: #d7f6dc;
+  border: 1px solid #bce7c6;
+  border-top-right-radius: 5px;
+}
+.wa-message.is-grouped { margin-top: 2px; }
+.wa-message.is-grouped.incoming { border-top-left-radius: 13px; }
+.wa-message.is-grouped.outgoing { border-top-right-radius: 13px; }
+.wa-message-text {
+  color: #1c3329;
+  font-size: .88rem;
+  font-weight: 450;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.wa-message-sender {
+  margin: 0 0 5px;
+  color: #197a64;
+  font-size: .74rem;
+  font-weight: 750;
+}
+.wa-message-meta {
+  min-height: 15px;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  color: #667b70;
+  font-size: .65rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.wa-message-meta time { margin: 0; }
+.wa-message-status { display: inline-flex; align-items: center; color: #718c7d; }
+.wa-message-status svg { width: 14px; height: 14px; stroke-width: 2.2px; }
+.wa-message-status.is-read { color: #1785ac; }
+.wa-message-more {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 22px;
+  height: 23px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, .5);
+  color: #657b72;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .14s ease, background .14s ease;
+}
+.wa-message-more svg { width: 16px; height: 16px; }
+.wa-message:hover .wa-message-more,
+.wa-message:focus-within .wa-message-more,
+.wa-message.actions-open .wa-message-more { opacity: 1; }
+.wa-message-more:hover { background: #fff; color: #174b37; }
+.wa-message-actions {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% - 2px);
+  right: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 3px;
+  width: max-content;
+  max-width: min(92vw, 300px);
+  margin: 0;
+  padding: 5px;
+  border: 1px solid #dbe7df;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 10px 26px rgba(25, 48, 34, .16);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity .12s ease, transform .12s ease;
+}
+.wa-message.incoming .wa-message-actions { left: 0; right: auto; }
+.wa-message.actions-open .wa-message-actions {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+.wa-message-action {
+  flex: 0 0 auto;
+  width: 29px;
+  height: 29px;
+  border-radius: 7px;
+  background: #f1f7f3;
+  color: #416354;
+}
+.wa-message-action:hover { background: #dff3e5; color: #136b45; }
+.wa-message-action svg { width: 15px; height: 15px; }
+.wa-message-media { max-width: 100%; margin: 1px 0 6px; }
+.wa-message-media img,
+.wa-message-media video {
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  max-height: 340px;
+  border-radius: 9px;
+}
+.wa-message-media audio { max-width: 100%; }
+.wa-thread-empty {
+  align-self: center;
+  max-width: 340px;
+  margin: auto;
+  padding: 14px 18px;
+  border-radius: 13px;
+  background: rgba(255,255,255,.87);
+  color: #62786b;
+  text-align: center;
+  font-size: .82rem;
+  line-height: 1.5;
+}
+.wa-reply-form {
+  gap: 10px;
+  padding: 12px 15px;
+  border-top-color: #e4eae6;
+  background: #fff;
+}
+.wa-reply-form textarea {
+  border-radius: 16px;
+  padding: 12px 15px;
+  background: #f8faf9;
+}
+.wa-reply-form textarea:focus { background: #fff; }
+.wa-attach-button {
+  background: #f5faf7;
+  border-color: #dce9e0;
+}
+
+@media (max-width: 760px) {
+  .wa-message-thread { padding: 13px 12px 20px; }
+  .wa-message { max-width: 88%; }
+  .wa-message-more { opacity: .8; }
+  .wa-conversation-head { padding: 10px 12px; }
+  .wa-conversation-head .wa-chat-actions {
+    flex-wrap: nowrap;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .wa-message-actions { opacity: 0; }
+  .wa-reply-form { padding: 10px; gap: 7px; }
+}
