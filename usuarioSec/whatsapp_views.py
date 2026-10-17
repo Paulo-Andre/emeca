@@ -754,7 +754,21 @@ def _aliases_contato_wa(jid, contatos=None):
     if not jid:
         return []
     grupos = _mapa_aliases_wa(contatos if contatos is not None else _contatos_wa())
-    return [jid] + [item for item in grupos.get(jid, ()) if item != jid]
+    ligados = [jid] + [item for item in grupos.get(jid, ()) if item != jid]
+    # Ligações adicionais confirmadas pelo senderJid das mensagens recebidas.
+    # As duas direções são necessárias para abrir todo o histórico unificado.
+    for alias in list(ligados):
+        if alias.endswith("@lid"):
+            item = cache.get("emeca:whatsapp:lid:" + sha256(alias.encode("utf-8")).hexdigest())
+            telefone = item.get("telefone") if isinstance(item, dict) else ""
+            if _jid_eh_telefone(telefone) and telefone not in ligados:
+                ligados.append(telefone)
+        elif _jid_eh_telefone(alias):
+            chave = "emeca:whatsapp:phone:" + sha256(alias.encode("utf-8")).hexdigest()
+            for lid in cache.get(chave) or []:
+                if lid.endswith("@lid") and lid not in ligados:
+                    ligados.append(lid)
+    return ligados
 
 
 def _nome_local_por_telefone(phone_jid):
@@ -834,6 +848,16 @@ def _enriquecer_chats(chats):
             else:
                 cache.set(chave_cache, identidade, 45)
         if identidade.get("telefone") or identidade.get("nome"):
+            telefone_confirmado = identidade.get("telefone") or ""
+            if _jid_eh_telefone(telefone_confirmado):
+                chave_reversa = (
+                    "emeca:whatsapp:phone:"
+                    + sha256(telefone_confirmado.encode("utf-8")).hexdigest()
+                )
+                lids = list(cache.get(chave_reversa) or [])
+                if jid not in lids:
+                    lids.append(jid)
+                cache.set(chave_reversa, lids, 900)
             contatos.append({
                 "jid": jid,
                 "lid": jid,
