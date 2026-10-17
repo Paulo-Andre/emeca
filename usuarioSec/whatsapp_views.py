@@ -24,6 +24,7 @@ from site_publico.models import BoletimAluno, PeriodoBoletim
 from .access_control import usuario_tem_modulo
 from .sessao_whatsapp import sessao_atual_id, criar_sessao_isolada
 from .agenda_android import AgendaImportError, MAX_VCF_BYTES, processar_agenda_vcf
+from .limpeza_historico_whatsapp import limpar_emeca_e_criar_sessao_nova
 from .models import (
     EnvioBoletimWhatsApp,
     ContatoAgendaWhatsApp,
@@ -65,6 +66,7 @@ from .whatsapp_gateway import (
     iniciar_sessao,
     pausar_sessao,
     desvincular_sessao,
+    excluir_historico_sessao,
     listar_agendamentos,
     listar_chats,
     listar_contatos,
@@ -570,59 +572,47 @@ def whatsapp_conectar(request):
 @login_required
 @require_POST
 def whatsapp_desconectar(request):
-    """Interrompe a sessão atual sem apagar histórico ou autenticação Django.
-
-    Pausar preserva credenciais WhatsApp; desvincular invalida o aparelho
-    associado e exige um novo QR Code para voltar a enviar mensagens.
-    """
+    """Pausar preserva dados. Desvincular apaga definitivamente ESTA sessão."""
     if _validar_sessao_cliente(request) is not None:
         messages.error(request, "A conta WhatsApp foi alterada. Reabra a página.")
         return redirect("whatsapp")
     if not _pode_desconectar_whatsapp(request.user):
-        return HttpResponseForbidden("Somente administradores podem desconectar o WhatsApp.")
+        return HttpResponseForbidden(
+            "Somente administradores podem desconectar o WhatsApp."
+        )
 
     destino = "whatsapp_gerenciamento" if request.POST.get("origem") == "gerenciamento" else (
         "whatsapp_mensagens" if request.POST.get("origem") == "mensagens" else "whatsapp"
     )
     acao = (request.POST.get("acao") or "").strip()
-    if acao not in ("pausar", "desvincular", "isolar"):
+    if acao not in ("pausar", "desvincular", "isolar", "finalizar_limpeza"):
         messages.error(request, "Ação de desconexão inválida.")
         return redirect(destino)
-    confirmacoes = {"desvincular": "DESVINCULAR", "isolar": "ISOLAR"}
-    if acao in confirmacoes and request.POST.get("confirmacao") != confirmacoes[acao]:
-        messages.error(request, "Confirme a troca de sessão WhatsApp para continuar.")
-        return redirect(destino)
+
+    if acao != "pausar":
+        esperada = {"desvincular": "DESVINCULAR", "isolar": "ISOLAR",
+                    "finalizar_limpeza": "APAGAR"}[acao]
+        if (
+            request.POST.get("confirmacao") != esperada
+            or request.POST.get("confirmar_exclusao") != "APAGAR_HISTORICO"
+        ):
+            messages.error(
+                request, "Confirme a exclusão PERMANENTE das mensagens da sessão."
+            )
+            return redirect(destino)
+
     if not gateway_configurado():
         messages.error(request, "Integração do WhatsApp não configurada.")
         return redirect(destino)
 
     try:
+        sessao_id = sessao_atual_id()
         sessao = obter_sessao()
-        status = str(
-            (sessao.get("data") or {}).get("status")
-            or sessao.get("status") or ""
-        ).upper()
-        if acao in {"desvincular", "isolar"}:
-            # O WA-AKG mantém a FK Session mesmo após logout. Nunca reconectar
-            # outro número nesse registro, pois ele contém o histórico anterior.
-            if status != "CONNECTED":
-                messages.error(
-                    request,
-                    "A troca exige uma conexão ativa para confirmar o logout "
-                    "da conta anterior. Não é seguro reutilizar uma sessão offline.",
-                )
-                return redirect(destino)
-            resposta = desvincular_sessao()
-            if not isinstance(resposta, dict) or resposta.get("status") is not True:
-                raise WhatsAppGatewayError("O WA-AKG não confirmou o logout.")
-            nova = criar_sessao_isolada()
-            messages.success(
-                request,
-                "WhatsApp anterior desvinculado. A sessão histórica foi preservada "
-                "separadamente. Clique em Conectar WhatsApp e leia o novo QR Code "
-                "para sincronizar a conta atual sem misturar conversas."
-            )
-        else:
+        dados = sessao.get("data") if isinstance(sessao, dict) else {}
+        dados = dados if isinstance(dados, dict) else {}
+        status = str(dados.get("status") or sessao.get("status") or "").upper()
+
+        if acao == "pausar":
             if status in {"STOPPED", "LOGGED_OUT", "NAO_CRIADA"}:
                 messages.info(request, "O WhatsApp já está desconectado.")
                 return redirect(destino)
@@ -630,12 +620,56 @@ def whatsapp_desconectar(request):
             if not isinstance(resposta, dict) or resposta.get("status") is not True:
                 raise WhatsAppGatewayError("O WA-AKG não confirmou a pausa.")
             messages.success(
-                request,
-                "Conexão do WhatsApp pausada. Mensagens e credenciais mantidas; "
-                "use Conectar WhatsApp para retomar."
+                request, "Conexão pausada. Nenhum histórico foi excluído."
             )
-    except WhatsAppGatewayError as exc:
-        messages.error(request, f"Não foi possível desconectar o WhatsApp: {exc}")
+            return redirect(destino)
+
+        # Somente LOGGED_OUT pode ser limpo. Uma falha de rede (DISCONNECTED)
+        # nunca deve apagar registros do atendimento institucional.
+        if status == "CONNECTED" and acao != "finalizar_limpeza":
+            resposta = desvincular_sessao()
+            if not isinstance(resposta, dict) or resposta.get("status") is not True:
+                raise WhatsAppGatewayError("O WA-AKG não confirmou o logout.")
+        elif status != "LOGGED_OUT":
+            raise WhatsAppGatewayError(
+                "É preciso desvincular realmente o WhatsApp. "
+                "Não é permitido apagar histórico de uma sessão pausada ou ativa."
+            )
+
+        # O socket pode levar alguns segundos para fechar após logout().
+        # Se o endpoint recusar (409), não liberar a próxima conexão.
+        import time
+        resposta_limpeza = None
+        for tentativa in range(8):
+            try:
+                resposta_limpeza = excluir_historico_sessao(sessao_id)
+                break
+            except WhatsAppGatewayError as exc:
+                if exc.status_code != 409 or tentativa == 7:
+                    raise
+                time.sleep(1)
+        if not isinstance(resposta_limpeza, dict) or resposta_limpeza.get("status") is not True:
+            raise WhatsAppGatewayError("O WA-AKG não confirmou a remoção do histórico.")
+
+        resultado = limpar_emeca_e_criar_sessao_nova(sessao_id)
+        if (resposta_limpeza.get("data") or {}).get("mediaWarning"):
+            messages.warning(
+                request,
+                "Mensagens removidas do banco, porém alguns arquivos de mídia "
+                "não puderam ser excluídos do armazenamento. Verifique o servidor."
+            )
+        messages.success(
+            request,
+            "Conta desvinculada e histórico desta sessão apagado do WA-AKG "
+            "e do EMECA. A nova conexão começará com uma sessão vazia. "
+            "Os registros apagados não poderão ser recuperados por este sistema."
+        )
+    except (WhatsAppGatewayError, ValueError) as exc:
+        messages.error(
+            request,
+            "A exclusão do histórico não foi concluída. NÃO conecte outro número. "
+            f"Verifique a sessão anterior e tente finalizar a limpeza: {exc}"
+        )
     return redirect(destino)
 
 
