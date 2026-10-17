@@ -1289,3 +1289,41 @@ textarea.wa-new-chat-input{resize:vertical;min-height:94px}
   .wa-message-delete-trigger{opacity:.95}
   .wa-message-more{opacity:.95}
 }
+
+
+/* Exclusão completa da conversa, preservando a base WA-AKG */
+.wa-conversation-head .wa-delete-chat-button {
+  border-color:#f2d8d8;color:#9d3737;background:#fff7f7;
+}
+.wa-conversation-head .wa-delete-chat-button:hover {
+  color:#8a2020;background:#ffe9e9;
+}
+.wa-delete-chat-explanation {
+  padding:15px 18px;
+  margin:0;
+  color:#48596a;
+  font-size:.85rem;
+  line-height:1.6;
+  border-bottom:1px solid #e8ecef;
+}
+.wa-delete-chat-buttons {
+  display:flex;justify-content:flex-end;flex-wrap:wrap;gap:9px;
+  padding:12px 18px;
+}
+.wa-delete-chat-buttons button {
+  display:inline-flex;gap:7px;align-items:center;justify-content:center;
+  min-height:40px;padding:8px 13px;border-radius:9px;cursor:pointer;font-weight:700;
+}
+.wa-delete-chat-buttons .wa-delete-chat-confirm {
+  border:1px solid #c63838;background:#b52d2d;color:#fff;
+}
+.wa-delete-chat-buttons .wa-delete-chat-confirm:hover {
+  background:#942525;
+}
+.wa-delete-chat-buttons .wa-delete-chat-confirm:disabled {
+  opacity:.6;cursor:wait;
+}
+.wa-delete-chat-buttons svg{width:17px;height:17px}
+@media (max-width:520px) {
+  .wa-delete-chat-buttons button{flex:1 1 auto}
+}
