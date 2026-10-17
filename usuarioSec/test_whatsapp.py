@@ -1370,15 +1370,27 @@ class WhatsAppAcoesCabecalhoTests(TestCase):
         self.assertFalse(EstadoConversaWhatsApp.objects.get(jid=self.jid).bloqueado)
         self.assertEqual(bloqueio.call_count, 2)
 
+    @patch("usuarioSec.whatsapp_views.atualizar_etiquetas_chat",
+           return_value={"success": True, "labels": [
+               {"id": "teste", "name": "Matrícula", "colorHex": "#00FF00"}
+           ]})
     @patch("usuarioSec.whatsapp_views.criar_etiqueta",
-           return_value={"status": True, "data": {"label": {"id": "teste", "name": "Matrícula"}}})
-    def test_criar_etiqueta_na_tela_de_mensagens(self, criar):
+           return_value={"status": True, "data": {"label": {
+               "id": "teste", "name": "Matrícula", "colorHex": "#00FF00"
+           }}})
+    def test_criar_etiqueta_na_tela_de_mensagens(self, criar, associar):
+        from .models import EtiquetaConversaWhatsApp
         response = self.client.post(reverse("whatsapp_etiquetas_criar_api"), {
-            "nome": "Matrícula", "cor": "3",
+            "jid": self.jid, "nome": "Matrícula", "cor": "3",
         })
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual(response.json()["etiqueta"]["name"], "Matrícula")
+        self.assertEqual(len(response.json()["etiquetas_conversa"]), 1)
+        self.assertTrue(EtiquetaConversaWhatsApp.objects.filter(
+            jid=self.jid, etiqueta_id="teste"
+        ).exists())
         criar.assert_called_once_with("Matrícula", 3)
+        associar.assert_called_once_with(self.jid, ["teste"], "add")
 
     @patch("usuarioSec.whatsapp_views.criar_etiqueta")
     def test_nao_cria_etiqueta_com_nome_vazio(self, criar):
@@ -1387,6 +1399,78 @@ class WhatsAppAcoesCabecalhoTests(TestCase):
         })
         self.assertEqual(response.status_code, 400)
         criar.assert_not_called()
+
+    @patch("usuarioSec.whatsapp_views.listar_contatos", return_value={"data": []})
+    def test_conversa_fixada_fica_acima_de_conversa_recente(self, _contatos):
+        from .models import EstadoConversaWhatsApp
+        from .sessao_whatsapp import sessao_atual_id
+        primeiro = "5538999991234@s.whatsapp.net"
+        novo = "5538999995678@s.whatsapp.net"
+        EstadoConversaWhatsApp.objects.create(
+            sessao=sessao_atual_id(), jid=primeiro, fixado=True
+        )
+        chats = _enriquecer_chats([
+            {"jid": novo, "lastMessage": {"timestamp": "2026-10-17T15:50:00Z"}},
+            {"jid": primeiro, "lastMessage": {"timestamp": "2026-10-17T10:00:00Z"}},
+        ])
+        self.assertEqual(chats[0]["jid"], primeiro)
+        self.assertTrue(chats[0]["fixado"])
+
+    @patch("usuarioSec.whatsapp_views.listar_contatos", return_value={"data": []})
+    def test_etiquetas_sao_visiveis_apos_reabrir_lista(self, _contatos):
+        from .models import EtiquetaConversaWhatsApp
+        from .sessao_whatsapp import sessao_atual_id
+        EtiquetaConversaWhatsApp.objects.create(
+            sessao=sessao_atual_id(), jid=self.jid,
+            etiqueta_id="matriculas", nome="Matrículas", cor="#22c55e",
+        )
+        chats = _enriquecer_chats([{"jid": self.jid}])
+        self.assertEqual(chats[0]["etiquetas"][0]["name"], "Matrículas")
+
+    @patch("usuarioSec.whatsapp_views.atualizar_etiquetas_chat",
+           return_value={"success": True, "labels": [
+               {"id": "urgente", "name": "Urgente", "colorHex": "#FF0000"}
+           ]})
+    def test_salvar_etiqueta_apresenta_estado_persistido(self, atualizar):
+        from .models import EtiquetaConversaWhatsApp
+        response = self.client.post(reverse("whatsapp_etiquetas_atualizar_api"), {
+            "jid": self.jid, "action": "add", "label_ids": ["urgente"],
+        })
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()["etiquetas_conversa"][0]["nome"], "Urgente")
+        self.assertTrue(EtiquetaConversaWhatsApp.objects.filter(
+            jid=self.jid, etiqueta_id="urgente"
+        ).exists())
+        atualizar.assert_called_once_with(self.jid, ["urgente"], "add")
+
+    @patch("usuarioSec.whatsapp_views.atualizar_etiquetas_chat")
+    def test_erro_atribuicao_nao_cria_etiqueta_local(self, atualizar):
+        from .models import EtiquetaConversaWhatsApp
+        from .whatsapp_gateway import WhatsAppGatewayError
+        atualizar.side_effect = WhatsAppGatewayError("Falha ao aplicar", 502)
+        response = self.client.post(reverse("whatsapp_etiquetas_atualizar_api"), {
+            "jid": self.jid, "action": "add", "label_ids": ["urgente"],
+        })
+        self.assertEqual(response.status_code, 502)
+        self.assertFalse(EtiquetaConversaWhatsApp.objects.exists())
+
+    @patch("usuarioSec.whatsapp_views.listar_etiquetas_chat",
+           return_value={"status": True, "data": {"labels": [
+               {"id": "urgente", "name": "Urgente", "colorHex": "#FF0000"}
+           ]}})
+    @patch("usuarioSec.whatsapp_views.listar_etiquetas",
+           return_value={"status": True, "data": {"labels": [
+               {"id": "urgente", "name": "Urgente", "colorHex": "#FF0000"}
+           ]}})
+    def test_consulta_etiquetas_reconcilia_lista_local(self, _geral, _chat):
+        from .models import EtiquetaConversaWhatsApp
+        response = self.client.get(
+            reverse("whatsapp_etiquetas_api"), {"jid": self.jid}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(EtiquetaConversaWhatsApp.objects.filter(
+            jid=self.jid, etiqueta_id="urgente"
+        ).exists())
 
     @patch("usuarioSec.whatsapp_views.buscar_mensagens")
     def test_busca_de_conversa_retorna_resultados(self, buscar):
