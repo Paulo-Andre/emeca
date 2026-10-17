@@ -5,6 +5,9 @@ As operações remotas são simuladas; não envia mensagens reais.
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
+
+from .access_control import GRUPO_WHATSAPP
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -19,6 +22,8 @@ class GruposSemMensagemTests(TestCase):
         self.user = get_user_model().objects.create_user(
             username="grupos-teste", password="senha-teste"
         )
+        grupo, _ = Group.objects.get_or_create(name=GRUPO_WHATSAPP)
+        self.user.groups.add(grupo)
         self.client.force_login(self.user)
         self.group_jid = "120363888888888888@g.us"
 
