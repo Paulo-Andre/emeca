@@ -279,3 +279,126 @@ def gerenciar_chat(jid, acao, ativo=True):
     if acao == "read":
         return marcar_chat_como_lido(jid)
     raise WhatsAppGatewayError("Ação de conversa inválida.")
+
+
+def buscar_mensagens(q="", jid="", tipo="", page=1, limit=50):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    params = []
+    if q:
+        params.append(f"q={quote(str(q), safe='')}")
+    if jid:
+        params.append(f"jid={quote(str(jid), safe='')}")
+    if tipo:
+        params.append(f"type={quote(str(tipo), safe='')}")
+    params.append(f"page={int(page)}")
+    params.append(f"limit={min(max(int(limit), 1), 100)}")
+    return _request("GET", f"messages/{session_id}/search?{'&'.join(params)}")
+
+
+def responder_mensagem_citada(jid, message_id, texto):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    message_id_codificado = quote(message_id, safe="")
+    return _request(
+        "POST",
+        f"messages/{session_id}/{jid_codificado}/{message_id_codificado}/reply",
+        {"message": {"text": texto}},
+    )
+
+
+def favoritar_mensagem(jid, message_id, star=True, from_me=False):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    message_id_codificado = quote(message_id, safe="")
+    return _request(
+        "POST",
+        f"messages/{session_id}/{jid_codificado}/{message_id_codificado}/star",
+        {"star": bool(star), "fromMe": bool(from_me)},
+    )
+
+
+def reagir_mensagem(jid, message_id, emoji):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    message_id_codificado = quote(message_id, safe="")
+    return _request(
+        "POST",
+        f"messages/{session_id}/{jid_codificado}/{message_id_codificado}/react",
+        {"emoji": emoji},
+    )
+
+
+def editar_mensagem(jid, message_id, texto):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    message_id_codificado = quote(message_id, safe="")
+    return _request(
+        "PATCH",
+        f"messages/{session_id}/{jid_codificado}/{message_id_codificado}",
+        {"text": texto},
+    )
+
+
+def apagar_mensagem(jid, message_id):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    message_id_codificado = quote(message_id, safe="")
+    return _request(
+        "DELETE",
+        f"messages/{session_id}/{jid_codificado}/{message_id_codificado}",
+    )
+
+
+def encaminhar_mensagem(from_jid, message_id, to_jids):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    return _request(
+        "POST",
+        f"messages/{session_id}/forward",
+        {
+            "fromJid": from_jid,
+            "messageId": message_id,
+            "toJids": to_jids,
+        },
+    )
+
+
+def bloquear_contato(jid, bloquear=True):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    acao = "block" if bloquear else "unblock"
+    return _request(
+        "POST",
+        f"contacts/{session_id}/{jid_codificado}/{acao}",
+        {},
+    )
+
+
+def enviar_presenca(jid, presence):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    return _request(
+        "POST",
+        f"chat/{session_id}/{jid_codificado}/presence",
+        {"presence": presence},
+    )
+
+
+def listar_etiquetas():
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    return _request("GET", f"labels/{session_id}")
+
+
+def listar_etiquetas_chat(jid):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    return _request("GET", f"labels/{session_id}/chat/{jid_codificado}/labels")
+
+
+def atualizar_etiquetas_chat(jid, label_ids, action):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    return _request(
+        "PUT",
+        f"labels/{session_id}/chat/{jid_codificado}/labels",
+        {"labelIds": label_ids, "action": action},
+    )
