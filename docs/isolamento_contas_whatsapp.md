@@ -51,6 +51,8 @@ docker compose -f deploy/wa-akg/compose.secure.yaml exec -T db sh -c \
   > "/srv/backups/emeca/wa-akg-antes-isolamento-$(date +%Y%m%d-%H%M%S).sql"
 
 git pull origin main
+# Alternativa simples para os comandos de backup acima:
+# bash deploy/wa-akg/backup_antes_isolamento.sh
 docker compose up -d --build
 docker compose exec -T web python manage.py migrate
 docker compose exec -T web python manage.py test \
