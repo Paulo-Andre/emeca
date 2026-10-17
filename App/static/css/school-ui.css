@@ -1301,3 +1301,70 @@ table thead th {
     display: contents;
   }
 }
+
+
+/* Recolhimento manual persistente do menu lateral */
+.sidebar-toggle{
+  margin-left:auto;
+  width:34px;
+  height:34px;
+  flex:0 0 34px;
+  display:grid;
+  place-items:center;
+  border:0;
+  border-radius:9px;
+  background:rgba(255,255,255,.08);
+  color:#d8ebf0;
+  cursor:pointer;
+}
+.sidebar-toggle:hover{background:rgba(255,255,255,.15);color:#fff}
+.sidebar-toggle svg{width:18px;height:18px}
+
+@media (min-width:1101px){
+  .sidebar.is-collapsed,
+  .sidebar.is-collapsed:hover,
+  .sidebar.is-collapsed:focus-within{
+    width:78px !important;
+    min-width:78px !important;
+    padding-left:12px !important;
+    padding-right:12px !important;
+  }
+  .sidebar.is-collapsed .logo,
+  .sidebar.is-collapsed:hover .logo,
+  .sidebar.is-collapsed:focus-within .logo{
+    margin:0 0 26px !important;
+    padding:2px 0 18px !important;
+    gap:0 !important;
+    justify-content:center !important;
+  }
+  .sidebar.is-collapsed .logo__copy,
+  .sidebar.is-collapsed .nav-section-label,
+  .sidebar.is-collapsed .sidebar-subnav,
+  .sidebar.is-collapsed .nav-item > span{
+    display:none !important;
+  }
+  .sidebar.is-collapsed .sidebar-toggle{
+    position:absolute;
+    right:8px;
+    top:8px;
+    width:28px;
+    height:28px;
+    background:rgba(255,255,255,.12);
+  }
+  .sidebar.is-collapsed .nav-item,
+  .sidebar.is-collapsed:hover .nav-item,
+  .sidebar.is-collapsed:focus-within .nav-item{
+    justify-content:center !important;
+    gap:0 !important;
+    padding:10px !important;
+    font-size:0 !important;
+    overflow:hidden !important;
+  }
+  .sidebar.is-collapsed .nav-item > svg{
+    margin:0 !important;
+  }
+}
+
+@media (max-width:1100px){
+  .sidebar-toggle{display:none}
+}
