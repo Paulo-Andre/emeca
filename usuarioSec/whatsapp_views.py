@@ -721,7 +721,7 @@ def whatsapp_desconectar(request):
     except (WhatsAppGatewayError, ValueError) as exc:
         logger.warning(
             "Desconexão WhatsApp incompleta na sessão %s: %s",
-            sessao_atual_id(), exc,
+            locals().get("sessao_id", "indisponível"), exc,
         )
         messages.error(
             request,
