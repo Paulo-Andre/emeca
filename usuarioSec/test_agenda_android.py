@@ -1,6 +1,9 @@
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
+
+from .access_control import GRUPO_WHATSAPP
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -69,6 +72,8 @@ class AgendaAndroidTests(TestCase):
 
     def test_preview_e_importacao_por_admin(self):
         user = get_user_model().objects.create_user(username="exemplo_admin", is_staff=True)
+        grupo, _ = Group.objects.get_or_create(name=GRUPO_WHATSAPP)
+        user.groups.add(grupo)
         self.client.force_login(user)
         url = reverse("whatsapp_importar_agenda")
         payload = lambda mode: {"modo": mode, "arquivo": SimpleUploadedFile("agenda.vcf", VCF)}
@@ -87,6 +92,8 @@ class AgendaAndroidTests(TestCase):
             "jid": "5538999991234@s.whatsapp.net", "name": "Nome antigo",
         }]}
         user = get_user_model().objects.create_user(username="busca_agenda")
+        grupo, _ = Group.objects.get_or_create(name=GRUPO_WHATSAPP)
+        user.groups.add(grupo)
         self.client.force_login(user)
         response = self.client.get(
             reverse("whatsapp_buscar_contatos_wa"), {"q": "Maria"}
@@ -126,6 +133,8 @@ class AgendaAndroidTests(TestCase):
         usuario = get_user_model().objects.create_user(
             username="administrador_sincronizacao", is_staff=True
         )
+        grupo, _ = Group.objects.get_or_create(name=GRUPO_WHATSAPP)
+        usuario.groups.add(grupo)
         self.client.force_login(usuario)
         pagina = self.client.get(reverse("whatsapp_gerenciamento"))
         self.assertEqual(pagina.status_code, 200)
