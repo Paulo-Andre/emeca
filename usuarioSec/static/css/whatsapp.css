@@ -327,3 +327,27 @@ textarea.wa-new-chat-input{resize:vertical;min-height:94px}
   .wa-chat-actions{gap:2px}
   .wa-chat-actions .wa-icon-button{width:32px;height:32px}
 }
+
+
+/* Anexos dentro da conversa */
+.wa-reply-form{
+  grid-template-columns:42px minmax(0,1fr) 46px;
+}
+.wa-attach-button{
+  width:42px;
+  height:42px;
+  display:grid;
+  place-items:center;
+  align-self:end;
+  border:1px solid #dbe3ee;
+  border-radius:50%;
+  background:#fff;
+  color:#475569;
+  cursor:pointer;
+}
+.wa-attach-button:hover:not(:disabled){
+  background:#f1f5f9;
+  color:#0f172a;
+}
+.wa-attach-button:disabled{opacity:.5;cursor:wait}
+.wa-attach-button svg{width:18px;height:18px}
