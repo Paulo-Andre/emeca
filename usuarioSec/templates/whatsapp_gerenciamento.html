@@ -22,6 +22,7 @@
         <p>Recursos administrativos de atendimento integrados ao WA-AKG.</p>
       </div>
       <div class="wa-header-actions">
+        {% if request.user.is_staff %}<a class="btn-secondary" href="{% url 'whatsapp_importar_agenda' %}"><i data-lucide="contact-round"></i> Importar contatos</a>{% endif %}
         <a class="btn-secondary" href="{% url 'whatsapp_mensagens' %}"><i data-lucide="messages-square"></i> Mensagens</a>
         <a class="btn-secondary" href="{% url 'whatsapp' %}"><i data-lucide="send"></i> Envios</a>
       </div>
