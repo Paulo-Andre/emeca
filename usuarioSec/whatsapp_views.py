@@ -21,12 +21,18 @@ from .models import (
 )
 from .whatsapp_gateway import (
     WhatsAppGatewayError,
+    apagar_agendamento,
     apagar_mensagem,
+    apagar_resposta_automatica,
     baixar_midia_mensagem,
     atualizar_etiquetas_chat,
     bloquear_contato,
     buscar_mensagens,
     configurado as gateway_configurado,
+    criar_agendamento,
+    criar_etiqueta,
+    criar_grupo,
+    criar_resposta_automatica,
     editar_mensagem,
     encaminhar_mensagem,
     enviar_broadcast,
@@ -36,9 +42,12 @@ from .whatsapp_gateway import (
     favoritar_mensagem,
     gerenciar_chat,
     iniciar_sessao,
+    listar_agendamentos,
     listar_chats,
     listar_contatos,
     listar_etiquetas,
+    listar_grupos,
+    listar_respostas_automaticas,
     listar_etiquetas_chat,
     marcar_chat_como_lido,
     obter_foto_perfil,
@@ -1230,3 +1239,92 @@ def whatsapp_midia_recebida(request, message_id):
             {"ok": False, "erro": str(exc)},
             status=exc.status_code or 502,
         )
+
+
+
+@login_required
+def whatsapp_gerenciamento(request):
+    if request.method == "POST":
+        acao = (request.POST.get("acao") or "").strip()
+        try:
+            if acao == "criar_etiqueta":
+                nome = (request.POST.get("nome") or "").strip()
+                cor = int(request.POST.get("cor") or 0)
+                if not nome:
+                    raise ValueError("Informe o nome da etiqueta.")
+                criar_etiqueta(nome, cor)
+                messages.success(request, "Etiqueta criada no WhatsApp.")
+            elif acao == "criar_auto_resposta":
+                palavra = (request.POST.get("palavra") or "").strip()
+                resposta = (request.POST.get("resposta") or "").strip()
+                match_type = (request.POST.get("match_type") or "EXACT").strip()
+                trigger_type = (request.POST.get("trigger_type") or "ALL").strip()
+                if not palavra or not resposta:
+                    raise ValueError("Informe a palavra-chave e a resposta.")
+                criar_resposta_automatica(palavra, resposta, match_type, trigger_type)
+                messages.success(request, "Resposta automática criada.")
+            elif acao == "apagar_auto_resposta":
+                apagar_resposta_automatica((request.POST.get("id") or "").strip())
+                messages.success(request, "Resposta automática removida.")
+            elif acao == "criar_agendamento":
+                numero = re.sub(r"\D", "", request.POST.get("numero") or "")
+                jid = _normalizar_jid(numero)
+                conteudo = (request.POST.get("conteudo") or "").strip()
+                enviar_em = (request.POST.get("enviar_em") or "").strip()
+                if not jid or not conteudo or not enviar_em:
+                    raise ValueError("Informe número válido, mensagem e data/hora.")
+                criar_agendamento(jid, conteudo, enviar_em)
+                messages.success(request, "Mensagem agendada.")
+            elif acao == "apagar_agendamento":
+                apagar_agendamento((request.POST.get("id") or "").strip())
+                messages.success(request, "Agendamento removido.")
+            elif acao == "criar_grupo":
+                assunto = (request.POST.get("assunto") or "").strip()
+                numeros = [
+                    _normalizar_jid(item)
+                    for item in re.split(r"[,;\n]+", request.POST.get("participantes") or "")
+                ]
+                participantes = [item for item in numeros if item]
+                if not assunto or not participantes:
+                    raise ValueError("Informe o nome do grupo e pelo menos um telefone válido.")
+                criar_grupo(assunto, participantes)
+                messages.success(request, "Grupo criado.")
+            else:
+                raise ValueError("Ação inválida.")
+        except (ValueError, WhatsAppGatewayError) as exc:
+            messages.error(request, str(exc))
+        return redirect("whatsapp_gerenciamento")
+
+    dados = {
+        "gateway_configurado": gateway_configurado(),
+        "etiquetas": [],
+        "auto_respostas": [],
+        "agendamentos": [],
+        "historico_agendamentos": [],
+        "grupos": [],
+    }
+    if gateway_configurado():
+        try:
+            labels = listar_etiquetas()
+            dados["etiquetas"] = labels.get("data", {}).get("labels", []) if isinstance(labels, dict) else []
+        except WhatsAppGatewayError:
+            pass
+        try:
+            payload = listar_respostas_automaticas()
+            dados["auto_respostas"] = payload.get("data", []) if isinstance(payload, dict) else []
+        except WhatsAppGatewayError:
+            pass
+        try:
+            payload = listar_agendamentos("pending")
+            dados["agendamentos"] = payload.get("data", []) if isinstance(payload, dict) else []
+            hist = listar_agendamentos("history")
+            dados["historico_agendamentos"] = hist.get("data", []) if isinstance(hist, dict) else []
+        except WhatsAppGatewayError:
+            pass
+        try:
+            payload = listar_grupos()
+            dados["grupos"] = payload.get("data", []) if isinstance(payload, dict) else []
+        except WhatsAppGatewayError:
+            pass
+
+    return render(request, "whatsapp_gerenciamento.html", dados)
