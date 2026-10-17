@@ -1212,6 +1212,8 @@ def whatsapp_gerenciar_chat_api(request):
 
     try:
         resposta = gerenciar_chat(jid, acao, ativo)
+        if acao == "read":
+            _marcar_como_vista_no_emeca(request.user, jid)
         return JsonResponse({"ok": True, "resposta": resposta})
     except WhatsAppGatewayError as exc:
         return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
