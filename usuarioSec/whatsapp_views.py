@@ -719,18 +719,56 @@ def _contatos_persistidos_wa(identidades=None):
     ]
 
 
+_CAMPOS_JID_WA = (
+    "jid", "id", "lid", "remoteJidAlt", "phoneJid", "pnJid", "phoneNumberJid"
+)
+_CAMPOS_NOME_WA = (
+    "name", "verifiedName", "notify", "pushName", "pushname",
+    "displayName", "fullName", "shortName", "businessName",
+)
+_ROTULOS_INVALIDOS_WA = {
+    "", "contato whatsapp", "whatsapp", "unknown", "sem nome",
+    "contato sem identificação", "número não identificado",
+}
+
+
+def _nome_disponivel_no_wa(registro, *, perfil=False):
+    """Nome realmente retornado pelo WA-AKG; nunca gerar nome a partir de LID."""
+    if not isinstance(registro, dict):
+        return ""
+    campos = (
+        ("notify", "pushName", "pushname", "displayName", "fullName", "shortName", "name", "verifiedName")
+        if perfil else _CAMPOS_NOME_WA
+    )
+    for fonte in (registro, registro.get("data")):
+        if not isinstance(fonte, dict):
+            continue
+        for campo in campos:
+            nome = fonte.get(campo)
+            if not isinstance(nome, str):
+                continue
+            nome = nome.strip()
+            if (
+                nome and len(nome) <= 160
+                and nome.casefold() not in _ROTULOS_INVALIDOS_WA
+                and not nome.endswith(("@lid", "@s.whatsapp.net", "@c.us"))
+            ):
+                return nome
+    return ""
+
+
 def _jids_do_registro(registro):
-    """Somente JIDs explícitos: nomes/fotos iguais NÃO autorizam fusão."""
+    """Somente vínculos JID explícitos do WhatsApp; jamais juntar por nome/foto."""
     if not isinstance(registro, dict):
         return set()
-    valores = {
-        str(registro.get(chave) or "").strip()
-        for chave in ("jid", "lid", "remoteJidAlt", "phoneJid")
-    }
-    dados = registro.get("data")
-    if isinstance(dados, dict):
-        valores.add(str(dados.get("id") or "").strip())
-        valores.add(str(dados.get("lid") or "").strip())
+    valores = set()
+    for fonte in (registro, registro.get("data")):
+        if not isinstance(fonte, dict):
+            continue
+        for campo in _CAMPOS_JID_WA:
+            valor = fonte.get(campo)
+            if isinstance(valor, str):
+                valores.add(valor.strip())
     extras = registro.get("aliases")
     if isinstance(extras, list):
         valores.update(str(item or "").strip() for item in extras)
@@ -826,6 +864,15 @@ def _enriquecer_chats(chats):
         for item in identidades if item["origem"] == "METADATA" and item["nome_exibicao"]
     }
     contatos = _contatos_wa() + _contatos_persistidos_wa(identidades)
+    # Reaproveitar nomes em campos alternativos do cadastro do WA-AKG,
+    # inclusive os metadados brutos armazenados pelo Baileys.
+    for contato in contatos:
+        if isinstance(contato, dict) and not _nome_disponivel_no_wa({
+            "name": contato.get("name"), "verifiedName": contato.get("verifiedName")
+        }):
+            nome_nativo = _nome_disponivel_no_wa(contato)
+            if nome_nativo:
+                contato["name"] = nome_nativo
     # Registros @lid antigos nem sempre têm o telefone na tabela Contact.
     # O histórico recebido pode conter senderJid (telefone) e pushName,
     # informados diretamente pelo WhatsApp. Consultar no máximo três LIDs
@@ -858,7 +905,7 @@ def _enriquecer_chats(chats):
                     if _jid_eh_telefone(candidato):
                         telefone = candidato.replace("@c.us", "@s.whatsapp.net")
                 if not nome_perfil:
-                    nome_perfil = str(msg.get("pushName") or "").strip()
+                    nome_perfil = _nome_disponivel_no_wa(msg, perfil=True)
                 if telefone and nome_perfil:
                     break
             identidade = {"telefone": telefone, "nome": nome_perfil}
@@ -992,6 +1039,15 @@ def _enriquecer_chats(chats):
                 apelidos.append(apelido)
 
         nome = nomes[0] if nomes else ""
+        if not nome:
+            nome = next(
+                (
+                    _nome_disponivel_no_wa(contato, perfil=not bool(phone_jid))
+                    for contato in contatos_grupo
+                    if _nome_disponivel_no_wa(contato, perfil=not bool(phone_jid))
+                ),
+                "",
+            )
         if not nome and phone_jid:
             nome = _nome_local_por_telefone(phone_jid)
         if not nome and not phone_jid:
