@@ -10,7 +10,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
   <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-unified-05">
-  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-profile-12">
+  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-disconnect-13">
 </head>
 <body>
   {% include 'includes/sidebar.html' %}
@@ -29,8 +29,29 @@
         <a class="btn-secondary inbox-back-send" href="{% url 'whatsapp' %}">
           <i data-lucide="send"></i> Envios
         </a>
+        {% if gateway_status == "CONNECTED" and request.user.is_staff %}
+          <form method="post" action="{% url 'whatsapp_desconectar' %}" class="wa-disconnect-header-form"
+            onsubmit="return confirm('Pausar o WhatsApp? O histórico e o vínculo com o celular serão preservados.');">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="pausar">
+            <input type="hidden" name="origem" value="mensagens">
+            <button type="submit" class="btn-secondary" title="Pausar conexão"><i data-lucide="pause-circle"></i> Pausar</button>
+          </form>
+          <form method="post" action="{% url 'whatsapp_desconectar' %}" class="wa-disconnect-header-form"
+            onsubmit="return confirm('Desvincular o WhatsApp desta escola? Será necessário um novo QR Code para conectar. As mensagens armazenadas serão mantidas.');">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="desvincular">
+            <input type="hidden" name="confirmacao" value="DESVINCULAR">
+            <input type="hidden" name="origem" value="mensagens">
+            <button type="submit" class="btn-secondary wa-disconnect-btn" title="Desvincular WhatsApp do aparelho"><i data-lucide="log-out"></i> Desvincular</button>
+          </form>
+        {% endif %}
       </div>
     </header>
+
+    {% for message in messages %}
+      <div class="wa-manager-alert{% if message.tags %} {{ message.tags }}{% endif %}" role="status">{{ message }}</div>
+    {% endfor %}
 
     {% if gateway_status != "CONNECTED" %}
       <section class="connection-card">
