@@ -900,3 +900,43 @@ textarea.wa-new-chat-input{resize:vertical;min-height:94px}
   .wa-conversation-head .wa-identify-button span { display: none; }
   .wa-conversation-head .wa-identify-button { padding: 0 8px; }
 }
+
+
+/* Importação de contatos Android / EMECA */
+.wa-agenda-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.85fr);
+  align-items: start;
+  gap: 16px;
+}
+.wa-agenda-main,.wa-agenda-help { min-width: 0; }
+.wa-agenda-main input[type="file"] {
+  display: block; width: 100%; box-sizing: border-box;
+  padding: 14px; border: 1px dashed #a7cabb;
+  border-radius: 12px; background: #f7fbf8;
+  color: #345748;
+  font-size: .86rem;
+}
+.wa-agenda-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.wa-agenda-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+.wa-agenda-actions button:disabled { opacity: .5; cursor: not-allowed; }
+.wa-agenda-actions svg { width: 16px; height: 16px; }
+.wa-agenda-status { padding: 8px 0; font-size: .83rem; font-weight: 600; color: #166b42; }
+.wa-agenda-status.is-error { color: #a12525; }
+.wa-agenda-title { margin: 12px 0; font-size: 1.05rem; color: #153c2c; }
+.wa-agenda-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.wa-agenda-stat { padding: 13px; border: 1px solid #e0eae4; border-radius: 12px; display:grid; gap:5px; background:#f9fcfa; }
+.wa-agenda-stat strong { font-size: 1.45rem; color:#164f36; letter-spacing:-.03em; }
+.wa-agenda-stat span { font-size: .71rem; line-height:1.4; color:#64786b; }
+.wa-agenda-hint { margin: 14px 0; line-height: 1.5; color: #536e5e; font-size:.81rem; }
+.wa-agenda-samples { display:grid; gap:7px; margin:10px 0; }
+.wa-agenda-samples > div { display:flex; align-items:center; gap:8px; justify-content:space-between; padding:10px 12px; border-radius:10px; background:#f6faf7; border:1px solid #e2ede6; }
+.wa-agenda-samples strong { font-size:.84rem; color:#193d2c; overflow-wrap:anywhere; }
+.wa-agenda-samples span { font-size:.78rem; color:#536e61; white-space:nowrap; }
+.wa-agenda-help ol { margin:10px 0; padding-left:22px; color:#364d42; line-height:1.65; font-size:.83rem; }
+.wa-agenda-help li { margin:0 0 10px; }
+.wa-agenda-note { display:flex; gap:10px; padding:13px; border:1px solid #dcebe1; border-radius:12px; background:#f2f9f4; }
+.wa-agenda-note svg { width:19px; height:19px; flex:0 0 19px; color:#278351; }
+.wa-agenda-note p { margin:0; line-height:1.55; color:#476653; font-size:.77rem; }
+@media(max-width:1000px){ .wa-agenda-layout {grid-template-columns:1fr;} }
+@media(max-width:600px){ .wa-agenda-stats {grid-template-columns:repeat(2,minmax(0,1fr));} .wa-agenda-actions button {flex:1 1 100%;} }
