@@ -30,6 +30,7 @@ from .models import (
     ConversaExcluidaWhatsApp,
     EstadoConversaWhatsApp,
     EtiquetaConversaWhatsApp,
+    GrupoOcultoWhatsApp,
     ItemEnvioBoletimWhatsApp,
     IdentidadeContatoWhatsApp,
     LeituraChatWhatsApp,
@@ -40,6 +41,7 @@ from .models import (
 from .whatsapp_gateway import (
     WhatsAppGatewayError,
     apagar_agendamento,
+    apagar_etiqueta,
     apagar_mensagem,
     apagar_resposta_automatica,
     baixar_midia_mensagem,
@@ -80,8 +82,26 @@ from .whatsapp_gateway import (
     reagir_mensagem,
     responder_mensagem_citada,
     salvar_config_sistema,
+    sair_grupo,
     verificar_numeros,
 )
+
+
+CORES_ETIQUETAS_WA = [
+    {"id": i, "hex": cor, "nome": nome}
+    for i, (cor, nome) in enumerate([
+        ("#FF0000", "Vermelho"), ("#FF7F00", "Laranja"),
+        ("#FFFF00", "Amarelo"), ("#00FF00", "Verde"),
+        ("#0000FF", "Azul"), ("#4B0082", "Índigo"),
+        ("#9400D3", "Roxo"), ("#FF1493", "Rosa"),
+        ("#00CED1", "Turquesa"), ("#32CD32", "Verde-lima"),
+        ("#FFD700", "Dourado"), ("#FF69B4", "Rosa-claro"),
+        ("#8B4513", "Marrom"), ("#2F4F4F", "Verde-escuro"),
+        ("#696969", "Cinza"), ("#708090", "Cinza-azulado"),
+        ("#778899", "Ardósia"), ("#B0C4DE", "Azul-gelo"),
+        ("#ADD8E6", "Azul-claro"), ("#F0E68C", "Areia"),
+    ])
+]
 
 
 TIPOS_CONTATO = {"PAI", "MAE", "RESPONSAVEL"}
@@ -1528,6 +1548,16 @@ def _filtrar_conversas_excluidas_wa(usuario, chats):
         for identificador in [chat.get("jid"), *(chat.get("aliases") or [])]
         if identificador
     }
+    grupos_ocultos = set(
+        GrupoOcultoWhatsApp.objects.filter(
+            sessao=sessao_atual_id(), jid__in=jids
+        ).values_list("jid", flat=True)
+    )
+    chats = [
+        chat for chat in chats
+        if chat.get("jid") not in grupos_ocultos and
+        not set(chat.get("aliases") or []).intersection(grupos_ocultos)
+    ]
     cortes = {
         linha.jid: _instante_mensagem_whatsapp(linha.ultima_mensagem_em)
         for linha in ConversaExcluidaWhatsApp.objects.filter(
@@ -2483,14 +2513,25 @@ def whatsapp_gerenciamento(request):
             messages.error(request, "A conta WhatsApp foi trocada. Atualize a página.")
             return redirect("whatsapp_gerenciamento")
         acao = (request.POST.get("acao") or "").strip()
+        if acao in {"apagar_etiqueta", "sair_grupo", "remover_grupo"} and not _pode_desconectar_whatsapp(request.user):
+            return HttpResponseForbidden("Somente administradores podem excluir etiquetas ou gerenciar a participação em grupos.")
         try:
             if acao == "criar_etiqueta":
                 nome = (request.POST.get("nome") or "").strip()
                 cor = int(request.POST.get("cor") or 0)
-                if not nome:
-                    raise ValueError("Informe o nome da etiqueta.")
+                if not 1 <= len(nome) <= 80 or not 0 <= cor < len(CORES_ETIQUETAS_WA):
+                    raise ValueError("Informe o nome da etiqueta e escolha uma cor válida.")
                 criar_etiqueta(nome, cor)
                 messages.success(request, "Etiqueta criada no WhatsApp.")
+            elif acao == "apagar_etiqueta":
+                label_id = (request.POST.get("id") or "").strip()
+                if not label_id or len(label_id) > 120 or request.POST.get("confirmacao") != "EXCLUIR":
+                    raise ValueError("Confirme qual etiqueta deseja excluir.")
+                apagar_etiqueta(label_id)
+                EtiquetaConversaWhatsApp.objects.filter(
+                    sessao=sessao_atual_id(), etiqueta_id=label_id
+                ).delete()
+                messages.success(request, "Etiqueta excluída e removida das conversas. Mensagens preservadas.")
             elif acao == "criar_auto_resposta":
                 palavra = (request.POST.get("palavra") or "").strip()
                 resposta = (request.POST.get("resposta") or "").strip()
@@ -2536,6 +2577,32 @@ def whatsapp_gerenciamento(request):
                     raise ValueError("Informe o nome do grupo e pelo menos um telefone válido.")
                 criar_grupo(assunto, participantes)
                 messages.success(request, "Grupo criado.")
+            elif acao in {"sair_grupo", "remover_grupo"}:
+                jid = (request.POST.get("jid") or "").strip()
+                if not re.fullmatch(r"[0-9-]{5,85}@g\\.us", jid):
+                    raise ValueError("Selecione um grupo WhatsApp válido.")
+                confirmacao = "SAIR" if acao == "sair_grupo" else "REMOVER"
+                if request.POST.get("confirmacao") != confirmacao:
+                    raise ValueError("Confirme a ação antes de continuar.")
+                resultado_grupos = listar_grupos()
+                if not isinstance(resultado_grupos, dict) or resultado_grupos.get("status") is False:
+                    raise WhatsAppGatewayError("Não foi possível verificar os grupos da sessão.")
+                grupos_atuais = resultado_grupos.get("data") or []
+                if not isinstance(grupos_atuais, list) or not any(
+                    isinstance(grupo, dict) and grupo.get("jid") == jid
+                    for grupo in grupos_atuais
+                ):
+                    raise ValueError("Grupo não localizado nesta conta WhatsApp.")
+                if acao == "sair_grupo":
+                    sair_grupo(jid)
+                GrupoOcultoWhatsApp.objects.update_or_create(
+                    sessao=sessao_atual_id(), jid=jid,
+                    defaults={"motivo": "SAIU" if acao == "sair_grupo" else "REMOVIDO"},
+                )
+                if acao == "sair_grupo":
+                    messages.success(request, "A conta institucional saiu do grupo. O histórico antigo foi preservado.")
+                else:
+                    messages.success(request, "Grupo removido da lista EMECA. A conta continua participante no WhatsApp.")
             else:
                 raise ValueError("Ação inválida.")
         except (ValueError, WhatsAppGatewayError) as exc:
@@ -2548,6 +2615,7 @@ def whatsapp_gerenciamento(request):
         "wa_sessao_id": sessao_atual_id(),
         "pode_desconectar": _pode_desconectar_whatsapp(request.user),
         "etiquetas": [],
+        "cores_etiquetas": CORES_ETIQUETAS_WA,
         "auto_respostas": [],
         "agendamentos": [],
         "historico_agendamentos": [],
@@ -2581,7 +2649,16 @@ def whatsapp_gerenciamento(request):
             pass
         try:
             payload = listar_grupos()
-            dados["grupos"] = payload.get("data", []) if isinstance(payload, dict) else []
+            grupos = payload.get("data", []) if isinstance(payload, dict) else []
+            grupos_ocultos = set(
+                GrupoOcultoWhatsApp.objects.filter(
+                    sessao=sessao_atual_id()
+                ).values_list("jid", flat=True)
+            )
+            dados["grupos"] = [
+                grupo for grupo in grupos
+                if isinstance(grupo, dict) and grupo.get("jid") not in grupos_ocultos
+            ] if isinstance(grupos, list) else []
         except WhatsAppGatewayError:
             pass
         try:
