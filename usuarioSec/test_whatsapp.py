@@ -19,6 +19,7 @@ from .models import (
     declaracao,
 )
 from .whatsapp_views import (
+    _enriquecer_chats,
     _normalizar_jid,
     _resolver_boletins_destinatarios,
     _resolver_destinatarios,
@@ -325,6 +326,52 @@ class WhatsAppInboxTests(TestCase):
         self.assertContains(response, "Mensagens do WhatsApp")
         self.assertContains(response, "RESPONSAVEL SINTETICO")
         self.assertContains(response, "Envios")
+
+    @patch("usuarioSec.whatsapp_views.listar_contatos")
+    def test_enriquece_lid_com_numero_real_nome_e_foto(self, listar_contatos_mock):
+        listar_contatos_mock.return_value = {
+            "data": [
+                {
+                    "jid": "184774392074394@lid",
+                    "lid": "184774392074394@lid",
+                    "remoteJidAlt": "5538999990000@s.whatsapp.net",
+                    "name": "RESPONSAVEL TESTE",
+                    "notify": "Responsável",
+                    "profilePic": "https://example.invalid/foto.jpg",
+                }
+            ]
+        }
+
+        chats = _enriquecer_chats([
+            {
+                "jid": "184774392074394@lid",
+                "lastMessage": {"content": "Olá"},
+            }
+        ])
+
+        self.assertEqual(chats[0]["phoneJid"], "5538999990000@s.whatsapp.net")
+        self.assertEqual(chats[0]["name"], "RESPONSAVEL TESTE")
+        self.assertEqual(chats[0]["profilePic"], "https://example.invalid/foto.jpg")
+        self.assertEqual(chats[0]["photoJid"], "5538999990000@s.whatsapp.net")
+
+    @patch("usuarioSec.whatsapp_views.obter_foto_perfil")
+    def test_api_foto_retorna_url_de_perfil(self, obter_foto_mock):
+        obter_foto_mock.return_value = {
+            "success": True,
+            "profilePicUrl": "https://example.invalid/foto-real.jpg",
+        }
+
+        response = self.client.post(
+            reverse("whatsapp_foto_api"),
+            {"jid": "5538999990000@s.whatsapp.net"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        self.assertEqual(
+            response.json()["url"],
+            "https://example.invalid/foto-real.jpg",
+        )
 
     @patch("usuarioSec.whatsapp_views.marcar_chat_como_lido")
     @patch("usuarioSec.whatsapp_views.obter_mensagens_chat")
