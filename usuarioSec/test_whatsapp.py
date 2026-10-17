@@ -1018,3 +1018,23 @@ class WhatsAppIdentificacaoManualTests(TestCase):
         self.assertEqual(data[0]["name"], "Mãe da turma")
         self.assertEqual(data[0]["phoneJid"], "")
 
+
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=False)
+    @patch("usuarioSec.whatsapp_views.listar_contatos", return_value={"data": []})
+    def test_metadados_persistem_sem_cache_de_worker(self, _contatos, _gateway):
+        IdentidadeContatoWhatsApp.objects.create(
+            sessao=settings.WA_AKG_SESSION_ID,
+            jid=self.lid,
+            telefone_jid=self.telefone,
+            nome_exibicao="Nome de perfil WhatsApp",
+            origem="METADATA",
+        )
+        cache.clear()
+        chats = _enriquecer_chats([
+            {"jid": self.lid, "lastMessage": {"timestamp": "2026-10-17T09:00:00Z"}},
+            {"jid": self.telefone, "lastMessage": {"timestamp": "2026-10-17T10:00:00Z"}},
+        ])
+        self.assertEqual(len(chats), 1)
+        self.assertEqual(chats[0]["jid"], self.telefone)
+        self.assertIn(self.lid, _aliases_contato_wa(self.telefone, []))
+        self.assertEqual(chats[0]["phoneJid"], self.telefone)
