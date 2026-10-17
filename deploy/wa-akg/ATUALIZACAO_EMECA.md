@@ -9,6 +9,11 @@ não modifica as chaves e não apaga sessões/arquivos de mídia.
 - Captura os pares **LID ↔ telefone (PN)** enviados em contatos, histórico,
   mensagens com `remoteJidAlt` e, quando efetivamente emitido, evento de
   `lid-mapping.update`. Um LID sem PN **não vira um número inventado**.
+- Consulta também `sock.signalRepository.lidMapping.getPNForLID`, isto é,
+  os mapeamentos já armazenados pelo Baileys na sessão existente. Ao conectar,
+  tenta reconciliar os LIDs antigos de contatos e mensagens em lotes limitados,
+  sem desconectar nem pedir QR novamente. O resultado aparece nos logs do
+  `wa-akg-app`: `LID mappings recovered from existing Signal store`.
 - Persiste `phoneNumber`, `lid`, `notify`, `name` e `verifiedName` no banco
   MySQL já utilizado pelo WA-AKG.
 - Não usa `pushName` para sobrescrever o nome salvo de um contato.
@@ -56,6 +61,9 @@ docker compose up -d --build
 docker compose exec -T web python manage.py migrate
 docker compose exec -T web python manage.py test usuarioSec.test_whatsapp
 docker compose exec -T web python manage.py diagnosticar_contatos_whatsapp
+
+# Consultar somente estatísticas da reconciliação de LIDs (sem expor telefones)
+docker logs --tail=250 wa-akg-app 2>&1 | grep 'LID mappings recovered' || true
 ```
 
 **Atenção:** valide se os contêineres são os esperados antes de implantar. Se
