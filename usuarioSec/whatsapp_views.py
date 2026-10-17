@@ -24,6 +24,7 @@ from .whatsapp_gateway import (
     configurado as gateway_configurado,
     enviar_broadcast,
     enviar_mensagem_chat,
+    enviar_midia,
     gerenciar_chat,
     iniciar_sessao,
     listar_chats,
@@ -972,6 +973,59 @@ def whatsapp_gerenciar_chat_api(request):
         return JsonResponse({"ok": True, "resposta": resposta})
     except WhatsAppGatewayError as exc:
         return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
+
+
+@login_required
+@require_POST
+def whatsapp_enviar_midia_api(request):
+    jid = (request.POST.get("jid") or "").strip()
+    legenda = (request.POST.get("legenda") or "").strip()
+    arquivo = request.FILES.get("arquivo")
+
+    if not jid or len(jid) > 120:
+        return JsonResponse({"ok": False, "erro": "Conversa inválida."}, status=400)
+    if not arquivo:
+        return JsonResponse({"ok": False, "erro": "Selecione um arquivo."}, status=400)
+    if arquivo.size > 25 * 1024 * 1024:
+        return JsonResponse(
+            {"ok": False, "erro": "O arquivo deve ter no máximo 25 MB."},
+            status=400,
+        )
+
+    nome = arquivo.name or "arquivo"
+    extensao = nome.rsplit(".", 1)[-1].lower() if "." in nome else ""
+    bloqueadas = {"exe", "msi", "bat", "cmd", "com", "scr", "ps1", "vbs", "js", "jar"}
+    if extensao in bloqueadas:
+        return JsonResponse(
+            {"ok": False, "erro": "Esse tipo de arquivo não é permitido."},
+            status=400,
+        )
+
+    content_type = (arquivo.content_type or "application/octet-stream").lower()
+    if content_type.startswith("image/"):
+        tipo = "image"
+    elif content_type.startswith("video/"):
+        tipo = "video"
+    elif content_type.startswith("audio/"):
+        tipo = "audio"
+    else:
+        tipo = "document"
+
+    try:
+        resposta = enviar_midia(
+            jid,
+            arquivo.read(),
+            nome,
+            content_type,
+            tipo,
+            legenda,
+        )
+        return JsonResponse({"ok": True, "tipo": tipo, "resposta": resposta})
+    except WhatsAppGatewayError as exc:
+        return JsonResponse(
+            {"ok": False, "erro": str(exc)},
+            status=exc.status_code or 502,
+        )
 
 
 @login_required
