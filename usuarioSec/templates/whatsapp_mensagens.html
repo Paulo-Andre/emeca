@@ -22,9 +22,14 @@
         <h2>Mensagens do WhatsApp</h2>
         <p>Leia e responda aos pais e responsáveis pelo número institucional da escola.</p>
       </div>
-      <a class="btn-secondary inbox-back-send" href="{% url 'whatsapp' %}">
-        <i data-lucide="send"></i> Envios
-      </a>
+      <div class="wa-header-actions">
+        <button class="btn-primary" type="button" id="newChatButton">
+          <i data-lucide="message-square-plus"></i> Nova conversa
+        </button>
+        <a class="btn-secondary inbox-back-send" href="{% url 'whatsapp' %}">
+          <i data-lucide="send"></i> Envios
+        </a>
+      </div>
     </header>
 
     {% if gateway_status != "CONNECTED" %}
@@ -91,6 +96,12 @@
               <strong id="contactName">Contato</strong>
               <small id="contactNumber"></small>
             </div>
+            <div class="wa-chat-actions">
+              <button type="button" class="wa-icon-button" data-chat-action="read" title="Marcar como lida"><i data-lucide="check-check"></i></button>
+              <button type="button" class="wa-icon-button" data-chat-action="pin" title="Fixar conversa"><i data-lucide="pin"></i></button>
+              <button type="button" class="wa-icon-button" data-chat-action="mute" title="Silenciar conversa"><i data-lucide="bell-off"></i></button>
+              <button type="button" class="wa-icon-button" data-chat-action="archive" title="Arquivar conversa"><i data-lucide="archive"></i></button>
+            </div>
             <span class="wa-live-badge"><span></span> Atualização automática</span>
           </header>
 
@@ -109,6 +120,39 @@
       </section>
     </section>
   </main>
+
+  <dialog class="wa-new-chat-dialog" id="newChatDialog">
+    <form method="dialog" class="wa-new-chat-card" id="newChatForm">
+      <div class="wa-new-chat-head">
+        <div>
+          <strong>Nova conversa</strong>
+          <small>Busque um contato salvo no WhatsApp ou informe um número.</small>
+        </div>
+        <button type="button" class="wa-icon-button" id="closeNewChat" aria-label="Fechar"><i data-lucide="x"></i></button>
+      </div>
+
+      <label for="waContactSearch">Contato do WhatsApp</label>
+      <div class="wa-chat-search wa-contact-search-box">
+        <i data-lucide="search"></i>
+        <input id="waContactSearch" type="search" placeholder="Nome ou telefone" autocomplete="off">
+      </div>
+      <div class="wa-contact-search-results" id="waContactResults" hidden></div>
+
+      <div class="wa-new-chat-separator"><span>ou</span></div>
+
+      <label for="waNewNumber">Número com DDD</label>
+      <input class="wa-new-chat-input" id="waNewNumber" type="tel" inputmode="tel" placeholder="(38) 99999-9999">
+
+      <label for="waNewMessage">Mensagem</label>
+      <textarea class="wa-new-chat-input" id="waNewMessage" rows="4" maxlength="4000" placeholder="Digite a mensagem"></textarea>
+
+      <input type="hidden" id="waSelectedJid">
+      <div class="wa-new-chat-selected" id="waSelectedContact" hidden></div>
+      <div class="wa-new-chat-status" id="waNewChatStatus"></div>
+
+      <button type="submit" class="btn-primary wa-new-chat-send"><i data-lucide="send"></i> Enviar mensagem</button>
+    </form>
+  </dialog>
 
   {{ chats_iniciais|json_script:"wa-chats-iniciais" }}
   <script>
@@ -129,6 +173,15 @@
     const contactName = document.getElementById("contactName");
     const contactNumber = document.getElementById("contactNumber");
     const contactAvatar = document.getElementById("contactAvatar");
+    const newChatDialog = document.getElementById("newChatDialog");
+    const newChatForm = document.getElementById("newChatForm");
+    const waContactSearch = document.getElementById("waContactSearch");
+    const waContactResults = document.getElementById("waContactResults");
+    const waNewNumber = document.getElementById("waNewNumber");
+    const waNewMessage = document.getElementById("waNewMessage");
+    const waSelectedJid = document.getElementById("waSelectedJid");
+    const waSelectedContact = document.getElementById("waSelectedContact");
+    const waNewChatStatus = document.getElementById("waNewChatStatus");
 
     let chats = Array.isArray(initialChats) ? initialChats : [];
     let activeJid = "";
@@ -388,6 +441,125 @@
         chatCount.textContent = "Erro ao atualizar";
       }
     }
+
+
+    async function manageActiveChat(action) {
+      if (!activeJid) return;
+      const body = new FormData();
+      body.append("jid", activeJid);
+      body.append("acao", action);
+      body.append("ativo", "1");
+      body.append("csrfmiddlewaretoken", csrfToken());
+      replyStatus.textContent = "Atualizando conversa…";
+      try {
+        const resp = await fetch("{% url 'whatsapp_gerenciar_chat_api' %}", {
+          method: "POST",
+          body,
+          headers: {"X-CSRFToken": csrfToken()}
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) throw new Error(data.erro || "Não foi possível atualizar a conversa.");
+        const labels = {read:"Conversa marcada como lida.", pin:"Conversa fixada.", mute:"Conversa silenciada.", archive:"Conversa arquivada."};
+        replyStatus.textContent = labels[action] || "Conversa atualizada.";
+        replyStatus.className = "wa-reply-status success";
+        setTimeout(refreshChats, 500);
+      } catch (err) {
+        replyStatus.textContent = err.message;
+        replyStatus.className = "wa-reply-status error";
+      }
+    }
+
+    document.querySelectorAll("[data-chat-action]").forEach(button => {
+      button.addEventListener("click", () => manageActiveChat(button.dataset.chatAction));
+    });
+
+    document.getElementById("newChatButton").addEventListener("click", () => {
+      waSelectedJid.value = "";
+      waSelectedContact.hidden = true;
+      waContactSearch.value = "";
+      waNewNumber.value = "";
+      waNewMessage.value = "";
+      waContactResults.hidden = true;
+      waNewChatStatus.textContent = "";
+      newChatDialog.showModal();
+      setTimeout(() => waContactSearch.focus(), 50);
+    });
+    document.getElementById("closeNewChat").addEventListener("click", () => newChatDialog.close());
+
+    let waSearchTimer = null;
+    waContactSearch.addEventListener("input", () => {
+      clearTimeout(waSearchTimer);
+      const q = waContactSearch.value.trim();
+      waSelectedJid.value = "";
+      waSelectedContact.hidden = true;
+      if (q.length < 2) {
+        waContactResults.hidden = true;
+        return;
+      }
+      waSearchTimer = setTimeout(async () => {
+        try {
+          const resp = await fetch("{% url 'whatsapp_buscar_contatos_wa' %}?q=" + encodeURIComponent(q));
+          const data = await resp.json();
+          waContactResults.innerHTML = "";
+          (data.results || []).forEach(item => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "wa-contact-result";
+            const name = document.createElement("strong");
+            name.textContent = item.nome || "Contato WhatsApp";
+            const number = document.createElement("span");
+            number.textContent = item.telefone ? prettyPhone(item.telefone + "@s.whatsapp.net") : "";
+            button.append(name, number);
+            button.addEventListener("click", () => {
+              waSelectedJid.value = item.jid || "";
+              waSelectedContact.textContent = (item.nome || "Contato WhatsApp") + (number.textContent ? " · " + number.textContent : "");
+              waSelectedContact.hidden = false;
+              waContactResults.hidden = true;
+              waNewNumber.value = "";
+            });
+            waContactResults.appendChild(button);
+          });
+          waContactResults.hidden = !(data.results || []).length;
+        } catch (_) {
+          waContactResults.hidden = true;
+        }
+      }, 250);
+    });
+
+    newChatForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const message = waNewMessage.value.trim();
+      if (!message) {
+        waNewChatStatus.textContent = "Digite uma mensagem.";
+        return;
+      }
+      const body = new FormData();
+      if (waSelectedJid.value) body.append("jid", waSelectedJid.value);
+      if (waNewNumber.value) body.append("numero", waNewNumber.value);
+      body.append("mensagem", message);
+      body.append("csrfmiddlewaretoken", csrfToken());
+      waNewChatStatus.textContent = "Enviando…";
+      try {
+        const resp = await fetch("{% url 'whatsapp_nova_conversa_api' %}", {
+          method: "POST",
+          body,
+          headers: {"X-CSRFToken": csrfToken()}
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) throw new Error(data.erro || "Não foi possível enviar.");
+        waNewChatStatus.textContent = "Mensagem enviada.";
+        await refreshChats();
+        const chat = chats.find(item => item.jid === data.jid || item.phoneJid === data.jid);
+        if (chat) {
+          newChatDialog.close();
+          await openChat(chat);
+        } else {
+          setTimeout(() => newChatDialog.close(), 500);
+        }
+      } catch (err) {
+        waNewChatStatus.textContent = err.message;
+      }
+    });
 
     chatSearch.addEventListener("input", renderChats);
     document.getElementById("refreshChats").addEventListener("click", refreshChats);
