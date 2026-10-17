@@ -10,7 +10,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
   <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-unified-05">
-  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-inbox-05">
+  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-inbox-06">
 </head>
 <body>
   {% include 'includes/sidebar.html' %}
@@ -284,36 +284,13 @@
       const photoJid = chat.photoJid || chat.phoneJid || chat.jid;
       if (!photoJid) return;
 
-      if (chat.profilePic) {
-        photoCache.set(photoJid, chat.profilePic);
+      if (chat.profilePic && /^https?:\/\//i.test(chat.profilePic)) {
         setAvatarContent(element, chat, chat.profilePic);
         return;
       }
 
-      if (photoCache.has(photoJid)) {
-        setAvatarContent(element, chat, photoCache.get(photoJid) || "");
-        return;
-      }
-
-      try {
-        const body = new FormData();
-        body.append("jid", photoJid);
-        body.append("csrfmiddlewaretoken", csrfToken());
-        const resp = await fetch("{% url 'whatsapp_foto_api' %}", {
-          method: "POST",
-          body,
-          headers: {"X-CSRFToken": csrfToken()}
-        });
-        const data = await resp.json();
-        const url = resp.ok && data.ok ? (data.url || "") : "";
-        photoCache.set(photoJid, url);
-        if (url) {
-          chat.profilePic = url;
-          setAvatarContent(element, chat, url);
-        }
-      } catch (_) {
-        photoCache.set(photoJid, "");
-      }
+      const proxyUrl = "{% url 'whatsapp_foto_imagem' %}?jid=" + encodeURIComponent(photoJid);
+      setAvatarContent(element, chat, proxyUrl);
     }
 
     const avatarObserver = ("IntersectionObserver" in window)
