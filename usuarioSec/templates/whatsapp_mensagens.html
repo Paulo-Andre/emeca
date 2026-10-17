@@ -524,6 +524,7 @@
 
       const avatar = document.createElement("span");
       avatar.className = "wa-chat-avatar";
+      avatar.title = "Clique para ampliar a foto";
       avatar.dataset.chatJid = chat.jid || "";
       const name = chatDisplayName(chat);
       setAvatarContent(avatar, chat);
@@ -555,7 +556,11 @@
       preview.textContent = previewText(chat);
       body.append(row, preview);
       button.append(avatar, body);
-      button.addEventListener("click", () => openChat(chat));
+      button.addEventListener("click", event => {
+        const clicouFoto = !!event.target.closest(".wa-chat-avatar");
+        openChat(chat);
+        if (clicouFoto) openPhotoViewer();
+      });
       return button;
     }
 
