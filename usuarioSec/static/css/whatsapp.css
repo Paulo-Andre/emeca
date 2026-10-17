@@ -554,3 +554,18 @@ textarea.wa-new-chat-input{resize:vertical;min-height:94px}
   font-size:.78rem;
   line-height:1.45;
 }
+
+/* Cabeçalho de conversa: não comprimir o telefone entre os botões. */
+.wa-conversation-head { flex-wrap: wrap; }
+.wa-conversation-head > div:nth-child(2) { flex: 1 1 190px; min-width: 175px; }
+.wa-chat-actions { flex: 0 0 auto; }
+@media (max-width: 1250px) {
+  .wa-conversation-head .wa-chat-actions {
+    order: 5;
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+}
+
