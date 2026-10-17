@@ -615,7 +615,10 @@ def _enriquecer_chats(chats):
         vistos.add(chave_dedupe)
 
         chat["phoneJid"] = phone_jid or ""
-        chat["profilePic"] = contato.get("profilePic") or chat.get("profilePic") or ""
+        foto = contato.get("profilePic") or chat.get("profilePic") or ""
+        if foto and not str(foto).startswith(("https://", "http://")):
+            foto = ""
+        chat["profilePic"] = foto
         chat["name"] = contato.get("name") or contato.get("verifiedName") or chat.get("name") or ""
         chat["notify"] = contato.get("notify") or chat.get("notify") or ""
         chat["photoJid"] = phone_jid or jid
