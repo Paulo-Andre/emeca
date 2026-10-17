@@ -875,17 +875,35 @@
       return date.toLocaleDateString("pt-BR", {day:"numeric",month:"long",year:"numeric"});
     }
 
-    function renderMessages(messages) {
-      currentMessages = (Array.isArray(messages) ? messages : []).filter(msg => {
+    function messageSignature(msg) {
+      return JSON.stringify([
+        msg.keyId || msg.id, msg.timestamp, msg.content, msg.type, msg.status,
+        msg.mediaUrl, msg.isStarred, msg.isDeleted, msg.quoted
+      ]);
+    }
+
+    function renderMessages(messages, {quiet=false}={}) {
+      const oldMessages = currentMessages;
+      const nextMessages = (Array.isArray(messages) ? messages : []).filter(msg => {
         if (!msg || typeof msg !== "object") return false;
         const tipo = String(msg.type || "").toUpperCase();
         return tipo !== "TEXT" || Boolean(String(msg.content || "").trim());
       });
-      thread.replaceChildren();
-      let prior = null;
-      let priorDay = "";
+      const oldCount = oldMessages.length;
+      const samePrefix = oldCount <= nextMessages.length &&
+        oldMessages.every((msg, i) => messageSignature(msg) === messageSignature(nextMessages[i]));
+      if (quiet && samePrefix && oldCount === nextMessages.length) return;
+
+      const nearBottom = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 140;
+      const oldScrollTop = thread.scrollTop;
+      const canAppend = quiet && oldCount > 0 && samePrefix &&
+        nextMessages.length > oldCount && thread.querySelector(".wa-message");
+      currentMessages = nextMessages;
+      if (!canAppend) thread.replaceChildren();
+      let prior = canAppend ? oldMessages[oldCount - 1] : null;
+      let priorDay = prior ? messageDayKey(prior.timestamp) : "";
       const groupChat = activeJid.endsWith("@g.us");
-      currentMessages.forEach(msg => {
+      (canAppend ? nextMessages.slice(oldCount) : nextMessages).forEach(msg => {
         const day = messageDayKey(msg.timestamp);
         if (day && day !== priorDay) {
           const divider = document.createElement("div");
@@ -1072,7 +1090,8 @@
         thread.appendChild(empty);
       }
       if (window.lucide) window.lucide.createIcons();
-      thread.scrollTop = thread.scrollHeight;
+      if (!quiet || nearBottom) thread.scrollTop = thread.scrollHeight;
+      else thread.scrollTop = oldScrollTop;
     }
 
     function lastMessageSignature(chat) {
@@ -1145,10 +1164,7 @@
         if (requestId !== chatRequestId || activeJid !== chat.jid) return;
         if (!resp.ok || !data.ok) throw new Error(data.erro || "Não foi possível carregar a conversa.");
 
-        const keepScroll = quiet && thread.scrollHeight - thread.scrollTop - thread.clientHeight > 130;
-        const oldScrollTop = thread.scrollTop;
-        renderMessages(data.mensagens || []);
-        if (keepScroll) thread.scrollTop = oldScrollTop;
+        renderMessages(data.mensagens || [], {quiet});
 
         if (data.nome && !contactLabel(chat.name) && !realPhone(chat)) {
           chat.name = data.nome;
