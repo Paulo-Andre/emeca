@@ -355,6 +355,38 @@ class WhatsAppInboxTests(TestCase):
         self.assertEqual(chats[0]["profilePic"], "https://example.invalid/foto.jpg")
         self.assertEqual(chats[0]["photoJid"], "5538999990000@s.whatsapp.net")
 
+    @patch("usuarioSec.whatsapp_views.listar_contatos", return_value={"data": []})
+    def test_chat_sem_nome_exibe_jid_com_numero_real(self, _listar_contatos_mock):
+        chat = _enriquecer_chats([{
+            "jid": "5538999990000@s.whatsapp.net",
+            "name": None,
+            "notify": "",
+        }])[0]
+
+        self.assertEqual(chat["name"], "")
+        self.assertEqual(chat["phoneJid"], "5538999990000@s.whatsapp.net")
+
+    @patch("usuarioSec.whatsapp_views.listar_contatos", return_value={"data": []})
+    def test_nome_generico_nao_substitui_numero_de_contato(self, _listar_contatos_mock):
+        chat = _enriquecer_chats([{
+            "jid": "5538999990000@s.whatsapp.net",
+            "name": "Contato WhatsApp",
+            "notify": "WhatsApp",
+        }])[0]
+
+        self.assertEqual(chat["name"], "")
+        self.assertEqual(chat["phoneJid"], "5538999990000@s.whatsapp.net")
+
+    @patch("usuarioSec.whatsapp_views.listar_contatos", return_value={"data": []})
+    def test_lid_sem_numero_nao_e_apresentado_como_telefone(self, _listar_contatos_mock):
+        chat = _enriquecer_chats([{
+            "jid": "184774392074394@lid",
+            "name": None,
+        }])[0]
+
+        self.assertEqual(chat["phoneJid"], "")
+        self.assertEqual(chat["name"], "")
+
     @patch("usuarioSec.whatsapp_views.obter_foto_perfil")
     def test_api_foto_retorna_url_de_perfil(self, obter_foto_mock):
         obter_foto_mock.return_value = {
