@@ -10,7 +10,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
   <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-unified-05">
-  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-inbox-compact-18">
+  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-delete-message-19">
 </head>
 <body>
   {% include 'includes/sidebar.html' %}
@@ -206,6 +206,30 @@
     </form>
   </dialog>
 
+
+  <dialog class="wa-delete-dialog" id="deleteMessageDialog" aria-labelledby="deleteMessageTitle">
+    <div class="wa-delete-dialog-card">
+      <header class="wa-delete-dialog-title">
+        <div>
+          <strong id="deleteMessageTitle">Excluir mensagem</strong>
+          <p id="deleteMessagePreview">Escolha como deseja remover esta mensagem.</p>
+        </div>
+        <button type="button" class="wa-icon-button" id="closeDeleteMessage" title="Fechar" aria-label="Fechar"><i data-lucide="x"></i></button>
+      </header>
+      <div class="wa-delete-dialog-actions">
+        <button type="button" class="wa-delete-local" id="deleteOnlyEmeca">
+          <i data-lucide="eye-off"></i>
+          <span><strong>Remover somente do EMECA</strong><small>Oculta esta mensagem apenas para você neste sistema. Não apaga do WhatsApp nem do histórico original.</small></span>
+        </button>
+        <button type="button" class="wa-delete-everyone" id="deleteForEveryone">
+          <i data-lucide="trash-2"></i>
+          <span><strong>Apagar para todos</strong><small>Disponível apenas para mensagens enviadas pela escola, quando o WhatsApp permitir.</small></span>
+        </button>
+      </div>
+      <div class="wa-delete-dialog-status" id="deleteMessageStatus" role="status" aria-live="polite"></div>
+    </div>
+  </dialog>
+
   <dialog class="wa-labels-dialog" id="labelsDialog">
     <div class="wa-labels-card">
       <div class="wa-new-chat-head">
@@ -296,6 +320,12 @@
     const replyFile = document.getElementById("replyFile");
     const attachButton = document.getElementById("attachButton");
     const replyStatus = document.getElementById("replyStatus");
+    const deleteMessageDialog = document.getElementById("deleteMessageDialog");
+    const deleteOnlyEmeca = document.getElementById("deleteOnlyEmeca");
+    const deleteForEveryone = document.getElementById("deleteForEveryone");
+    const deleteMessageStatus = document.getElementById("deleteMessageStatus");
+    let pendingDeleteMessage = null;
+    let pendingDeleteJid = null;
     const actionNotice = document.getElementById("waActionNotice");
     let actionNoticeTimer = null;
     function showActionNotice(message, error=false) {
@@ -853,6 +883,65 @@
       return data;
     }
 
+    function openDeleteMessageDialog(msg) {
+      if (!activeJid || !(msg.keyId || msg.id)) return;
+      pendingDeleteMessage = msg;
+      pendingDeleteJid = activeJid;
+      const text = messageText(msg).trim();
+      document.getElementById("deleteMessagePreview").textContent =
+        text.length > 120 ? text.slice(0, 120) + "…" : (text || "Mensagem com mídia");
+      deleteForEveryone.hidden = !Boolean(msg.fromMe);
+      deleteMessageStatus.textContent = "";
+      deleteOnlyEmeca.disabled = false;
+      deleteForEveryone.disabled = false;
+      if (!deleteMessageDialog.open) deleteMessageDialog.showModal();
+    }
+
+    async function confirmDeleteMessage(forEveryone) {
+      const msg = pendingDeleteMessage;
+      const jid = pendingDeleteJid;
+      if (!msg || !jid || activeJid !== jid) {
+        deleteMessageDialog.close();
+        return;
+      }
+      if (forEveryone && !msg.fromMe) return;
+      const label = forEveryone
+        ? "Apagar esta mensagem para todos os participantes? Essa ação pode ser irreversível."
+        : "Ocultar esta mensagem somente na sua visualização do EMECA? Ela continuará no WhatsApp.";
+      if (!window.confirm(label)) return;
+      deleteOnlyEmeca.disabled = true;
+      deleteForEveryone.disabled = true;
+      deleteMessageStatus.textContent = forEveryone
+        ? "Solicitando exclusão ao WhatsApp…" : "Ocultando mensagem…";
+      try {
+        const data = await messageAction(forEveryone ? "delete" : "hide_local", msg);
+        deleteMessageDialog.close();
+        if (activeJid !== jid) return;
+        const key = String(msg.keyId || msg.id);
+        renderMessages(currentMessages.filter(item =>
+          String(item.keyId || item.id || "") !== key
+        ));
+        showActionNotice(data.mensagem || (
+          forEveryone ? "Exclusão solicitada ao WhatsApp." : "Mensagem ocultada no EMECA."
+        ));
+      } catch (error) {
+        deleteMessageStatus.textContent = error.message || "Não foi possível excluir a mensagem.";
+        showActionNotice(deleteMessageStatus.textContent, true);
+      } finally {
+        deleteOnlyEmeca.disabled = false;
+        deleteForEveryone.disabled = false;
+      }
+    }
+
+    document.getElementById("closeDeleteMessage").addEventListener("click", () => deleteMessageDialog.close());
+    deleteMessageDialog.addEventListener("close", () => {
+      pendingDeleteMessage = null;
+      pendingDeleteJid = null;
+      deleteMessageStatus.textContent = "";
+    });
+    deleteOnlyEmeca.addEventListener("click", () => confirmDeleteMessage(false));
+    deleteForEveryone.addEventListener("click", () => confirmDeleteMessage(true));
+
     function validMessageDate(timestamp) {
       const date = timestamp ? new Date(timestamp) : null;
       return date && !Number.isNaN(date.getTime()) ? date : null;
@@ -976,8 +1065,9 @@
           ["forward","forward","Encaminhar"]
         ];
         if (msg.fromMe) {
-          specs.push(["edit","pencil","Editar"],["delete","trash-2","Apagar"]);
+          specs.push(["edit","pencil","Editar"]);
         }
+        specs.push(["delete-options", "trash-2", "Excluir mensagem"]);
         specs.forEach(([action,icon,title]) => {
           const btn = document.createElement("button");
           btn.type = "button"; btn.className = "wa-message-action";
@@ -999,9 +1089,9 @@
                 const texto = prompt("Novo texto da mensagem:", String(msg.content || ""));
                 if (!texto) return;
                 await messageAction("edit", msg, {texto});
-              } else if (action === "delete") {
-                if (!confirm("Apagar esta mensagem para todos?")) return;
-                await messageAction("delete", msg);
+              } else if (action === "delete-options") {
+                openDeleteMessageDialog(msg);
+                return;
               } else if (action === "star") {
                 await messageAction("star", msg);
               } else if (action === "forward") {
@@ -1047,7 +1137,17 @@
           const open = bubble.classList.toggle("actions-open");
           moreButton.setAttribute("aria-expanded", String(open));
         });
-        bubble.append(moreButton, actions);
+        const deleteTrigger = document.createElement("button");
+        deleteTrigger.type = "button";
+        deleteTrigger.className = "wa-message-delete-trigger";
+        deleteTrigger.title = "Excluir mensagem";
+        deleteTrigger.setAttribute("aria-label", "Excluir mensagem");
+        deleteTrigger.innerHTML = '<i data-lucide="trash-2"></i>';
+        deleteTrigger.addEventListener("click", (event) => {
+          event.stopPropagation();
+          openDeleteMessageDialog(msg);
+        });
+        bubble.append(deleteTrigger, moreButton, actions);
 
         const meta = document.createElement("div");
         meta.className = "wa-message-meta";
