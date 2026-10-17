@@ -266,8 +266,15 @@
     }
 
     function chatDisplayName(chat) {
-      // Número real é preferível ao apelido/pushName de um contato não salvo.
-      return contactLabel(chat.name) || realPhone(chat) || contactLabel(chat.notify) || "Contato sem telefone disponível";
+      // Nunca exibir LID como se fosse um número de telefone.
+      const known = contactLabel(chat.name) || realPhone(chat) || contactLabel(chat.notify);
+      if (known) return known;
+      const jid = String(chat.jid || "");
+      if (jid.endsWith("@lid")) {
+        const suffix = jid.split("@")[0].slice(-6);
+        return "Contato · ID " + suffix;
+      }
+      return "Contato sem nome";
     }
 
     function setAvatarContent(element, chat, url="", fallbackUrl="") {
