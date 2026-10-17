@@ -30,6 +30,7 @@ def substitute(text: str, before: str, after: str, context: str) -> str:
 def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
     instance = source / "src/modules/whatsapp/instance.ts"
     index = source / "src/modules/whatsapp/store/index.ts"
+    contact_store = source / "src/modules/whatsapp/store/contacts.ts"
     chat_service = source / "src/modules/whatsapp/chat.service.ts"
     chat_route = source / "src/app/api/chat/[sessionId]/route.ts"
     messages_route = source / "src/app/api/chat/[sessionId]/[jid]/route.ts"
@@ -37,7 +38,7 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
     overlay_file = patch_dir / "overrides/src/modules/whatsapp/store/emeca-identity.ts"
     target_file = source / "src/modules/whatsapp/store/emeca-identity.ts"
 
-    required = [instance, index, chat_service, chat_route, messages_route, contacts_route, overlay_file]
+    required = [instance, index, contact_store, chat_service, chat_route, messages_route, contacts_route, overlay_file]
     missing = [str(p) for p in required if not p.is_file()]
     if missing:
         raise RuntimeError("Arquivos não encontrados: " + ", ".join(missing))
@@ -101,6 +102,24 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
         "nome criado a partir da mensagem",
     )
     edits[index] = value
+
+    # The upstream contacts.ts originally treated pushName/notify as the
+    # address-book name. Preserve saved names and let the EMECA listener
+    # import PN/LID mappings and profile names in separate columns.
+    value = contact_store.read_text(encoding="utf-8")
+    value = substitute(
+        value,
+        'name: update.name || update.notify,',
+        'name: update.name || undefined,',
+        "nome salvo em contacts.update",
+    )
+    value = substitute(
+        value,
+        'name: contact.name || contact.notify,',
+        'name: contact.name || undefined,',
+        "nome salvo em messaging-history.set",
+    )
+    edits[contact_store] = value
 
     value = chat_service.read_text(encoding="utf-8")
     value = substitute(
