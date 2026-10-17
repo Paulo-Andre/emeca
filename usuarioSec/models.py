@@ -294,3 +294,30 @@ class SessaoWhatsAppAtiva(models.Model):
     class Meta:
         verbose_name = "Sessão WhatsApp ativa"
         verbose_name_plural = "Sessões WhatsApp ativas"
+
+
+class EtiquetaConversaWhatsApp(models.Model):
+    """Etiqueta efetivamente associada no WA-AKG; exibição rápida no EMECA.
+
+    Guarda apenas informações de apresentação. Mensagens e contatos continuam
+    no WA-AKG; sessões diferentes jamais compartilham essas associações.
+    """
+    sessao = models.CharField(max_length=120)
+    jid = models.CharField(max_length=120)
+    etiqueta_id = models.CharField(max_length=120)
+    nome = models.CharField(max_length=100)
+    cor = models.CharField(max_length=16, default="#94a3b8")
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["sessao", "jid", "etiqueta_id"],
+                name="uniq_etiqueta_conversa_wa",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["sessao", "jid"], name="idx_etiqueta_wa_sessao_jid"),
+        ]
+        verbose_name = "Etiqueta de conversa WhatsApp"
+        verbose_name_plural = "Etiquetas de conversas WhatsApp"
