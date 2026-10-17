@@ -3,6 +3,9 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
+
+from .access_control import GRUPO_WHATSAPP
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -21,6 +24,9 @@ class ExclusaoConversaWhatsAppTests(TestCase):
         self.colega = get_user_model().objects.create_user(
             username="operador-colega", password="Senha-local-456"
         )
+        grupo, _ = Group.objects.get_or_create(name=GRUPO_WHATSAPP)
+        self.operador.groups.add(grupo)
+        self.colega.groups.add(grupo)
         self.client.force_login(self.operador)
         self.jid = "5538999991234@s.whatsapp.net"
         self.alias = "1234567890123@lid"
