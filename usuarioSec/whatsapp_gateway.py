@@ -91,6 +91,18 @@ def iniciar_sessao():
     return _request("POST", f"sessions/{session_id}/start", {})
 
 
+def pausar_sessao():
+    """Pausa o socket do WA-AKG sem apagar credenciais ou mensagens."""
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    return _request("POST", f"sessions/{session_id}/stop", {})
+
+
+def desvincular_sessao():
+    """Faz logout do aparelho: revoga o vínculo, mas não apaga mensagens."""
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    return _request("POST", f"sessions/{session_id}/logout", {})
+
+
 def obter_qr():
     session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
     return _request("GET", f"sessions/{session_id}/qr")
