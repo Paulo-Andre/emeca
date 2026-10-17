@@ -110,19 +110,23 @@ class IsolamentoContasWhatsAppTests(TestCase):
             sessao="emeca-legado"
         ).nao_lidas, 6)
 
+    @patch("usuarioSec.whatsapp_views.excluir_historico_sessao",
+           return_value={"status": True, "data": {"messages": 2}})
     @patch("usuarioSec.whatsapp_views.desvincular_sessao",
            return_value={"status": True})
     @patch("usuarioSec.whatsapp_views.obter_sessao",
            return_value={"data": {"status": "CONNECTED"}})
     @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
     def test_acao_isolar_desvincula_e_cria_sessao_nova(
-        self, _configurado, _sessao, logout
+        self, _configurado, _sessao, logout, apagar
     ):
         response = self.client.post(reverse("whatsapp_desconectar"), {
             "acao": "isolar", "confirmacao": "ISOLAR",
+            "confirmar_exclusao": "APAGAR_HISTORICO",
         })
         self.assertEqual(response.status_code, 302)
         logout.assert_called_once_with()
+        apagar.assert_called_once_with("emeca-legado")
         self.assertNotEqual(sessao_atual_id(), "emeca-legado")
 
     @patch("usuarioSec.whatsapp_views.desvincular_sessao")
