@@ -131,6 +131,7 @@
             <span class="wa-live-badge"><span></span> Atualização automática</span>
           </header>
 
+          <div class="wa-action-notice" id="waActionNotice" hidden role="status" aria-live="polite"></div>
           <div class="wa-message-searchbar" id="messageSearchBar" hidden>
             <i data-lucide="search"></i>
             <input id="messageSearchInput" type="search" placeholder="Digite e clique em Buscar">
@@ -306,6 +307,18 @@
     const replyFile = document.getElementById("replyFile");
     const attachButton = document.getElementById("attachButton");
     const replyStatus = document.getElementById("replyStatus");
+    const actionNotice = document.getElementById("waActionNotice");
+    let actionNoticeTimer = null;
+    function showActionNotice(message, error=false) {
+      if (!message) return;
+      actionNotice.textContent = message;
+      actionNotice.classList.toggle("is-error", error);
+      actionNotice.hidden = false;
+      clearTimeout(actionNoticeTimer);
+      actionNoticeTimer = window.setTimeout(() => {
+        actionNotice.hidden = true;
+      }, error ? 11000 : 6500);
+    }
     const contactName = document.getElementById("contactName");
     const contactNumber = document.getElementById("contactNumber");
     const contactAvatar = document.getElementById("contactAvatar");
@@ -1146,6 +1159,7 @@
       if (!jid || !q) {
         replyStatus.textContent = "Digite uma palavra para pesquisar nesta conversa.";
         replyStatus.className = "wa-reply-status error";
+        showActionNotice(replyStatus.textContent, true);
         return;
       }
       replyStatus.textContent = "Buscando mensagens…";
@@ -1163,9 +1177,11 @@
             ? " Exibindo a primeira página de " + data.pagination.total + "."
             : "");
         replyStatus.className = "wa-reply-status";
+        showActionNotice(replyStatus.textContent);
       } catch (error) {
         replyStatus.textContent = error.message || "Não foi possível pesquisar.";
         replyStatus.className = "wa-reply-status error";
+        showActionNotice(replyStatus.textContent, true);
       }
     }
     document.getElementById("runMessageSearch").addEventListener("click", runChatSearch);
@@ -1305,9 +1321,11 @@
         updateChatActionButtons(chat);
         replyStatus.textContent = chat.bloqueado ? "Contato bloqueado." : "Contato desbloqueado.";
         replyStatus.className = "wa-reply-status success";
+        showActionNotice(replyStatus.textContent);
       } catch(error) {
         replyStatus.textContent = error.message || "Não foi possível alterar o bloqueio.";
         replyStatus.className = "wa-reply-status error";
+        showActionNotice(replyStatus.textContent, true);
       } finally {
         button.disabled = false;
       }
@@ -1364,12 +1382,14 @@
         };
         replyStatus.textContent = messages[action] || "Conversa atualizada.";
         replyStatus.className = "wa-reply-status success";
+        showActionNotice(replyStatus.textContent);
         updateChatActionButtons(chat);
         renderChats();
         if (action === "read") setTimeout(() => refreshChats(true), 700);
       } catch (error) {
         replyStatus.textContent = error.message || "A operação não foi confirmada pelo WhatsApp.";
         replyStatus.className = "wa-reply-status error";
+        showActionNotice(replyStatus.textContent, true);
       } finally {
         if (button) button.disabled = false;
       }
