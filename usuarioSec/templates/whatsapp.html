@@ -78,11 +78,12 @@
               </button>
             </form>
             <form method="post" action="{% url 'whatsapp_desconectar' %}"
-              onsubmit="return confirm('Desvincular este número do EMECA? Será necessário ler um novo QR Code para reconectar. O histórico armazenado será mantido.');">
+              onsubmit="return confirm('EXCLUSÃO PERMANENTE: desvincular este WhatsApp e APAGAR TODO o histórico desta sessão no EMECA e no WA-AKG? Mensagens, contatos e mídias locais não poderão ser recuperados pelo sistema.');">
               {% csrf_token %}
           <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
               <input type="hidden" name="acao" value="desvincular">
               <input type="hidden" name="confirmacao" value="DESVINCULAR">
+              <input type="hidden" name="confirmar_exclusao" value="APAGAR_HISTORICO">
               <button class="btn-secondary wa-disconnect-btn" type="submit"
                 title="Desvincular o aparelho atual para conectar outro número">
                 <i data-lucide="log-out"></i> Desvincular número
@@ -90,6 +91,19 @@
             </form>
           {% endif %}
         {% else %}
+          {% if gateway_status == "LOGGED_OUT" and pode_desconectar %}
+            <form method="post" action="{% url 'whatsapp_desconectar' %}"
+              onsubmit="return confirm('A conta já está desvinculada. APAGAR PERMANENTEMENTE o histórico restante desta sessão e liberar outro número?');">
+              {% csrf_token %}
+              <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
+              <input type="hidden" name="acao" value="finalizar_limpeza">
+              <input type="hidden" name="confirmacao" value="APAGAR">
+              <input type="hidden" name="confirmar_exclusao" value="APAGAR_HISTORICO">
+              <button class="btn-secondary wa-disconnect-btn" type="submit">
+                <i data-lucide="trash-2"></i> Finalizar limpeza do histórico
+              </button>
+            </form>
+          {% elif gateway_status != "LOGGED_OUT" %}
           <form method="post" action="{% url 'whatsapp_conectar' %}">
             {% csrf_token %}
           <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
@@ -112,6 +126,7 @@
               <i data-lucide="qr-code"></i> Mostrar QR
             </button>
           {% endif %}
+          {% endif %}
         {% endif %}
       </div>
     </section>
@@ -120,14 +135,15 @@
       <section class="wa-account-isolation">
         <div>
           <strong><i data-lucide="shield-check"></i> Separação de contas WhatsApp</strong>
-          <p>Se conectou outro número e apareceram conversas da conta antiga, use esta opção. O sistema preserva o histórico anterior e cria uma sessão exclusiva para o número atual. Será necessário ler o QR Code novamente.</p>
+          <p>Ao separar a conta, o número será desvinculado e todo o histórico local desta sessão será excluído permanentemente. Para conectar outro número, será necessário ler um novo QR Code.</p>
         </div>
         <form method="post" action="{% url 'whatsapp_desconectar' %}"
-          onsubmit="return confirm('IMPORTANTE: desconectar a conta atual e criar uma nova sessão isolada? Será preciso ler o QR Code novamente. Nenhum histórico será apagado.');">
+          onsubmit="return confirm('APAGAR PERMANENTEMENTE o histórico completo da conta atual no EMECA e no WA-AKG e desconectar o WhatsApp? Não será possível desfazer.');">
           {% csrf_token %}
           <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
           <input type="hidden" name="acao" value="isolar">
           <input type="hidden" name="confirmacao" value="ISOLAR">
+          <input type="hidden" name="confirmar_exclusao" value="APAGAR_HISTORICO">
           <button type="submit" class="btn-secondary"><i data-lucide="shield-check"></i> Separar conta atual</button>
         </form>
       </section>
