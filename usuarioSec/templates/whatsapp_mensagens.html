@@ -294,6 +294,21 @@
     lucide.createIcons();
 
     const connected = {% if gateway_status == "CONNECTED" %}true{% else %}false{% endif %};
+    // Each browser tab is bound to the precise WhatsApp account/session it opened.
+    // Old tabs must never send or read under a newly connected number.
+    const clientSessionId = "{{ wa_sessao_id|escapejs }}";
+    function waFetch(url, options={}) {
+      const headers = new Headers(options.headers || {});
+      headers.set("X-EMECA-WA-SESSION", clientSessionId);
+      return window.fetch(url, {...options, headers}).then(response => {
+        if (response.status === 409) {
+          showActionNotice("A conta WhatsApp foi trocada. Reabra a tela para continuar.", true);
+          window.location.assign("{% url 'whatsapp' %}");
+          throw new Error("Sessão WhatsApp alterada; operação cancelada.");
+        }
+        return response;
+      });
+    }
     const initialChats = JSON.parse(document.getElementById("wa-chats-iniciais").textContent || "[]");
     const chatList = document.getElementById("chatList");
     const chatSearch = document.getElementById("chatSearch");
@@ -458,7 +473,7 @@
       loadLivePhoto(chat, profilePhotoButton);
       if (!contactProfileDialog.open) contactProfileDialog.showModal();
       try {
-        const response = await fetch("{% url 'whatsapp_perfil_api' %}?jid=" + encodeURIComponent(chatJid), {
+        const response = await waFetch("{% url 'whatsapp_perfil_api' %}?jid=" + encodeURIComponent(chatJid), {
           headers: {"Accept": "application/json"}
         });
         const json = await response.json();
@@ -691,7 +706,7 @@
       if (extra.texto) body.append("texto", extra.texto);
       if (extra.emoji !== undefined) body.append("emoji", extra.emoji);
       body.append("csrfmiddlewaretoken", csrfToken());
-      const resp = await fetch("{% url 'whatsapp_acao_mensagem_api' %}", {
+      const resp = await waFetch("{% url 'whatsapp_acao_mensagem_api' %}", {
         method:"POST", body, headers:{"X-CSRFToken":csrfToken()}
       });
       const data = await resp.json();
@@ -843,7 +858,7 @@
                 body.append("message_id", msg.keyId || msg.id);
                 body.append("to_jids", toJid);
                 body.append("csrfmiddlewaretoken", csrfToken());
-                const resp = await fetch("{% url 'whatsapp_encaminhar_api' %}", {method:"POST",body,headers:{"X-CSRFToken":csrfToken()}});
+                const resp = await waFetch("{% url 'whatsapp_encaminhar_api' %}", {method:"POST",body,headers:{"X-CSRFToken":csrfToken()}});
                 const data = await resp.json();
                 if (!resp.ok || !data.ok) throw new Error(data.erro || "Não foi possível encaminhar.");
               }
@@ -982,7 +997,7 @@
 
       const requestId = ++chatRequestId;
       try {
-        const resp = await fetch("{% url 'whatsapp_chat_api' %}?jid=" + encodeURIComponent(chat.jid), {
+        const resp = await waFetch("{% url 'whatsapp_chat_api' %}?jid=" + encodeURIComponent(chat.jid), {
           headers: {"Accept":"application/json"}
         });
         const data = await resp.json();
@@ -1030,9 +1045,13 @@
       if (!connected || refreshingChats || (document.hidden && !force)) return;
       refreshingChats = true;
       try {
-        const resp = await fetch("{% url 'whatsapp_chats_api' %}", {headers: {"Accept":"application/json"}});
+        const resp = await waFetch("{% url 'whatsapp_chats_api' %}", {headers: {"Accept":"application/json"}});
         const data = await resp.json();
         if (!resp.ok || !data.ok) throw new Error(data.erro || "Falha ao atualizar conversas.");
+        if (data.sessao_id && data.sessao_id !== clientSessionId) {
+          window.location.assign("{% url 'whatsapp' %}");
+          return;
+        }
         const incoming = Array.isArray(data.chats) ? data.chats : [];
         const previousByJid = new Map(chats.map(chat => [chat.jid, chat]));
         const previousActive = previousByJid.get(activeJid);
@@ -1122,7 +1141,7 @@
         payload.append("nome", identityName.value.trim());
         payload.append("telefone_jid", identityPhone.disabled ? "" : identityPhone.value);
         payload.append("csrfmiddlewaretoken", csrfToken());
-        const response = await fetch("{% url 'whatsapp_identificar_contato_api' %}", {
+        const response = await waFetch("{% url 'whatsapp_identificar_contato_api' %}", {
           method: "POST", body: payload, headers: {"X-CSRFToken": csrfToken()}
         });
         const data = await response.json();
@@ -1166,7 +1185,7 @@
       try {
         const url = "{% url 'whatsapp_buscar_mensagens_api' %}?jid=" +
           encodeURIComponent(jid) + "&q=" + encodeURIComponent(q);
-        const resp = await fetch(url, {headers: {"Accept": "application/json"}});
+        const resp = await waFetch(url, {headers: {"Accept": "application/json"}});
         const data = await resp.json();
         if (!resp.ok || !data.ok) throw new Error(data.erro || "Falha na busca.");
         if (activeJid !== jid) return;
@@ -1204,7 +1223,7 @@
       labelsList.innerHTML = "";
       labelsDialog.showModal();
       try {
-        const resp = await fetch("{% url 'whatsapp_etiquetas_api' %}?jid="+encodeURIComponent(activeJid));
+        const resp = await waFetch("{% url 'whatsapp_etiquetas_api' %}?jid="+encodeURIComponent(activeJid));
         const data = await resp.json();
         if (!resp.ok || !data.ok) throw new Error(data.erro || "Falha ao carregar etiquetas.");
         const currentIds = new Set((data.atuais||[]).map(x=>String(x.id)));
@@ -1241,7 +1260,7 @@
         body.append("nome", nome);
         body.append("cor", cor);
         body.append("csrfmiddlewaretoken", csrfToken());
-        const response = await fetch("{% url 'whatsapp_etiquetas_criar_api' %}", {
+        const response = await waFetch("{% url 'whatsapp_etiquetas_criar_api' %}", {
           method: "POST", body, headers: {"X-CSRFToken": csrfToken()}
         });
         const data = await response.json();
@@ -1282,7 +1301,7 @@
           const body=new FormData();
           body.append("jid",activeJid); body.append("action",action); body.append("csrfmiddlewaretoken",csrfToken());
           ids.forEach(id=>body.append("label_ids",id));
-          const resp=await fetch("{% url 'whatsapp_etiquetas_atualizar_api' %}",{method:"POST",body,headers:{"X-CSRFToken":csrfToken()}});
+          const resp=await waFetch("{% url 'whatsapp_etiquetas_atualizar_api' %}",{method:"POST",body,headers:{"X-CSRFToken":csrfToken()}});
           const data=await resp.json();
           if(!resp.ok||!data.ok) throw new Error(data.erro||"Falha ao salvar etiquetas.");
         }
@@ -1311,7 +1330,7 @@
         body.append("jid", jid);
         body.append("bloquear", bloquear ? "1" : "0");
         body.append("csrfmiddlewaretoken", csrfToken());
-        const resp = await fetch("{% url 'whatsapp_bloqueio_api' %}", {
+        const resp = await waFetch("{% url 'whatsapp_bloqueio_api' %}", {
           method: "POST", body, headers: {"X-CSRFToken": csrfToken()}
         });
         const data = await resp.json();
@@ -1337,11 +1356,11 @@
       clearTimeout(presenceTimer);
       const body=new FormData();
       body.append("jid",activeJid); body.append("presence","composing"); body.append("csrfmiddlewaretoken",csrfToken());
-      fetch("{% url 'whatsapp_presenca_api' %}",{method:"POST",body,headers:{"X-CSRFToken":csrfToken()}}).catch(()=>{});
+      waFetch("{% url 'whatsapp_presenca_api' %}",{method:"POST",body,headers:{"X-CSRFToken":csrfToken()}}).catch(()=>{});
       presenceTimer=setTimeout(()=>{
         const paused=new FormData();
         paused.append("jid",activeJid); paused.append("presence","paused"); paused.append("csrfmiddlewaretoken",csrfToken());
-        fetch("{% url 'whatsapp_presenca_api' %}",{method:"POST",body:paused,headers:{"X-CSRFToken":csrfToken()}}).catch(()=>{});
+        waFetch("{% url 'whatsapp_presenca_api' %}",{method:"POST",body:paused,headers:{"X-CSRFToken":csrfToken()}}).catch(()=>{});
       },1200);
     });
 
@@ -1361,7 +1380,7 @@
       replyStatus.textContent = "Atualizando conversa…";
       replyStatus.className = "wa-reply-status";
       try {
-        const resp = await fetch("{% url 'whatsapp_gerenciar_chat_api' %}", {
+        const resp = await waFetch("{% url 'whatsapp_gerenciar_chat_api' %}", {
           method: "POST", body, headers: {"X-CSRFToken": csrfToken()}
         });
         const data = await resp.json();
@@ -1424,7 +1443,7 @@
       }
       waSearchTimer = setTimeout(async () => {
         try {
-          const resp = await fetch("{% url 'whatsapp_buscar_contatos_wa' %}?q=" + encodeURIComponent(q));
+          const resp = await waFetch("{% url 'whatsapp_buscar_contatos_wa' %}?q=" + encodeURIComponent(q));
           const data = await resp.json();
           waContactResults.innerHTML = "";
           (data.results || []).forEach(item => {
@@ -1466,7 +1485,7 @@
       body.append("csrfmiddlewaretoken", csrfToken());
       waNewChatStatus.textContent = "Enviando…";
       try {
-        const resp = await fetch("{% url 'whatsapp_nova_conversa_api' %}", {
+        const resp = await waFetch("{% url 'whatsapp_nova_conversa_api' %}", {
           method: "POST",
           body,
           headers: {"X-CSRFToken": csrfToken()}
@@ -1535,7 +1554,7 @@
       replyStatus.className = "wa-reply-status";
 
       try {
-        const resp = await fetch("{% url 'whatsapp_enviar_midia_api' %}", {
+        const resp = await waFetch("{% url 'whatsapp_enviar_midia_api' %}", {
           method: "POST",
           body,
           headers: {"X-CSRFToken": csrfToken()}
@@ -1578,11 +1597,11 @@
           body.append("from_me", quotedMessage.fromMe ? "1" : "0");
           body.append("texto", text);
           body.append("csrfmiddlewaretoken", csrfToken());
-          resp = await fetch("{% url 'whatsapp_acao_mensagem_api' %}", {
+          resp = await waFetch("{% url 'whatsapp_acao_mensagem_api' %}", {
             method:"POST", body, headers:{"X-CSRFToken":csrfToken()}
           });
         } else {
-          resp = await fetch("{% url 'whatsapp_responder_api' %}", {
+          resp = await waFetch("{% url 'whatsapp_responder_api' %}", {
             method: "POST",
             body: formData,
             headers: {"X-CSRFToken": formData.get("csrfmiddlewaretoken")}
