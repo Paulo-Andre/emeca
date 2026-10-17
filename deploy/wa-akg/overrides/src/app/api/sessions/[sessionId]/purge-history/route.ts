@@ -79,7 +79,7 @@ export async function POST(
             const messages = await tx.message.count({ where: { sessionId: session.id } });
             const contacts = await tx.contact.count({ where: { sessionId: session.id } });
             const groups = await tx.group.count({ where: { sessionId: session.id } });
-            await tx.label.deleteMany({ where: { sessionId: session.id } });
+            await tx.label.deleteMany({ where: { sessionId } });
             await tx.authState.deleteMany({ where: { sessionId } });
             await tx.broadcastLog.deleteMany({ where: { sessionId } });
             await tx.session.delete({ where: { id: session.id } });
