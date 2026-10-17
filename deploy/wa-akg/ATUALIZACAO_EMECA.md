@@ -4,6 +4,34 @@ Este pacote corrige a integração sobre o **WA-AKG já instalado** em
 `/srv/projetos/wa-akg`. Não reinstala o WhatsApp, não altera o esquema Prisma,
 não modifica as chaves e não apaga sessões/arquivos de mídia.
 
+## Sincronização automática ao conectar um número
+
+O fluxo normal **não usa VCF**:
+
+1. O operador conecta uma nova sessão de WhatsApp pelo QR Code do WA-AKG.
+2. A integração registra automaticamente os eventos `contacts.upsert`,
+   `contacts.update` e `messaging-history.set` recebidos do Baileys.
+3. Nomes de agenda (quando enviados), nomes de perfil, JIDs, telefones,
+   fotos e associações LID/PN são preservados por sessão no MySQL.
+4. Uma reconciliação é agendada após o socket conectar e novamente
+   quando o lote inicial de histórico é concluído, inclusive em contas com
+   muitos contatos. Mensagens novas continuam atualizando os vínculos.
+5. O EMECA consulta os contatos já sincronizados, sem arquivos nem passos
+   de importação de agenda em cada conexão.
+
+**Limite da plataforma:** usar o QR Code do WhatsApp Web/Baileys não dá
+acesso irrestrito à agenda Android. Números e nomes que o WhatsApp não
+enviar também não estarão disponíveis ao WA-AKG. Para obter a agenda
+completa do Android, seria necessário um conector autorizado adicional
+(Google Contacts ou aplicativo Android, com consentimento inicial).
+
+As sessões devem ser distintas para números institucionais diferentes,
+para não misturar os registros históricos de contas distintas. O script
+de implantação não faz logout nem troca a sessão atual.
+
+Os logs `Automatic contacts synced from ...` e `Automatic contact
+reconciliation finished ...` permitem acompanhar a execução.
+
 ## Principais alterações
 
 - Captura os pares **LID ↔ telefone (PN)** enviados em contatos, histórico,
