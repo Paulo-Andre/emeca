@@ -253,3 +253,27 @@ class ContatoAgendaWhatsApp(models.Model):
 
     def __str__(self):
         return f"{self.nome} ({self.telefone_jid})"
+
+
+class EstadoConversaWhatsApp(models.Model):
+    """Últimos comandos de organização confirmados pelo WA-AKG, por sessão.
+
+    Estes valores refletem as ações realizadas no EMECA; se o estado for
+    modificado no telefone, o WA-AKG precisa sincronizar o novo estado.
+    """
+    sessao = models.CharField(max_length=120)
+    jid = models.CharField(max_length=120)
+    fixado = models.BooleanField(default=False)
+    silenciado = models.BooleanField(default=False)
+    arquivado = models.BooleanField(default=False)
+    bloqueado = models.BooleanField(default=False)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["sessao", "jid"], name="uniq_estado_conversa_whatsapp"
+            )
+        ]
+        verbose_name = "Estado de conversa WhatsApp"
+        verbose_name_plural = "Estados de conversas WhatsApp"
