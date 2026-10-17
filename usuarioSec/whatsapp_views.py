@@ -1,5 +1,7 @@
 import re
 from collections import defaultdict
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 from django.conf import settings
 from django.contrib import messages
@@ -1346,3 +1348,43 @@ def whatsapp_gerenciamento(request):
             pass
 
     return render(request, "whatsapp_gerenciamento.html", dados)
+
+
+
+@login_required
+@require_GET
+def whatsapp_foto_imagem(request):
+    jid = (request.GET.get("jid") or "").strip()
+    if not jid or len(jid) > 120:
+        return HttpResponse(status=404)
+
+    for alias in _aliases_contato_wa(jid):
+        try:
+            payload = obter_foto_perfil(alias)
+            url = payload.get("profilePicUrl") if isinstance(payload, dict) else None
+            if not url or not str(url).startswith("https://"):
+                continue
+
+            req = Request(
+                str(url),
+                headers={"User-Agent": "Mozilla/5.0 EMECA-WhatsApp/1.0"},
+                method="GET",
+            )
+            with urlopen(req, timeout=10) as response:
+                content_type = response.headers.get("Content-Type") or ""
+                if not content_type.startswith("image/"):
+                    continue
+                tamanho = response.headers.get("Content-Length")
+                if tamanho and int(tamanho) > 5 * 1024 * 1024:
+                    continue
+                conteudo = response.read(5 * 1024 * 1024 + 1)
+                if len(conteudo) > 5 * 1024 * 1024:
+                    continue
+                resposta = HttpResponse(conteudo, content_type=content_type)
+                resposta["Cache-Control"] = "private, max-age=900"
+                resposta["Content-Security-Policy"] = "default-src 'none'"
+                return resposta
+        except (WhatsAppGatewayError, HTTPError, URLError, ValueError):
+            continue
+
+    return HttpResponse(status=404)
