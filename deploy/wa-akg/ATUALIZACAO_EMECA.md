@@ -17,6 +17,10 @@ não modifica as chaves e não apaga sessões/arquivos de mídia.
   houver associação explícita. Contatos diferentes nunca são unidos pela foto.
 - Habilita `?limit=N&before=ISO_TIMESTAMP` na API de conversas, com
   `meta.nextBefore`; o conector EMECA busca as páginas subsequentes.
+- Disponibiliza histórico de mensagens paginado e contatos com
+  `displayName`, `aliases` e `phoneJid` normalizados. A interface do EMECA
+  ainda exibe inicialmente as mensagens mais recentes; o histórico antigo
+  passa a estar disponível para carregamento em páginas.
 
 O WhatsApp/Baileys não garante telefone e lista de contatos para todos os LIDs
 nem entrega, necessariamente, todo o histórico anterior à sincronização.
@@ -74,6 +78,9 @@ substitua volumes por engano.
 - `data[]`: `jid`, `aliases[]`, `phoneJid` (vazio se não confirmado),
   `name`, `notify`, `profilePic`, `lastMessage`;
 - `meta.limit` e `meta.nextBefore` para buscar os itens anteriores.
+
+O endpoint de mensagens aceita `?limit=500&before=<ISO>` e retorna
+`meta.hasMore` e `meta.nextBefore`.
 
 O endpoint de contatos continua aceitando `limit=all`. Ele disponibiliza
 os dados que o WhatsApp efetivamente sincronizou, não uma lista privada que
