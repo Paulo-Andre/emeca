@@ -161,3 +161,34 @@ class SecurityRateLimit(models.Model):
 
     def __str__(self):
         return f"{self.chave[:12]}… ({self.contador})"
+
+
+class LeituraChatWhatsApp(models.Model):
+    """Estado de leitura local do atendimento, por usuário e conversa.
+
+    O WA-AKG não expõe contadores de não lidas em seu endpoint de chats.
+    A primeira sincronização estabelece uma referência; os contadores
+    posteriores são baseados apenas nas mensagens recebidas após ela.
+    """
+
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="leituras_chats_whatsapp",
+    )
+    jid = models.CharField(max_length=120)
+    ultima_verificacao_em = models.DateTimeField(blank=True, null=True)
+    nao_lidas = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["usuario", "jid"],
+                name="uniq_leitura_whatsapp_usuario_jid",
+            )
+        ]
+        verbose_name = "Leitura de conversa WhatsApp"
+        verbose_name_plural = "Leituras de conversas WhatsApp"
+
+    def __str__(self):
+        return f"{self.usuario_id}: {self.jid} ({self.nao_lidas})"
