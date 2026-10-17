@@ -1,0 +1,89 @@
+{% load static %}
+<aside class="sidebar" aria-label="Navegação da secretaria">
+  <div class="logo">
+    <img class="logo__mark" src="{% static 'imagens/logo.svg' %}" alt="">
+    <span class="logo__copy">
+      <strong>E. M. Egídio Cordeiro Aquino</strong>
+      <span>Secretaria Digital</span>
+    </span>
+  </div>
+
+  <nav class="sidebar-nav">
+    {% if acessos_emeca.secretaria %}
+      <div class="nav-section-label">Atendimento</div>
+      <a class="nav-item{% if request.resolver_match.url_name == 'dashboard' %} active{% endif %}" href="{% url 'dashboard' %}">
+        <i data-lucide="users-round"></i><span>Matrículas</span>
+      </a>
+      <a class="nav-item{% if request.resolver_match.url_name == 'telaDeclaracao' %} active{% endif %}" href="{% url 'telaDeclaracao' %}">
+        <i data-lucide="file-text"></i><span>Declarações</span>
+      </a>
+    {% endif %}
+
+    {% if acessos_emeca.historico %}
+      <a class="nav-item{% if request.resolver_match.namespace == 'historico' %} active{% endif %}" href="{% url 'historico:inicio' %}">
+        <i data-lucide="graduation-cap"></i><span>Histórico Escolar</span>
+      </a>
+      {% if request.resolver_match.namespace == 'historico' %}
+        <div class="sidebar-subnav" aria-label="Atalhos do Histórico Escolar">
+          <a class="sidebar-subitem{% if request.resolver_match.url_name == 'inicio' %} active{% endif %}" href="{% url 'historico:inicio' %}"><span>Painel</span></a>
+          <a class="sidebar-subitem{% if request.resolver_match.url_name == 'aluno_novo' %} active{% endif %}" href="{% url 'historico:aluno_novo' %}"><span>Novo aluno</span></a>
+          <a class="sidebar-subitem{% if request.resolver_match.url_name == 'relatorios' or request.resolver_match.url_name == 'relatorio_aluno' %} active{% endif %}" href="{% url 'historico:relatorios' %}"><span>Relatórios</span></a>
+          <a class="sidebar-subitem{% if request.resolver_match.url_name == 'integridade_dados' %} active{% endif %}" href="{% url 'historico:integridade_dados' %}"><span>Conferir dados</span></a>
+          {% if acessos_emeca.administracao %}
+            <a class="sidebar-subitem{% if request.resolver_match.url_name == 'importar_lista_alunos' %} active{% endif %}" href="{% url 'historico:importar_lista_alunos' %}"><span>Atualizar lista</span></a>
+            <a class="sidebar-subitem{% if request.resolver_match.url_name == 'importar_notas_pdf' %} active{% endif %}" href="{% url 'historico:importar_notas_pdf' %}"><span>Importar notas</span></a>
+            <a class="sidebar-subitem{% if request.resolver_match.url_name == 'dados_extras_anuais' %} active{% endif %}" href="{% url 'historico:dados_extras_anuais' %}"><span>Dados por ano</span></a>
+          {% endif %}
+        </div>
+      {% endif %}
+    {% endif %}
+
+    {% if acessos_emeca.boletins %}
+      <a class="nav-item{% if request.resolver_match.url_name == 'gestao_boletins' or 'gestao_boletim_' in request.resolver_match.url_name %} active{% endif %}" href="{% url 'site_publico:gestao_boletins' %}">
+        <i data-lucide="notebook-tabs"></i><span>Boletins</span>
+      </a>
+      {% if request.resolver_match.url_name == 'gestao_boletins' or 'gestao_boletim_' in request.resolver_match.url_name %}
+        <div class="sidebar-subnav" aria-label="Atalhos de Boletins">
+          <a class="sidebar-subitem{% if request.resolver_match.url_name == 'gestao_boletim_importar' %} active{% endif %}" href="{% url 'site_publico:gestao_boletim_importar' %}"><span>Importar boletim</span></a>
+          <a class="sidebar-subitem{% if request.resolver_match.url_name != 'gestao_boletim_importar' %} active{% endif %}" href="{% url 'site_publico:gestao_boletins' %}"><span>Editar dados</span></a>
+        </div>
+      {% endif %}
+    {% endif %}
+
+    {% if acessos_emeca.whatsapp %}
+      <a class="nav-item{% if request.resolver_match.url_name == 'whatsapp' %} active{% endif %}" href="{% url 'whatsapp' %}">
+        <i data-lucide="message-circle-more"></i><span>WhatsApp</span>
+      </a>
+    {% endif %}
+
+    {% if acessos_emeca.site %}
+      <div class="nav-section-label">Site público</div>
+      <a class="nav-item{% if request.resolver_match.namespace == 'site_publico' and request.resolver_match.url_name != 'gestao_boletins' and 'gestao_boletim_' not in request.resolver_match.url_name %} active{% endif %}" href="{% url 'site_publico:gestao_site' %}">
+        <i data-lucide="panel-top"></i><span>Gestão do Site</span>
+      </a>
+      <a class="nav-item" href="{% url 'site_publico:home' %}" target="_blank" rel="noopener">
+        <i data-lucide="external-link"></i><span>Ver site público</span>
+      </a>
+    {% endif %}
+
+    {% if acessos_emeca.administracao %}
+      <div class="nav-section-label">Administração</div>
+      <a class="nav-item{% if request.resolver_match.url_name == 'cadastro' %} active{% endif %}" href="{% url 'cadastro' %}">
+        <i data-lucide="user-plus"></i><span>Cadastrar usuário</span>
+      </a>
+      <a class="nav-item{% if request.resolver_match.url_name == 'gerenciar_acessos' %} active{% endif %}" href="{% url 'gerenciar_acessos' %}">
+        <i data-lucide="shield-check"></i><span>Gerenciar acessos</span>
+      </a>
+      <a class="nav-item{% if request.resolver_match.url_name == 'importar_alunos' %} active{% endif %}" href="{% url 'importar_alunos' %}">
+        <i data-lucide="file-up"></i><span>Importar declarações</span>
+      </a>
+    {% endif %}
+  </nav>
+
+  <form class="sidebar-logout-form" method="post" action="{% url 'sair' %}">
+    {% csrf_token %}
+    <button class="nav-item nav-logout" type="submit">
+      <i data-lucide="log-out"></i><span>Sair</span>
+    </button>
+  </form>
+</aside>
