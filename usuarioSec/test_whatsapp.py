@@ -601,3 +601,144 @@ class WhatsAppAliasMidiaTests(TestCase):
         self.assertTrue(response.json()["ok"])
         self.assertEqual(response.json()["tipo"], "image")
         enviar_midia_mock.assert_called_once()
+
+
+
+class WhatsAppRecursosAvancadosTests(TestCase):
+    def setUp(self):
+        self.usuario = get_user_model().objects.create_user(
+            username="whatsapp_recursos_avancados",
+            password="Senha-Sintetica-2026!",
+        )
+        self.client.force_login(self.usuario)
+
+    @patch("usuarioSec.whatsapp_views.obter_config_sistema")
+    @patch("usuarioSec.whatsapp_views.listar_grupos")
+    @patch("usuarioSec.whatsapp_views.listar_agendamentos")
+    @patch("usuarioSec.whatsapp_views.listar_respostas_automaticas")
+    @patch("usuarioSec.whatsapp_views.listar_etiquetas")
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
+    def test_painel_gerenciamento_carrega_recursos(
+        self,
+        _configurado,
+        etiquetas_mock,
+        auto_mock,
+        agendamentos_mock,
+        grupos_mock,
+        config_mock,
+    ):
+        etiquetas_mock.return_value = {
+            "data": {"labels": [{"id": "l1", "name": "Urgente", "colorHex": "#ff0000"}]}
+        }
+        auto_mock.return_value = {
+            "data": [{"id": "r1", "keyword": "horario", "response": "Atendimento às 7h."}]
+        }
+        agendamentos_mock.side_effect = [
+            {"data": [{"id": "s1", "jid": "5538999990000@s.whatsapp.net", "content": "Lembrete"}]},
+            {"data": []},
+        ]
+        grupos_mock.return_value = {
+            "data": [{"id": "g1", "subject": "Responsáveis 5º Ano", "size": 20}]
+        }
+        config_mock.return_value = {"data": {"timezone": "America/Sao_Paulo"}}
+
+        response = self.client.get(reverse("whatsapp_gerenciamento"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Gerenciamento do WhatsApp")
+        self.assertContains(response, "Urgente")
+        self.assertContains(response, "Responsáveis 5º Ano")
+        self.assertContains(response, "Respostas automáticas")
+        self.assertContains(response, "Mensagens agendadas")
+
+    @patch("usuarioSec.whatsapp_views.responder_mensagem_citada")
+    def test_resposta_citada(self, responder_mock):
+        responder_mock.return_value = {"status": True}
+
+        response = self.client.post(
+            reverse("whatsapp_acao_mensagem_api"),
+            {
+                "jid": "5538999990000@s.whatsapp.net",
+                "message_id": "msg-1",
+                "acao": "reply",
+                "texto": "Resposta citada.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        responder_mock.assert_called_once_with(
+            "5538999990000@s.whatsapp.net",
+            "msg-1",
+            "Resposta citada.",
+        )
+
+    @patch("usuarioSec.whatsapp_views.reagir_mensagem")
+    def test_reacao_em_mensagem(self, reagir_mock):
+        reagir_mock.return_value = {"success": True}
+
+        response = self.client.post(
+            reverse("whatsapp_acao_mensagem_api"),
+            {
+                "jid": "5538999990000@s.whatsapp.net",
+                "message_id": "msg-2",
+                "acao": "react",
+                "emoji": "👍",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        reagir_mock.assert_called_once_with(
+            "5538999990000@s.whatsapp.net",
+            "msg-2",
+            "👍",
+        )
+
+    @patch("usuarioSec.whatsapp_views.baixar_midia_mensagem")
+    def test_proxy_midia_recebida_exige_login_e_entrega_imagem(self, baixar_mock):
+        baixar_mock.return_value = (
+            b"imagem-sintetica",
+            "image/jpeg",
+            'attachment; filename="foto.jpg"',
+        )
+
+        response = self.client.get(
+            reverse("whatsapp_midia_recebida", args=["db-message-id"])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "image/jpeg")
+        self.assertEqual(response["Content-Disposition"], "inline")
+        self.assertEqual(response.content, b"imagem-sintetica")
+
+    @patch("usuarioSec.whatsapp_views.salvar_config_sistema")
+    def test_configuracao_fuso_horario(self, salvar_mock):
+        salvar_mock.return_value = {"status": True}
+
+        response = self.client.post(
+            reverse("whatsapp_gerenciamento"),
+            {
+                "acao": "configurar_sistema",
+                "timezone": "America/Sao_Paulo",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        salvar_mock.assert_called_once_with(
+            "EMECA WhatsApp",
+            "",
+            "/favicon.ico",
+            "America/Sao_Paulo",
+            False,
+        )
+
+    def test_tela_mensagens_exibe_anexo_e_acoes_avancadas(self):
+        with patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=False):
+            response = self.client.get(reverse("whatsapp_mensagens"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="attachButton"')
+        self.assertContains(response, 'id="labelsButton"')
+        self.assertContains(response, 'id="messageSearchButton"')
+        self.assertContains(response, "Gerenciamento", count=1)
