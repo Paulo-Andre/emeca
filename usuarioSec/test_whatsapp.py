@@ -1521,3 +1521,146 @@ class WhatsAppAcoesCabecalhoTests(TestCase):
 
         self.assertNotContains(response, 'chatList.innerHTML = ""')
 
+
+
+class WhatsAppExclusaoMensagemTests(TestCase):
+    def setUp(self):
+        self.operador = get_user_model().objects.create_user(
+            username="operador_exclusao", password="SenhaFicticia-123"
+        )
+        self.outro = get_user_model().objects.create_user(
+            username="operador_diferente", password="SenhaFicticia-123"
+        )
+        self.client.force_login(self.operador)
+        self.jid = "5538999990000@s.whatsapp.net"
+        self.message_id = "MENSAGEM_DE_TESTE_01"
+
+    def test_ocultar_mensagem_nao_chama_wa_akg(self):
+        from .models import MensagemOcultaWhatsApp
+        with patch("usuarioSec.whatsapp_views.apagar_mensagem") as apagar:
+            resposta = self.client.post(reverse("whatsapp_acao_mensagem_api"), {
+                "jid": self.jid, "message_id": self.message_id,
+                "acao": "hide_local", "from_me": "0",
+            })
+        self.assertEqual(resposta.status_code, 200, resposta.content)
+        self.assertTrue(resposta.json()["ok"])
+        apagar.assert_not_called()
+        self.assertTrue(MensagemOcultaWhatsApp.objects.filter(
+            usuario=self.operador, mensagem_id=self.message_id
+        ).exists())
+        self.assertFalse(MensagemOcultaWhatsApp.objects.filter(
+            usuario=self.outro
+        ).exists())
+
+    @patch("usuarioSec.whatsapp_views.marcar_chat_como_lido")
+    @patch("usuarioSec.whatsapp_views._contatos_wa", return_value=[])
+    @patch("usuarioSec.whatsapp_views.obter_mensagens_chat")
+    def test_oculta_em_consultas_futuras_somente_para_operador(
+        self, buscar, _contatos, _lida
+    ):
+        buscar.return_value = {"data": [
+            {"keyId": self.message_id, "content": "Teste", "fromMe": False},
+            {"keyId": "OUTRA_MSG", "content": "Continua aqui", "fromMe": True}
+        ]}
+        self.client.post(reverse("whatsapp_acao_mensagem_api"), {
+            "jid": self.jid, "message_id": self.message_id, "acao": "hide_local"
+        })
+        resposta = self.client.get(reverse("whatsapp_chat_api"), {
+            "jid": self.jid
+        })
+        self.assertEqual(resposta.status_code, 200, resposta.content)
+        self.assertEqual(
+            [x["keyId"] for x in resposta.json()["mensagens"]],
+            ["OUTRA_MSG"]
+        )
+        self.client.force_login(self.outro)
+        resposta_outro = self.client.get(reverse("whatsapp_chat_api"), {
+            "jid": self.jid
+        })
+        self.assertEqual(len(resposta_outro.json()["mensagens"]), 2)
+
+    @patch("usuarioSec.whatsapp_views._aliases_contato_wa")
+    @patch("usuarioSec.whatsapp_views.obter_mensagens_chat")
+    @patch("usuarioSec.whatsapp_views.apagar_mensagem")
+    def test_apagar_para_todos_valida_remetente_no_servidor(
+        self, apagar, historico, aliases
+    ):
+        from .models import MensagemOcultaWhatsApp
+        aliases.return_value = [self.jid]
+        historico.return_value = {"data": [{
+            "keyId": self.message_id, "fromMe": False
+        }]}
+        resposta = self.client.post(reverse("whatsapp_acao_mensagem_api"), {
+            "jid": self.jid, "message_id": self.message_id,
+            "acao": "delete", "from_me": "1"
+        })
+        self.assertEqual(resposta.status_code, 400)
+        apagar.assert_not_called()
+        self.assertFalse(MensagemOcultaWhatsApp.objects.exists())
+
+    @patch("usuarioSec.whatsapp_views._aliases_contato_wa")
+    @patch("usuarioSec.whatsapp_views.obter_mensagens_chat")
+    @patch("usuarioSec.whatsapp_views.apagar_mensagem",
+           return_value={"status": True})
+    def test_apagar_para_todos_so_oculta_apos_confirmacao_wa(
+        self, apagar, historico, aliases
+    ):
+        from .models import MensagemOcultaWhatsApp
+        aliases.return_value = [self.jid]
+        historico.return_value = {"data": [{
+            "keyId": self.message_id, "fromMe": True,
+            "remoteJid": self.jid
+        }]}
+        resposta = self.client.post(reverse("whatsapp_acao_mensagem_api"), {
+            "jid": self.jid, "message_id": self.message_id,
+            "acao": "delete", "from_me": "1"
+        })
+        self.assertEqual(resposta.status_code, 200, resposta.content)
+        apagar.assert_called_once_with(self.jid, self.message_id)
+        self.assertTrue(MensagemOcultaWhatsApp.objects.filter(
+            usuario=self.operador, mensagem_id=self.message_id
+        ).exists())
+
+    @patch("usuarioSec.whatsapp_views._aliases_contato_wa")
+    @patch("usuarioSec.whatsapp_views.obter_mensagens_chat")
+    @patch("usuarioSec.whatsapp_views.apagar_mensagem",
+           return_value={"status": False, "error": "Mensagem antiga"})
+    def test_falha_remota_nao_oculta_a_mensagem(
+        self, _apagar, historico, aliases
+    ):
+        from .models import MensagemOcultaWhatsApp
+        aliases.return_value = [self.jid]
+        historico.return_value = {"data": [{
+            "keyId": self.message_id, "fromMe": True
+        }]}
+        resposta = self.client.post(reverse("whatsapp_acao_mensagem_api"), {
+            "jid": self.jid, "message_id": self.message_id,
+            "acao": "delete", "from_me": "1"
+        })
+        self.assertEqual(resposta.status_code, 502)
+        self.assertFalse(MensagemOcultaWhatsApp.objects.exists())
+
+    def test_ocultacoes_nao_passam_para_outra_conta(self):
+        from .models import MensagemOcultaWhatsApp
+        from .sessao_whatsapp import criar_sessao_isolada, sessao_atual_id
+        self.client.post(reverse("whatsapp_acao_mensagem_api"), {
+            "jid": self.jid, "message_id": self.message_id,
+            "acao": "hide_local"
+        })
+        antiga = sessao_atual_id()
+        criar_sessao_isolada()
+        self.assertNotEqual(sessao_atual_id(), antiga)
+        self.client.post(reverse("whatsapp_acao_mensagem_api"), {
+            "jid": self.jid, "message_id": self.message_id,
+            "acao": "hide_local"
+        })
+        self.assertEqual(MensagemOcultaWhatsApp.objects.count(), 2)
+
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=False)
+    def test_tela_tem_lixeira_visivel_e_duas_opcoes(self, _config):
+        resposta = self.client.get(reverse("whatsapp_mensagens"))
+        self.assertEqual(resposta.status_code, 200)
+        self.assertContains(resposta, "wa-message-delete-trigger")
+        self.assertContains(resposta, 'id="deleteMessageDialog"')
+        self.assertContains(resposta, "Remover somente do EMECA")
+        self.assertContains(resposta, "Apagar para todos")
