@@ -256,3 +256,74 @@
   overflow-y: scroll;
   overscroll-behavior: contain;
 }
+
+
+/* Atendimento WhatsApp: nova conversa e gerenciamento */
+.wa-header-actions{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.wa-chat-actions{margin-left:auto;display:flex;align-items:center;gap:5px}
+.wa-live-badge{margin-left:8px}
+
+.wa-new-chat-dialog{
+  width:min(560px,calc(100% - 28px));
+  padding:0;
+  border:0;
+  border-radius:18px;
+  box-shadow:0 28px 80px rgba(15,23,42,.28);
+}
+.wa-new-chat-dialog::backdrop{background:rgba(15,23,42,.48)}
+.wa-new-chat-card{padding:22px;display:grid;gap:10px;background:#fff}
+.wa-new-chat-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:4px}
+.wa-new-chat-head>div{display:grid;gap:4px}
+.wa-new-chat-head strong{font-size:1.2rem;color:#0f172a}
+.wa-new-chat-head small{color:#64748b;line-height:1.4}
+.wa-new-chat-card>label{margin-top:5px;color:#334155;font-size:.82rem;font-weight:700}
+.wa-contact-search-box{padding:0;border:0}
+.wa-contact-search-results{
+  max-height:220px;
+  overflow-y:auto;
+  border:1px solid #dbe3ee;
+  border-radius:11px;
+  background:#fff;
+  box-shadow:0 10px 26px rgba(15,23,42,.08);
+}
+.wa-contact-result{
+  width:100%;
+  padding:11px 13px;
+  display:grid;
+  gap:3px;
+  border:0;
+  border-bottom:1px solid #edf2f7;
+  background:#fff;
+  text-align:left;
+  cursor:pointer;
+}
+.wa-contact-result:last-child{border-bottom:0}
+.wa-contact-result:hover{background:#f0fdf4}
+.wa-contact-result strong{color:#0f172a}
+.wa-contact-result span{color:#64748b;font-size:.78rem}
+.wa-new-chat-separator{position:relative;margin:5px 0;text-align:center;color:#94a3b8;font-size:.72rem}
+.wa-new-chat-separator::before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px solid #e2e8f0}
+.wa-new-chat-separator span{position:relative;padding:0 9px;background:#fff}
+.wa-new-chat-input{
+  width:100%;
+  box-sizing:border-box;
+  margin:0;
+  padding:11px 13px;
+  border:1px solid #dbe3ee;
+  border-radius:11px;
+  background:#fff;
+  font:inherit;
+  outline:none;
+}
+textarea.wa-new-chat-input{resize:vertical;min-height:94px}
+.wa-new-chat-input:focus{border-color:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.09)}
+.wa-new-chat-selected{padding:10px 12px;border:1px solid #bbf7d0;border-radius:10px;background:#f0fdf4;color:#166534;font-size:.82rem;font-weight:700}
+.wa-new-chat-status{min-height:18px;color:#b91c1c;font-size:.78rem}
+.wa-new-chat-send{width:100%;margin-top:2px}
+
+@media(max-width:760px){
+  .wa-header-actions{width:100%;margin-left:0}
+  .wa-header-actions>*{flex:1}
+  .wa-chat-actions{gap:2px}
+  .wa-chat-actions .wa-icon-button{width:32px;height:32px}
+}

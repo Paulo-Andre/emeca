@@ -432,3 +432,92 @@ class WhatsAppInboxTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Conectar WhatsApp")
+
+
+class WhatsAppAtendimentoCompletoTests(TestCase):
+    def setUp(self):
+        self.usuario = get_user_model().objects.create_user(
+            username="whatsapp_atendimento_completo",
+            password="Senha-Sintetica-2026!",
+        )
+        self.client.force_login(self.usuario)
+
+    @patch("usuarioSec.whatsapp_views.listar_contatos")
+    def test_busca_contatos_do_whatsapp_por_nome(self, listar_mock):
+        listar_mock.return_value = {
+            "data": [
+                {
+                    "jid": "5538999991111@s.whatsapp.net",
+                    "name": "Responsável Teste",
+                    "notify": "Responsável Teste",
+                }
+            ]
+        }
+
+        response = self.client.get(
+            reverse("whatsapp_buscar_contatos_wa"),
+            {"q": "Responsável"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["results"][0]["nome"], "Responsável Teste")
+        self.assertEqual(
+            response.json()["results"][0]["jid"],
+            "5538999991111@s.whatsapp.net",
+        )
+
+    @patch("usuarioSec.whatsapp_views.enviar_mensagem_chat")
+    @patch("usuarioSec.whatsapp_views.verificar_numeros")
+    def test_nova_conversa_valida_numero_e_envia_direto(
+        self,
+        verificar_mock,
+        enviar_mock,
+    ):
+        verificar_mock.return_value = {
+            "data": {
+                "results": [
+                    {
+                        "number": "5538999991111",
+                        "exists": True,
+                        "jid": "5538999991111@s.whatsapp.net",
+                    }
+                ]
+            }
+        }
+        enviar_mock.return_value = {"status": True}
+
+        response = self.client.post(
+            reverse("whatsapp_nova_conversa_api"),
+            {
+                "numero": "(38) 99999-1111",
+                "mensagem": "Mensagem de teste.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        enviar_mock.assert_called_once_with(
+            "5538999991111@s.whatsapp.net",
+            "Mensagem de teste.",
+        )
+
+    @patch("usuarioSec.whatsapp_views.gerenciar_chat")
+    def test_gerenciamento_de_conversa(self, gerenciar_mock):
+        gerenciar_mock.return_value = {"success": True}
+
+        response = self.client.post(
+            reverse("whatsapp_gerenciar_chat_api"),
+            {
+                "jid": "5538999991111@s.whatsapp.net",
+                "acao": "archive",
+                "ativo": "1",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        gerenciar_mock.assert_called_once_with(
+            "5538999991111@s.whatsapp.net",
+            "archive",
+            True,
+        )
