@@ -321,3 +321,28 @@ class EtiquetaConversaWhatsApp(models.Model):
         ]
         verbose_name = "Etiqueta de conversa WhatsApp"
         verbose_name_plural = "Etiquetas de conversas WhatsApp"
+
+
+class MensagemOcultaWhatsApp(models.Model):
+    """Oculta uma mensagem apenas para o operador no EMECA.
+
+    Não exclui conteúdo do WhatsApp, do banco WA-AKG ou de outros usuários.
+    A chave inclui a sessão, impedindo vazamento entre contas conectadas.
+    """
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name="mensagens_ocultas_whatsapp"
+    )
+    sessao = models.CharField(max_length=120)
+    mensagem_id = models.CharField(max_length=190)
+    ocultada_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["usuario", "sessao", "mensagem_id"],
+                name="uniq_mensagem_oculta_wa_operador"
+            )
+        ]
+        verbose_name = "Mensagem oculta no EMECA"
+        verbose_name_plural = "Mensagens ocultas no EMECA"
