@@ -40,6 +40,7 @@ urlpatterns = [
     path('whatsapp/qr/', whatsapp_views.whatsapp_qr, name='whatsapp_qr'),
     path('whatsapp/enviar/', whatsapp_views.whatsapp_enviar, name='whatsapp_enviar'),
     path('whatsapp/mensagens/', whatsapp_views.whatsapp_mensagens, name='whatsapp_mensagens'),
+    path('whatsapp/gerenciamento/', whatsapp_views.whatsapp_gerenciamento, name='whatsapp_gerenciamento'),
     path('whatsapp/chats-api/', whatsapp_views.whatsapp_chats_api, name='whatsapp_chats_api'),
     path('whatsapp/chat-api/', whatsapp_views.whatsapp_chat_api, name='whatsapp_chat_api'),
     path('whatsapp/contatos-wa/', whatsapp_views.whatsapp_buscar_contatos_wa, name='whatsapp_buscar_contatos_wa'),
