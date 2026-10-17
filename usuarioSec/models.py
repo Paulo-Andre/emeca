@@ -192,3 +192,35 @@ class LeituraChatWhatsApp(models.Model):
 
     def __str__(self):
         return f"{self.usuario_id}: {self.jid} ({self.nao_lidas})"
+
+
+class IdentidadeContatoWhatsApp(models.Model):
+    """Associação verificada entre LID, telefone e apelido interno do atendimento.
+
+    A API do WA-AKG pode retornar um LID sem o número telefônico; nunca
+    converter os dígitos do LID em número. Associações manuais são persistentes.
+    """
+
+    sessao = models.CharField(max_length=120)
+    jid = models.CharField(max_length=120)
+    telefone_jid = models.CharField(max_length=120, blank=True)
+    nome_exibicao = models.CharField(max_length=160, blank=True)
+    origem = models.CharField(
+        max_length=12,
+        choices=[("MANUAL", "Confirmado pelo operador"), ("METADATA", "Dados WhatsApp")],
+        default="MANUAL",
+    )
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["sessao", "jid"],
+                name="uniq_identidade_wa_sessao_jid",
+            )
+        ]
+        verbose_name = "Identidade de contato WhatsApp"
+        verbose_name_plural = "Identidades de contatos WhatsApp"
+
+    def __str__(self):
+        return f"{self.sessao}: {self.jid} => {self.telefone_jid or self.nome_exibicao}"
