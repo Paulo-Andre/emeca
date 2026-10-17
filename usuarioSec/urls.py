@@ -55,6 +55,7 @@ urlpatterns = [
     path('whatsapp/presenca/', whatsapp_views.whatsapp_presenca_api, name='whatsapp_presenca_api'),
     path('whatsapp/etiquetas/', whatsapp_views.whatsapp_etiquetas_api, name='whatsapp_etiquetas_api'),
     path('whatsapp/etiquetas/atualizar/', whatsapp_views.whatsapp_etiquetas_atualizar_api, name='whatsapp_etiquetas_atualizar_api'),
+    path('whatsapp/midia/<str:message_id>/', whatsapp_views.whatsapp_midia_recebida, name='whatsapp_midia_recebida'),
 
     
     
