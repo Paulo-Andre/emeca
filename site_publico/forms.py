@@ -2,7 +2,6 @@ from django import forms
 from django.forms import modelform_factory
 from urllib.parse import urlparse
 
-from cadastro.models import matricula
 
 from .models import (
     AlbumGaleria,
