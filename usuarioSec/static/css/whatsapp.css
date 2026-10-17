@@ -876,3 +876,27 @@ textarea.wa-new-chat-input{resize:vertical;min-height:94px}
   color: #8b3f30;
   font-size: .8rem;
 }
+
+
+/* Botão legível para identificar contato sem número */
+.wa-conversation-head .wa-identify-button {
+  width: auto;
+  min-width: 38px;
+  padding: 0 10px;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  border-color: #bde1cc;
+  background: #edf9f2;
+  color: #146a3e;
+  font-size: .72rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+.wa-conversation-head .wa-identify-button:hover { background: #dcf2e5; }
+.wa-conversation-head .wa-identify-button svg { flex: 0 0 auto; }
+@media (max-width: 760px) {
+  .wa-conversation-head .wa-identify-button span { display: none; }
+  .wa-conversation-head .wa-identify-button { padding: 0 8px; }
+}
