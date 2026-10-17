@@ -1128,29 +1128,52 @@
     });
 
     document.getElementById("messageSearchButton").addEventListener("click", () => {
+      if (!activeJid) return;
       messageSearchBar.hidden = false;
       messageSearchInput.focus();
+      messageSearchInput.select();
     });
     document.getElementById("closeMessageSearch").addEventListener("click", async () => {
       messageSearchBar.hidden = true;
       messageSearchInput.value = "";
-      const current = chats.find(x=>x.jid===activeJid);
+      replyStatus.textContent = "";
+      const current = activeContact();
       if (current) await openChat(current, true);
     });
-    messageSearchInput.addEventListener("keydown", async (event) => {
-      if (event.key !== "Enter" || !activeJid) return;
+    async function runChatSearch() {
+      const jid = activeJid;
       const q = messageSearchInput.value.trim();
-      if (!q) return;
-      const resp = await fetch("{% url 'whatsapp_buscar_mensagens_api' %}?jid="+encodeURIComponent(activeJid)+"&q="+encodeURIComponent(q));
-      const data = await resp.json();
-      if (!resp.ok || !data.ok) {
-        replyStatus.textContent = data.erro || "Falha na busca.";
+      if (!jid || !q) {
+        replyStatus.textContent = "Digite uma palavra para pesquisar nesta conversa.";
         replyStatus.className = "wa-reply-status error";
         return;
       }
-      renderMessages(data.mensagens || []);
-      replyStatus.textContent = (data.mensagens || []).length + " resultado(s) encontrado(s).";
-      replyStatus.className = "wa-reply-status";
+      replyStatus.textContent = "Buscando mensagens…";
+      try {
+        const url = "{% url 'whatsapp_buscar_mensagens_api' %}?jid=" +
+          encodeURIComponent(jid) + "&q=" + encodeURIComponent(q);
+        const resp = await fetch(url, {headers: {"Accept": "application/json"}});
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) throw new Error(data.erro || "Falha na busca.");
+        if (activeJid !== jid) return;
+        const found = Array.isArray(data.mensagens) ? data.mensagens : [];
+        renderMessages(found);
+        replyStatus.textContent = found.length + " resultado(s) encontrado(s)." +
+          (data.pagination?.total > found.length
+            ? " Exibindo a primeira página de " + data.pagination.total + "."
+            : "");
+        replyStatus.className = "wa-reply-status";
+      } catch (error) {
+        replyStatus.textContent = error.message || "Não foi possível pesquisar.";
+        replyStatus.className = "wa-reply-status error";
+      }
+    }
+    document.getElementById("runMessageSearch").addEventListener("click", runChatSearch);
+    messageSearchInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        runChatSearch();
+      }
     });
 
     document.getElementById("cancelQuoted").addEventListener("click", () => {
@@ -1180,8 +1203,57 @@
           const text = document.createElement("span"); text.textContent=label.name || "Etiqueta";
           row.append(input,swatch,text); labelsList.appendChild(row);
         });
-        labelsStatus.textContent = "";
+        labelsStatus.textContent = labelsList.children.length
+          ? "Selecione as etiquetas e clique em Salvar."
+          : "Ainda não existem etiquetas. Crie uma abaixo para organizar este atendimento.";
       } catch(err) { labelsStatus.textContent=err.message; }
+    });
+
+    document.getElementById("createChatLabel").addEventListener("click", async () => {
+      const nome = document.getElementById("newChatLabelName").value.trim();
+      const cor = document.getElementById("newChatLabelColor").value;
+      if (!nome) {
+        labelsStatus.textContent = "Informe um nome para a etiqueta.";
+        return;
+      }
+      const button = document.getElementById("createChatLabel");
+      button.disabled = true;
+      labelsStatus.textContent = "Criando etiqueta…";
+      const jid = activeJid;
+      try {
+        const body = new FormData();
+        body.append("nome", nome);
+        body.append("cor", cor);
+        body.append("csrfmiddlewaretoken", csrfToken());
+        const response = await fetch("{% url 'whatsapp_etiquetas_criar_api' %}", {
+          method: "POST", body, headers: {"X-CSRFToken": csrfToken()}
+        });
+        const data = await response.json();
+        if (!response.ok || !data.ok || !data.etiqueta?.id) {
+          throw new Error(data.erro || "O WA-AKG não confirmou a criação da etiqueta.");
+        }
+        if (jid !== activeJid) return;
+        const label = data.etiqueta;
+        const row = document.createElement("label");
+        row.className = "wa-label-row";
+        const input = document.createElement("input");
+        input.type = "checkbox"; input.value = String(label.id);
+        input.checked = true;
+        input.dataset.initial = "0";
+        const swatch = document.createElement("span");
+        swatch.className = "wa-label-color";
+        swatch.style.background = label.colorHex || "#22c55e";
+        const text = document.createElement("span");
+        text.textContent = label.name || nome;
+        row.append(input, swatch, text);
+        labelsList.appendChild(row);
+        document.getElementById("newChatLabelName").value = "";
+        labelsStatus.textContent = "Etiqueta criada. Clique em Salvar etiquetas para associá-la à conversa.";
+      } catch(error) {
+        labelsStatus.textContent = error.message || "Não foi possível criar a etiqueta.";
+      } finally {
+        button.disabled = false;
+      }
     });
     document.getElementById("closeLabels").addEventListener("click",()=>labelsDialog.close());
     document.getElementById("saveLabels").addEventListener("click", async () => {
@@ -1203,18 +1275,42 @@
     });
 
     document.getElementById("blockContactButton").addEventListener("click", async () => {
-      if (!activeJid) return;
-      const escolha = prompt('Digite "bloquear" ou "desbloquear":', "bloquear");
-      if (!escolha) return;
-      const bloquear = escolha.toLowerCase().startsWith("bloq");
-      const body = new FormData();
-      body.append("jid", activeJid);
-      body.append("bloquear", bloquear ? "1" : "0");
-      body.append("csrfmiddlewaretoken", csrfToken());
-      const resp = await fetch("{% url 'whatsapp_bloqueio_api' %}", {method:"POST",body,headers:{"X-CSRFToken":csrfToken()}});
-      const data = await resp.json();
-      replyStatus.textContent = resp.ok && data.ok ? (bloquear ? "Contato bloqueado." : "Contato desbloqueado.") : (data.erro || "Falha na operação.");
-      replyStatus.className = resp.ok && data.ok ? "wa-reply-status success" : "wa-reply-status error";
+      const jid = activeJid;
+      const chat = activeContact();
+      if (!jid || !chat) return;
+      if (jid.endsWith("@g.us")) {
+        replyStatus.textContent = "O bloqueio só é permitido em conversas individuais.";
+        replyStatus.className = "wa-reply-status error";
+        return;
+      }
+      const bloquear = !Boolean(chat.bloqueado);
+      if (!confirm(bloquear
+        ? "Bloquear este contato no WhatsApp? Ele não poderá enviar novas mensagens para este número."
+        : "Desbloquear este contato no WhatsApp?")) return;
+      const button = document.getElementById("blockContactButton");
+      button.disabled = true;
+      replyStatus.textContent = bloquear ? "Bloqueando contato…" : "Desbloqueando contato…";
+      try {
+        const body = new FormData();
+        body.append("jid", jid);
+        body.append("bloquear", bloquear ? "1" : "0");
+        body.append("csrfmiddlewaretoken", csrfToken());
+        const resp = await fetch("{% url 'whatsapp_bloqueio_api' %}", {
+          method: "POST", body, headers: {"X-CSRFToken": csrfToken()}
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) throw new Error(data.erro || "Falha ao alterar bloqueio.");
+        if (activeJid !== jid) return;
+        chat.bloqueado = Boolean(data.bloqueado);
+        updateChatActionButtons(chat);
+        replyStatus.textContent = chat.bloqueado ? "Contato bloqueado." : "Contato desbloqueado.";
+        replyStatus.className = "wa-reply-status success";
+      } catch(error) {
+        replyStatus.textContent = error.message || "Não foi possível alterar o bloqueio.";
+        replyStatus.className = "wa-reply-status error";
+      } finally {
+        button.disabled = false;
+      }
     });
 
     let presenceTimer = null;
@@ -1232,28 +1328,50 @@
     });
 
     async function manageActiveChat(action) {
-      if (!activeJid) return;
+      const jid = activeJid;
+      const chat = activeContact();
+      if (!jid || !chat) return;
+      const fields = {pin: "fixado", mute: "silenciado", archive: "arquivado"};
+      const active = fields[action] ? !Boolean(chat[fields[action]]) : true;
       const body = new FormData();
-      body.append("jid", activeJid);
+      body.append("jid", jid);
       body.append("acao", action);
-      body.append("ativo", "1");
+      body.append("ativo", active ? "1" : "0");
       body.append("csrfmiddlewaretoken", csrfToken());
+      const button = document.querySelector('[data-chat-action="' + action + '"]');
+      if (button) button.disabled = true;
       replyStatus.textContent = "Atualizando conversa…";
+      replyStatus.className = "wa-reply-status";
       try {
         const resp = await fetch("{% url 'whatsapp_gerenciar_chat_api' %}", {
-          method: "POST",
-          body,
-          headers: {"X-CSRFToken": csrfToken()}
+          method: "POST", body, headers: {"X-CSRFToken": csrfToken()}
         });
         const data = await resp.json();
         if (!resp.ok || !data.ok) throw new Error(data.erro || "Não foi possível atualizar a conversa.");
-        const labels = {read:"Conversa marcada como lida.", pin:"Conversa fixada.", mute:"Conversa silenciada.", archive:"Conversa arquivada."};
-        replyStatus.textContent = labels[action] || "Conversa atualizada.";
+        if (activeJid !== jid) return;
+        if (fields[action]) {
+          chat[fields[action]] = Boolean(data.ativo);
+          if (data.estado) Object.assign(chat, data.estado);
+        }
+        if (action === "read") {
+          chat.naoLidas = 0;
+        }
+        const messages = {
+          read: "Conversa marcada como lida.",
+          pin: active ? "Conversa fixada." : "Conversa desafixada.",
+          mute: active ? "Conversa silenciada." : "Notificações reativadas.",
+          archive: active ? "Conversa arquivada." : "Conversa desarquivada."
+        };
+        replyStatus.textContent = messages[action] || "Conversa atualizada.";
         replyStatus.className = "wa-reply-status success";
-        setTimeout(refreshChats, 500);
-      } catch (err) {
-        replyStatus.textContent = err.message;
+        updateChatActionButtons(chat);
+        renderChats();
+        if (action === "read") setTimeout(() => refreshChats(true), 700);
+      } catch (error) {
+        replyStatus.textContent = error.message || "A operação não foi confirmada pelo WhatsApp.";
         replyStatus.className = "wa-reply-status error";
+      } finally {
+        if (button) button.disabled = false;
       }
     }
 
