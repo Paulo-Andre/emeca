@@ -864,15 +864,6 @@ def _enriquecer_chats(chats):
         for item in identidades if item["origem"] == "METADATA" and item["nome_exibicao"]
     }
     contatos = _contatos_wa() + _contatos_persistidos_wa(identidades)
-    # Reaproveitar nomes em campos alternativos do cadastro do WA-AKG,
-    # inclusive os metadados brutos armazenados pelo Baileys.
-    for contato in contatos:
-        if isinstance(contato, dict) and not _nome_disponivel_no_wa({
-            "name": contato.get("name"), "verifiedName": contato.get("verifiedName")
-        }):
-            nome_nativo = _nome_disponivel_no_wa(contato)
-            if nome_nativo:
-                contato["name"] = nome_nativo
     # Registros @lid antigos nem sempre têm o telefone na tabela Contact.
     # O histórico recebido pode conter senderJid (telefone) e pushName,
     # informados diretamente pelo WhatsApp. Consultar no máximo três LIDs
@@ -1040,11 +1031,13 @@ def _enriquecer_chats(chats):
 
         nome = nomes[0] if nomes else ""
         if not nome:
+            # Para contatos sem telefone, aceitar também o nome de perfil e
+            # metadados históricos; com telefone, preferir número ao pushName.
             nome = next(
                 (
-                    _nome_disponivel_no_wa(contato, perfil=not bool(phone_jid))
+                    _nome_disponivel_no_wa(contato, perfil=True)
                     for contato in contatos_grupo
-                    if _nome_disponivel_no_wa(contato, perfil=not bool(phone_jid))
+                    if not phone_jid and _nome_disponivel_no_wa(contato, perfil=True)
                 ),
                 "",
             )
