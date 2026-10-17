@@ -536,3 +536,48 @@ def salvar_config_sistema(app_name, logo_url, favicon_url, timezone, enable_regi
             "enableRegistration": bool(enable_registration),
         },
     )
+
+
+def baixar_midia_por_caminho(media_url):
+    """Baixa mídia privada usando a rota /api/media/{filename} do WA-AKG."""
+    media_url = str(media_url or "").strip()
+    prefixos = ("/api/media/", "api/media/", "/media/", "media/")
+    prefixo = next((item for item in prefixos if media_url.startswith(item)), None)
+    if not prefixo:
+        raise WhatsAppGatewayError("Caminho de mídia inválido.", 400)
+
+    filename = media_url[len(prefixo):].strip("/")
+    if not filename or "/" in filename or "\\" in filename or ".." in filename:
+        raise WhatsAppGatewayError("Nome de mídia inválido.", 400)
+
+    base_url = settings.WA_AKG_BASE_URL.rstrip("/")
+    # WA_AKG_BASE_URL termina em /api. A rota de mídia também vive sob /api.
+    url = f"{base_url}/media/{quote(filename, safe='')}"
+    request = Request(
+        url,
+        headers={
+            "Accept": "*/*",
+            "X-API-Key": settings.WA_AKG_API_KEY,
+        },
+        method="GET",
+    )
+    try:
+        with urlopen(request, timeout=max(settings.WA_AKG_TIMEOUT_SECONDS, 30)) as response:
+            return (
+                response.read(),
+                response.headers.get("Content-Type") or "application/octet-stream",
+                response.headers.get("Content-Disposition") or "",
+            )
+    except HTTPError as exc:
+        raw = exc.read().decode("utf-8", errors="replace")
+        try:
+            data = json.loads(raw) if raw else {}
+        except json.JSONDecodeError:
+            data = {}
+        raise WhatsAppGatewayError(
+            str(data.get("message") or data.get("error") or f"HTTP {exc.code}"),
+            exc.code,
+            data,
+        ) from exc
+    except URLError as exc:
+        raise WhatsAppGatewayError("Não foi possível baixar a mídia do WA-AKG.") from exc
