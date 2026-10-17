@@ -821,6 +821,10 @@ def _enriquecer_chats(chats):
         item["jid"]: item["nome_exibicao"]
         for item in identidades if item["origem"] == "MANUAL" and item["nome_exibicao"]
     }
+    nomes_perfil = {
+        item["jid"]: item["nome_exibicao"]
+        for item in identidades if item["origem"] == "METADATA" and item["nome_exibicao"]
+    }
     contatos = _contatos_wa() + _contatos_persistidos_wa(identidades)
     # Registros @lid antigos nem sempre têm o telefone na tabela Contact.
     # O histórico recebido pode conter senderJid (telefone) e pushName,
@@ -999,7 +1003,11 @@ def _enriquecer_chats(chats):
             (nomes_manuais[jid] for jid in [merged["jid"], *aliases] if jid in nomes_manuais),
             "",
         )
-        merged["name"] = nome_manual or nome
+        nome_remoto = next(
+            (nomes_perfil[jid] for jid in [merged["jid"], *aliases] if jid in nomes_perfil),
+            "",
+        )
+        merged["name"] = nome_manual or nome or (nome_remoto if not phone_jid else "")
         merged["nomeManual"] = bool(nome_manual)
         merged["notify"] = next(
             (texto for texto in apelidos if texto.casefold() not in genericos), ""
