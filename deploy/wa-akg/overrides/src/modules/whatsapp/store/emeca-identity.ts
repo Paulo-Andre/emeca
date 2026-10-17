@@ -112,16 +112,39 @@ export function bindEmecaContactIdentity(sock: WASocket, sessionId: string): voi
         return true;
     }
 
-    let backfillStarted = false;
-    async function backfillKnownLids(): Promise<void> {
-        if (backfillStarted) return;
-        backfillStarted = true;
-        const dbSessionId = await sessionDbId();
-        if (!dbSessionId) {
-            backfillStarted = false;
+    // Every socket belongs to a single WA-AKG session. Run once after the
+    // connection opens AND again after the full history has actually arrived:
+    // on a first QR login the history usually arrives after connection=open.
+    let backfillRunning = false;
+    let backfillQueued = false;
+    let lastBackfill = 0;
+    let backfillTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function scheduleReconciliation(reason: string, delayMs = 10000): void {
+        if (backfillTimer) clearTimeout(backfillTimer);
+        backfillTimer = setTimeout(() => {
+            backfillTimer = null;
+            quietly(backfillKnownLids(reason), "automatic contact reconciliation");
+        }, delayMs);
+    }
+
+    async function backfillKnownLids(reason: string): Promise<void> {
+        if (backfillRunning) {
+            backfillQueued = true;
             return;
         }
-
+        // Avoid rescanning a large account with every batch of incoming contacts.
+        if (Date.now() - lastBackfill < 30000) {
+            scheduleReconciliation("recent sync", 35000);
+            return;
+        }
+        backfillRunning = true;
+        const dbSessionId = await sessionDbId();
+        if (!dbSessionId) {
+            backfillRunning = false;
+            return;
+        }
+        try {
         // The WA-AKG stores historical LIDs in both Contacts and Messages.
         // Use bounded, local batches so reconnect is not blocked.
         const [contactRows, messageRows] = await Promise.all([
@@ -195,26 +218,68 @@ export function bindEmecaContactIdentity(sock: WASocket, sessionId: string): voi
             "LID mappings recovered from historical message pairs: " +
             fromHistory + "/" + phonesByLid.size +
             " (ambiguous pairs skipped: " + (phonesByLid.size - verified.length) + ")");
+        lastBackfill = Date.now();
+        logger.info("EMECA Identity",
+            "Automatic contact reconciliation finished for " + sessionId + " (" + reason + ")");
+        } finally {
+            backfillRunning = false;
+            if (backfillQueued) {
+                backfillQueued = false;
+                scheduleReconciliation("history completed while processing", 35000);
+            }
+        }
     }
 
     // Reconcile old contacts as soon as the existing session reconnects.
     // No new QR code, logout or credential reset is performed.
     sock.ev.on("connection.update", update => {
         if (update.connection === "open") {
-            quietly(backfillKnownLids(), "backfill stored LID mappings");
+            scheduleReconciliation("QR connected / socket opened", 8000);
+        } else if (update.connection === "close" && backfillTimer) {
+            clearTimeout(backfillTimer);
+            backfillTimer = null;
         }
     });
 
-    // The upstream store handles general contact sync. This listener preserves
-    // phoneNumber/lid fields emitted by Baileys 7 which the original drops.
+    // Automatic import per connected session, without uploading files.
+    // Limit concurrent upserts, since a new QR connection can supply thousands
+    // of contacts and chats in a single Baileys history event.
+    async function syncBatch(entries: ContactLike[], source: string): Promise<void> {
+        let stored = 0;
+        for (let i = 0; i < entries.length; i += 12) {
+            const results = await Promise.allSettled(
+                entries.slice(i, i + 12).map(contact => syncContact(contact))
+            );
+            stored += results.filter(item => item.status === "fulfilled").length;
+            for (const result of results) {
+                if (result.status === "rejected") {
+                    logger.error("EMECA Identity", source, result.reason);
+                }
+            }
+        }
+        logger.info("EMECA Identity",
+            "Automatic contacts synced from " + source + ": " + stored + "/" + entries.length);
+    }
+
     sock.ev.on("contacts.upsert", contacts => {
-        quietly(Promise.all(contacts.map(contact => syncContact(contact as ContactLike))), "contacts.upsert");
+        quietly(syncBatch(contacts as ContactLike[], "contacts.upsert"), "contacts.upsert");
     });
     sock.ev.on("contacts.update", contacts => {
-        quietly(Promise.all(contacts.map(contact => syncContact(contact as ContactLike))), "contacts.update");
+        quietly(syncBatch(contacts as ContactLike[], "contacts.update"), "contacts.update");
     });
     sock.ev.on("messaging-history.set", history => {
-        quietly(Promise.all((history.contacts || []).map(contact => syncContact(contact as ContactLike))), "history contacts");
+        const entries = [
+            ...((history.contacts || []) as ContactLike[]),
+            ...((history.chats || []) as ContactLike[])
+        ];
+        quietly(
+            syncBatch(entries, "messaging-history.set").then(() => {
+                // First QR login may finish many seconds after connection=open.
+                // Run again once history is complete to include newly saved LIDs.
+                if (history.isLatest) scheduleReconciliation("initial history completed", 12000);
+            }),
+            "automatic history contacts"
+        );
     });
 
     // Depending on the Baileys RC version this event may not fire. The
