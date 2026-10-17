@@ -114,7 +114,7 @@
   <script>
     lucide.createIcons();
 
-    const connected = {{ gateway_status == "CONNECTED"|yesno:"true,false" }};
+    const connected = {% if gateway_status == "CONNECTED" %}true{% else %}false{% endif %};
     const initialChats = JSON.parse(document.getElementById("wa-chats-iniciais").textContent || "[]");
     const chatList = document.getElementById("chatList");
     const chatSearch = document.getElementById("chatSearch");
