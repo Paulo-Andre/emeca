@@ -2579,7 +2579,7 @@ def whatsapp_gerenciamento(request):
                 messages.success(request, "Grupo criado.")
             elif acao in {"sair_grupo", "remover_grupo"}:
                 jid = (request.POST.get("jid") or "").strip()
-                if not re.fullmatch(r"[0-9-]{5,85}@g\\.us", jid):
+                if not re.fullmatch(r"[0-9-]{5,85}@g\.us", jid):
                     raise ValueError("Selecione um grupo WhatsApp válido.")
                 confirmacao = "SAIR" if acao == "sair_grupo" else "REMOVER"
                 if request.POST.get("confirmacao") != confirmacao:
