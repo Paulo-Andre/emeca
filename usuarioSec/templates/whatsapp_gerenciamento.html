@@ -1,0 +1,126 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secretaria Escolar · Gerenciamento WhatsApp</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+  <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-unified-05">
+  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-manager-01">
+</head>
+<body>
+  {% include 'includes/sidebar.html' %}
+  <main class="main whatsapp-main">
+    <header class="header">
+      <div class="header-icon whatsapp-icon"><i data-lucide="settings-2"></i></div>
+      <div>
+        <h2>Gerenciamento do WhatsApp</h2>
+        <p>Recursos administrativos de atendimento integrados ao WA-AKG.</p>
+      </div>
+      <div class="wa-header-actions">
+        <a class="btn-secondary" href="{% url 'whatsapp_mensagens' %}"><i data-lucide="messages-square"></i> Mensagens</a>
+        <a class="btn-secondary" href="{% url 'whatsapp' %}"><i data-lucide="send"></i> Envios</a>
+      </div>
+    </header>
+
+    {% for message in messages %}
+      <div class="wa-manager-alert{% if message.tags %} {{ message.tags }}{% endif %}">{{ message }}</div>
+    {% endfor %}
+
+    <section class="wa-manager-grid">
+      <article class="wa-manager-card">
+        <div class="wa-manager-card-head"><i data-lucide="tags"></i><div><h3>Etiquetas</h3><p>Organize conversas por assunto, prioridade ou situação.</p></div></div>
+        <form method="post" class="wa-manager-form">
+          {% csrf_token %}
+          <input type="hidden" name="acao" value="criar_etiqueta">
+          <label>Nome da etiqueta<input name="nome" required maxlength="80" placeholder="Ex.: Matrícula pendente"></label>
+          <label>Cor
+            <select name="cor">
+              {% for i in "01234567890123456789" %}<option value="{{ forloop.counter0 }}">Cor {{ forloop.counter }}</option>{% endfor %}
+            </select>
+          </label>
+          <button class="btn-primary" type="submit"><i data-lucide="plus"></i> Criar etiqueta</button>
+        </form>
+        <div class="wa-manager-list">
+          {% for item in etiquetas %}
+            <div class="wa-manager-list-row"><span class="wa-label-dot" style="background:{{ item.colorHex|default:'#94a3b8' }}"></span><strong>{{ item.name }}</strong><small>{{ item._count.chatLabels|default:0 }} conversa(s)</small></div>
+          {% empty %}<p class="wa-manager-empty">Nenhuma etiqueta cadastrada.</p>{% endfor %}
+        </div>
+      </article>
+
+      <article class="wa-manager-card">
+        <div class="wa-manager-card-head"><i data-lucide="bot"></i><div><h3>Respostas automáticas</h3><p>Responda automaticamente a palavras ou frases recebidas.</p></div></div>
+        <form method="post" class="wa-manager-form">
+          {% csrf_token %}
+          <input type="hidden" name="acao" value="criar_auto_resposta">
+          <label>Palavra-chave<input name="palavra" required maxlength="120" placeholder="Ex.: horário"></label>
+          <label>Resposta<textarea name="resposta" required rows="3" maxlength="2000" placeholder="Olá! O horário de atendimento é..."></textarea></label>
+          <div class="wa-manager-two">
+            <label>Correspondência<select name="match_type"><option value="EXACT">Exata</option><option value="CONTAINS">Contém</option><option value="STARTS_WITH">Começa com</option></select></label>
+            <label>Disparo<select name="trigger_type"><option value="ALL">Todos</option><option value="PRIVATE">Conversas privadas</option><option value="GROUP">Grupos</option></select></label>
+          </div>
+          <button class="btn-primary" type="submit"><i data-lucide="plus"></i> Criar resposta</button>
+        </form>
+        <div class="wa-manager-list">
+          {% for item in auto_respostas %}
+            <div class="wa-manager-list-row wa-manager-list-row--actions">
+              <div><strong>{{ item.keyword }}</strong><small>{{ item.response|truncatechars:90 }}</small></div>
+              <form method="post">{% csrf_token %}<input type="hidden" name="acao" value="apagar_auto_resposta"><input type="hidden" name="id" value="{{ item.id }}"><button class="wa-danger-icon" type="submit" title="Excluir"><i data-lucide="trash-2"></i></button></form>
+            </div>
+          {% empty %}<p class="wa-manager-empty">Nenhuma resposta automática criada.</p>{% endfor %}
+        </div>
+      </article>
+
+      <article class="wa-manager-card">
+        <div class="wa-manager-card-head"><i data-lucide="calendar-clock"></i><div><h3>Mensagens agendadas</h3><p>Programe um envio para data e hora específicas.</p></div></div>
+        <form method="post" class="wa-manager-form">
+          {% csrf_token %}
+          <input type="hidden" name="acao" value="criar_agendamento">
+          <label>Telefone com DDD<input name="numero" required inputmode="tel" placeholder="(38) 99999-9999"></label>
+          <label>Mensagem<textarea name="conteudo" required rows="3" maxlength="4000"></textarea></label>
+          <label>Enviar em<input name="enviar_em" required type="datetime-local"></label>
+          <button class="btn-primary" type="submit"><i data-lucide="calendar-plus"></i> Agendar</button>
+        </form>
+        <div class="wa-manager-list">
+          {% for item in agendamentos %}
+            <div class="wa-manager-list-row wa-manager-list-row--actions">
+              <div><strong>{{ item.jid }}</strong><small>{{ item.content|truncatechars:90 }} · {{ item.sendAt }}</small></div>
+              <form method="post">{% csrf_token %}<input type="hidden" name="acao" value="apagar_agendamento"><input type="hidden" name="id" value="{{ item.id }}"><button class="wa-danger-icon" type="submit" title="Cancelar"><i data-lucide="x"></i></button></form>
+            </div>
+          {% empty %}<p class="wa-manager-empty">Nenhum agendamento pendente.</p>{% endfor %}
+        </div>
+      </article>
+
+      <article class="wa-manager-card">
+        <div class="wa-manager-card-head"><i data-lucide="users"></i><div><h3>Grupos</h3><p>Visualize grupos sincronizados e crie novos grupos da escola.</p></div></div>
+        <form method="post" class="wa-manager-form">
+          {% csrf_token %}
+          <input type="hidden" name="acao" value="criar_grupo">
+          <label>Nome do grupo<input name="assunto" required maxlength="100" placeholder="Ex.: Responsáveis 5º Ano"></label>
+          <label>Participantes<textarea name="participantes" required rows="3" placeholder="Um telefone por linha, ou separados por vírgula"></textarea></label>
+          <button class="btn-primary" type="submit"><i data-lucide="users-round"></i> Criar grupo</button>
+        </form>
+        <div class="wa-manager-list">
+          {% for item in grupos %}
+            <div class="wa-manager-list-row"><strong>{{ item.subject|default:"Grupo sem nome" }}</strong><small>{{ item.size|default:"" }} participante(s)</small></div>
+          {% empty %}<p class="wa-manager-empty">Nenhum grupo sincronizado.</p>{% endfor %}
+        </div>
+      </article>
+    </section>
+
+    <section class="wa-manager-card wa-manager-history">
+      <div class="wa-manager-card-head"><i data-lucide="history"></i><div><h3>Histórico de agendamentos</h3><p>Mensagens agendadas que já foram processadas.</p></div></div>
+      <div class="wa-manager-list">
+        {% for item in historico_agendamentos %}
+          <div class="wa-manager-list-row"><strong>{{ item.status }}</strong><small>{{ item.jid }} · {{ item.content|truncatechars:100 }} · {{ item.sendAt }}</small></div>
+        {% empty %}<p class="wa-manager-empty">Nenhum histórico disponível.</p>{% endfor %}
+      </div>
+    </section>
+  </main>
+  <script>if(window.lucide)window.lucide.createIcons();</script>
+</body>
+</html>
