@@ -119,6 +119,16 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
         '        const chatList = await ChatService.getChatsList(session.id, limit, before);',
         "paginação do endpoint",
     )
+    value = substitute(
+        value,
+        '        return NextResponse.json({ status: true, message: "Chats fetched successfully", data: chatList });',
+        '        const nextBefore = chatList.length ? '
+        'chatList[chatList.length - 1].lastMessage?.timestamp || null : null;\n'
+        '        return NextResponse.json({ status: true, '
+        'message: "Chats fetched successfully", data: chatList, '
+        'meta: { limit, nextBefore } });',
+        "cursor para todos os chats",
+    )
     edits[chat_route] = value
 
     edits[target_file] = overlay_file.read_text(encoding="utf-8")
@@ -141,8 +151,8 @@ ENRICH_METHOD = """    /**
         });
         const known = new Map<string, Set<string>>();
         const byJid = new Map<string, typeof contacts>();
-        const isPn = (jid: string) => /^\\\\d+@(s\\\\.whatsapp\\\\.net|c\\\\.us)$/.test(jid);
-        const isLid = (jid: string) => /^\\\\d+(?::\\\\d+)?@lid$/.test(jid);
+        const isPn = (jid: string) => /^\\d+@(s\\.whatsapp\\.net|c\\.us)$/.test(jid);
+        const isLid = (jid: string) => /^\\d+(?::\\d+)?@lid$/.test(jid);
         const normalized = (jid: string) => jid.replace("@c.us", "@s.whatsapp.net");
         for (const c of contacts) {
             const data = (c.data && typeof c.data === "object") ? c.data as Record<string, any> : {};
