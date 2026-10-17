@@ -940,33 +940,44 @@ def _aliases_contato_wa(jid, contatos=None):
     return [jid] + [item for item in grupos.get(jid, ()) if item != jid]
 
 
-def _nome_local_por_telefone(phone_jid):
-    """Usa a base da escola como fallback quando o WA-AKG não possui nome."""
-    digitos = re.sub(r"\D", "", str(phone_jid or "").split("@")[0])
-    if not digitos:
-        return ""
+def _mapa_nomes_telefones_escola_wa():
+    """Carrega os nomes da base escolar UMA vez por atualização.
 
-    candidatos = {digitos}
-    if digitos.startswith("55"):
-        candidatos.add(digitos[2:])
-
-    telefones = TelefoneDeclaracao.objects.select_related("declaracao").all()
-    for registro in telefones:
-        salvo = re.sub(r"\D", "", registro.telefone or "")
-        salvo_sem_55 = salvo[2:] if salvo.startswith("55") else salvo
-        if salvo not in candidatos and salvo_sem_55 not in candidatos:
+    A implementação anterior percorria a tabela inteira para cada um dos
+    até 1.591 chats, causando milhares de leituras e travamentos visuais.
+    """
+    mapa = {}
+    registros = TelefoneDeclaracao.objects.select_related("declaracao").all()
+    for registro in registros.iterator(chunk_size=500):
+        salvo = re.sub(r"\\D", "", registro.telefone or "")
+        if not salvo:
             continue
-
+        sem_55 = salvo[2:] if salvo.startswith("55") and len(salvo) in (12, 13) else salvo
         dec = registro.declaracao
         if registro.tipo == "PAI":
-            return dec.nomePai or f"Pai de {dec.nomeDoAluno}"
-        if registro.tipo == "MAE":
-            return dec.nomeMae or f"Mãe de {dec.nomeDoAluno}"
-        if registro.tipo == "RESPONSAVEL":
-            return dec.nomeResponsavel or f"Responsável por {dec.nomeDoAluno}"
-        return dec.nomeDoAluno or ""
+            nome = dec.nomePai or f"Pai de {dec.nomeDoAluno}"
+        elif registro.tipo == "MAE":
+            nome = dec.nomeMae or f"Mãe de {dec.nomeDoAluno}"
+        elif registro.tipo == "RESPONSAVEL":
+            nome = dec.nomeResponsavel or f"Responsável por {dec.nomeDoAluno}"
+        else:
+            nome = dec.nomeDoAluno or ""
+        if not nome:
+            continue
+        for variante in {salvo, sem_55, "55" + sem_55}:
+            mapa.setdefault(variante, nome)
+    return mapa
 
-    return ""
+
+def _nome_local_por_telefone(phone_jid, *, mapa=None):
+    """Consulta índice de telefones, não a tabela inteira por conversa."""
+    digitos = re.sub(r"\\D", "", str(phone_jid or "").split("@")[0])
+    if not digitos:
+        return ""
+    base = mapa if mapa is not None else _mapa_nomes_telefones_escola_wa()
+    return base.get(digitos) or (
+        base.get(digitos[2:]) if digitos.startswith("55") else ""
+    ) or ""
 
 
 def _enriquecer_chats(chats):
@@ -981,6 +992,7 @@ def _enriquecer_chats(chats):
             sessao=sessao_atual_id()
         ).values_list("telefone_jid", "nome")
     )
+    nomes_escola = None  # lazy: carregar somente se algum chat precisar
     nomes_manuais = {
         item["jid"]: item["nome_exibicao"]
         for item in identidades if item["origem"] == "MANUAL" and item["nome_exibicao"]
@@ -1170,8 +1182,11 @@ def _enriquecer_chats(chats):
                 "",
             )
         if not nome and phone_jid:
-            # Evitar pesquisar toda a base escolar para contatos já importados.
-            nome = nomes_agenda.get(phone_jid) or _nome_local_por_telefone(phone_jid)
+            nome = nomes_agenda.get(phone_jid) or ""
+            if not nome:
+                if nomes_escola is None:
+                    nomes_escola = _mapa_nomes_telefones_escola_wa()
+                nome = _nome_local_por_telefone(phone_jid, mapa=nomes_escola)
         if not nome and not phone_jid:
             nome = next(
                 (texto for texto in apelidos if texto.casefold() not in genericos),
