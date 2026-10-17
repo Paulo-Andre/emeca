@@ -677,6 +677,7 @@ def _enfileirar_boletins(request):
     with transaction.atomic():
         envio = EnvioBoletimWhatsApp.objects.create(
             usuario=request.user,
+            sessao=sessao_atual_id(),
             tipo_periodo=dados["tipo"],
             numero_periodo=dados["numero"],
             ano=dados["ano"],
