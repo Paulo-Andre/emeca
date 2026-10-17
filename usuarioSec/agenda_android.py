@@ -61,7 +61,7 @@ def _texto_vcard(valor, cabecalho):
                 "utf-8", errors="replace"
             )
     valor = re.sub(r"\\[nN]", " ", valor)
-    valor = valor.replace(r"\,", ",").replace(r"\;", ";").replace(r"\\", "\")
+    valor = valor.replace(r"\,", ",").replace(r"\;", ";")
     valor = unicodedata.normalize("NFC", valor)
     valor = "".join(c for c in valor if c.isprintable())
     return " ".join(valor.split()).strip()[:160]
