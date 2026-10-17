@@ -10,7 +10,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
   <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-unified-05">
-  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-inbox-08">
+  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-inbox-09">
 </head>
 <body>
   {% include 'includes/sidebar.html' %}
@@ -267,7 +267,7 @@
 
     function chatDisplayName(chat) {
       // Número real é preferível ao apelido/pushName de um contato não salvo.
-      return contactLabel(chat.name) || realPhone(chat) || contactLabel(chat.notify) || "Número não identificado";
+      return contactLabel(chat.name) || realPhone(chat) || contactLabel(chat.notify) || "Contato sem telefone disponível";
     }
 
     function setAvatarContent(element, chat, url="", fallbackUrl="") {
@@ -431,13 +431,60 @@
       return data;
     }
 
+    function validMessageDate(timestamp) {
+      const date = timestamp ? new Date(timestamp) : null;
+      return date && !Number.isNaN(date.getTime()) ? date : null;
+    }
+
+    function messageDayKey(timestamp) {
+      const date = validMessageDate(timestamp);
+      return date ? date.toLocaleDateString("pt-BR", {year:"numeric",month:"2-digit",day:"2-digit"}) : "";
+    }
+
+    function messageDayLabel(timestamp) {
+      const date = validMessageDate(timestamp);
+      if (!date) return "";
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+      const key = messageDayKey(timestamp);
+      if (key === messageDayKey(today.toISOString())) return "Hoje";
+      if (key === messageDayKey(yesterday.toISOString())) return "Ontem";
+      return date.toLocaleDateString("pt-BR", {day:"numeric",month:"long",year:"numeric"});
+    }
+
     function renderMessages(messages) {
       currentMessages = Array.isArray(messages) ? messages : [];
-      thread.innerHTML = "";
+      thread.replaceChildren();
+      let prior = null;
+      let priorDay = "";
+      const groupChat = activeJid.endsWith("@g.us");
       currentMessages.forEach(msg => {
+        const day = messageDayKey(msg.timestamp);
+        if (day && day !== priorDay) {
+          const divider = document.createElement("div");
+          divider.className = "wa-message-day";
+          divider.setAttribute("role", "separator");
+          divider.textContent = messageDayLabel(msg.timestamp);
+          thread.appendChild(divider);
+        }
+        const currentTime = validMessageDate(msg.timestamp);
+        const previousTime = prior ? validMessageDate(prior.timestamp) : null;
+        const sameSender = prior && Boolean(prior.fromMe) === Boolean(msg.fromMe) &&
+          (!groupChat || msg.fromMe || prior.senderJid === msg.senderJid);
+        const together = Boolean(day && day === priorDay && sameSender && currentTime && previousTime &&
+          currentTime.getTime() >= previousTime.getTime() &&
+          currentTime.getTime() - previousTime.getTime() < 5 * 60 * 1000);
         const bubble = document.createElement("article");
         bubble.className = "wa-message " + (msg.fromMe ? "outgoing" : "incoming");
+        if (together) bubble.classList.add("is-grouped");
         bubble.dataset.messageId = msg.keyId || msg.id || "";
+        if (groupChat && !msg.fromMe && msg.pushName && !together) {
+          const sender = document.createElement("div");
+          sender.className = "wa-message-sender";
+          sender.textContent = msg.pushName;
+          bubble.appendChild(sender);
+        }
 
         const type = String(msg.type || "").toUpperCase();
         const proxy = mediaUrl(msg);
@@ -538,27 +585,66 @@
           });
           actions.appendChild(btn);
         });
-        bubble.appendChild(actions);
+        const moreButton = document.createElement("button");
+        moreButton.type = "button";
+        moreButton.className = "wa-message-more";
+        moreButton.title = "Opções da mensagem";
+        moreButton.setAttribute("aria-label", "Opções da mensagem");
+        moreButton.setAttribute("aria-expanded", "false");
+        moreButton.innerHTML = '<i data-lucide="ellipsis"></i>';
+        moreButton.addEventListener("click", (event) => {
+          event.stopPropagation();
+          thread.querySelectorAll(".wa-message.actions-open").forEach(item => {
+            if (item !== bubble) {
+              item.classList.remove("actions-open");
+              item.querySelector(".wa-message-more")?.setAttribute("aria-expanded", "false");
+            }
+          });
+          const open = bubble.classList.toggle("actions-open");
+          moreButton.setAttribute("aria-expanded", String(open));
+        });
+        bubble.append(moreButton, actions);
 
         const meta = document.createElement("div");
         meta.className = "wa-message-meta";
-        if (!msg.fromMe && msg.pushName) {
-          const sender = document.createElement("span");
-          sender.textContent = msg.pushName;
-          meta.appendChild(sender);
-        }
-        const status = document.createElement("span");
-        if (msg.fromMe && msg.status) status.textContent = String(msg.status).toLowerCase();
         const time = document.createElement("time");
-        const d = msg.timestamp ? new Date(msg.timestamp) : null;
-        time.textContent = d && !Number.isNaN(d.getTime())
-          ? d.toLocaleString("pt-BR", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"})
+        const d = validMessageDate(msg.timestamp);
+        time.textContent = d
+          ? d.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"})
           : "";
-        if (status.textContent) meta.appendChild(status);
+        if (d) time.title = d.toLocaleString("pt-BR");
         meta.appendChild(time);
+        if (msg.fromMe) {
+          const states = {
+            PENDING:["clock-3","Pendente"],
+            SENT:["check","Enviada"],
+            DELIVERED:["check-check","Entregue"],
+            READ:["check-check","Lida"],
+            PLAYED:["check-check","Ouvida"],
+            FAILED:["alert-circle","Falhou"]
+          };
+          const state = String(msg.status || "").toUpperCase();
+          const item = states[state];
+          if (item) {
+            const status = document.createElement("span");
+            status.className = "wa-message-status" + (state === "READ" ? " is-read" : "");
+            status.title = item[1];
+            status.setAttribute("aria-label", item[1]);
+            status.innerHTML = '<i data-lucide="' + item[0] + '"></i>';
+            meta.appendChild(status);
+          }
+        }
         bubble.appendChild(meta);
         thread.appendChild(bubble);
+        prior = msg;
+        priorDay = day;
       });
+      if (!currentMessages.length) {
+        const empty = document.createElement("div");
+        empty.className = "wa-thread-empty";
+        empty.textContent = "Nenhuma mensagem encontrada nesta conversa.";
+        thread.appendChild(empty);
+      }
       if (window.lucide) window.lucide.createIcons();
       thread.scrollTop = thread.scrollHeight;
     }
@@ -589,7 +675,7 @@
 
       if (switched || !quiet) {
         contactName.textContent = chatDisplayName(chat);
-        contactNumber.textContent = realPhone(chat) || "Número não identificado pelo WhatsApp";
+        contactNumber.textContent = realPhone(chat) || "Telefone não fornecido pelo WhatsApp";
         loadLivePhoto(chat, contactAvatar);
         conversationEmpty.hidden = true;
         conversation.hidden = false;
@@ -887,6 +973,14 @@
       } catch (err) {
         waNewChatStatus.textContent = err.message;
       }
+    });
+
+    thread.addEventListener("click", (event) => {
+      if (event.target.closest(".wa-message-more, .wa-message-actions")) return;
+      thread.querySelectorAll(".wa-message.actions-open").forEach(item => {
+        item.classList.remove("actions-open");
+        item.querySelector(".wa-message-more")?.setAttribute("aria-expanded", "false");
+      });
     });
 
     chatSearch.addEventListener("input", renderChats);
