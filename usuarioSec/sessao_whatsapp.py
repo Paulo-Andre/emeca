@@ -21,6 +21,27 @@ def sessao_atual_id():
     )
 
 
+def limpeza_historico_pendente():
+    return bool(
+        SessaoWhatsAppAtiva.objects.filter(
+            chave="secretaria", limpeza_pendente=True
+        ).exists()
+    )
+
+
+def marcar_limpeza_historico_pendente(sessao_id):
+    """Impede novos QR Codes até excluir dados da conta anterior."""
+    with transaction.atomic():
+        registro, _ = SessaoWhatsAppAtiva.objects.select_for_update().get_or_create(
+            chave="secretaria",
+            defaults={"sessao_id": settings.WA_AKG_SESSION_ID},
+        )
+        if registro.sessao_id != sessao_id:
+            raise ValueError("A sessão WhatsApp foi alterada durante a exclusão.")
+        registro.limpeza_pendente = True
+        registro.save(update_fields=["limpeza_pendente", "atualizado_em"])
+
+
 def criar_sessao_isolada():
     """Troca atomicamente o apontador, preservando todos os dados anteriores.
 
@@ -39,5 +60,6 @@ def criar_sessao_isolada():
         ).exists():
             nova = "emeca-" + secrets.token_hex(16)
         registro.sessao_id = nova
-        registro.save(update_fields=["sessao_id", "atualizado_em"])
+        registro.limpeza_pendente = False
+        registro.save(update_fields=["sessao_id", "limpeza_pendente", "atualizado_em"])
         return {"anterior": anterior, "atual": nova}
