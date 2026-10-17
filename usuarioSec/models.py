@@ -374,3 +374,24 @@ class ConversaExcluidaWhatsApp(models.Model):
         ]
         verbose_name = "Conversa excluída no EMECA"
         verbose_name_plural = "Conversas excluídas no EMECA"
+
+
+class GrupoOcultoWhatsApp(models.Model):
+    """Grupo retirado da lista administrativa do EMECA, por conta.
+
+    Não apaga o grupo de outras pessoas nem elimina mensagens do WA-AKG.
+    A saída real do grupo é uma operação distinta executada via Baileys.
+    """
+    sessao = models.CharField(max_length=120)
+    jid = models.CharField(max_length=120)
+    motivo = models.CharField(max_length=20, default="REMOVIDO")
+    ocultado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["sessao", "jid"], name="uniq_grupo_oculto_wa_sessao"
+            )
+        ]
+        verbose_name = "Grupo removido da lista EMECA"
+        verbose_name_plural = "Grupos removidos da lista EMECA"
