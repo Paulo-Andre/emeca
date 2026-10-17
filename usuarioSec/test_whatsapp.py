@@ -1290,6 +1290,9 @@ class WhatsAppDesconexaoTests(TestCase):
     @patch("usuarioSec.whatsapp_views.desvincular_sessao")
     def test_usuario_comum_nao_pode_desconectar(self, desvincular, pausar):
         comum = get_user_model().objects.create_user(username="colaborador_sem_permissao")
+        # Pode entrar no módulo WhatsApp, mas NÃO é administrador.
+        # Testa a autorização da própria operação destrutiva.
+        autorizar_operador_whatsapp_teste(comum)
         self.client.force_login(comum)
         resposta = self.client.post(self.url, {
             "acao": "desvincular", "confirmacao": "DESVINCULAR"
