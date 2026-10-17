@@ -1075,3 +1075,55 @@ class WhatsAppMetadadosAlternativosTests(TestCase):
         chats = _enriquecer_chats([{"jid": "184774392074394@lid"}])
         self.assertEqual(chats[0]["name"], "")
         self.assertEqual(chats[0]["phoneJid"], "")
+
+
+class WhatsAppGatewayPaginacaoTests(TestCase):
+    @patch("usuarioSec.whatsapp_gateway.settings.WA_AKG_SESSION_ID", "sessao-educacao")
+    @patch("usuarioSec.whatsapp_gateway._request")
+    def test_gateway_percorre_paginas_sem_perder_conversas(self, requisicao):
+        from .whatsapp_gateway import listar_chats
+        requisicao.side_effect = [
+            {
+                "status": True,
+                "data": [{"jid": "5511999990001@s.whatsapp.net",
+                          "lastMessage": {"timestamp": "2026-10-17T12:00:00Z"}}],
+                "meta": {"nextBefore": "2026-10-17T12:00:00Z"},
+            },
+            {
+                "status": True,
+                "data": [{"jid": "5511999990002@s.whatsapp.net",
+                          "lastMessage": {"timestamp": "2026-10-17T11:00:00Z"}}],
+                "meta": {"nextBefore": "2026-10-17T11:00:00Z"},
+            },
+            {"status": True, "data": [], "meta": {"nextBefore": None}},
+        ]
+        data = listar_chats()
+        self.assertEqual(len(data["data"]), 2)
+        self.assertEqual(requisicao.call_count, 3)
+        self.assertIn("limit=500", requisicao.call_args_list[0].args[1])
+        self.assertIn("before=", requisicao.call_args_list[1].args[1])
+
+    @patch("usuarioSec.whatsapp_gateway.settings.WA_AKG_SESSION_ID", "sessao-educacao")
+    @patch("usuarioSec.whatsapp_gateway._request")
+    def test_gateway_compatibilidade_com_api_antiga(self, requisicao):
+        from .whatsapp_gateway import listar_chats
+        requisicao.return_value = {
+            "status": True,
+            "data": [{"jid": "5511999990001@s.whatsapp.net"}],
+        }
+        resposta = listar_chats()
+        self.assertEqual(len(resposta["data"]), 1)
+        requisicao.assert_called_once()
+
+    @patch("usuarioSec.whatsapp_gateway.settings.WA_AKG_SESSION_ID", "sessao-educacao")
+    @patch("usuarioSec.whatsapp_gateway._request")
+    def test_gateway_impede_loop_de_cursor_repetido(self, requisicao):
+        from .whatsapp_gateway import listar_chats
+        requisicao.return_value = {
+            "status": True,
+            "data": [{"jid": "5511999990001@s.whatsapp.net"}],
+            "meta": {"nextBefore": "2026-10-17T12:00:00Z"},
+        }
+        resposta = listar_chats()
+        self.assertEqual(len(resposta["data"]), 1)
+        self.assertLessEqual(requisicao.call_count, 3)
