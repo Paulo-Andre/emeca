@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Q
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_POST
 
@@ -22,6 +22,7 @@ from .models import (
 from .whatsapp_gateway import (
     WhatsAppGatewayError,
     apagar_mensagem,
+    baixar_midia_mensagem,
     atualizar_etiquetas_chat,
     bloquear_contato,
     buscar_mensagens,
@@ -1209,3 +1210,21 @@ def whatsapp_etiquetas_atualizar_api(request):
         return JsonResponse({"ok": True, "resposta": resposta})
     except WhatsAppGatewayError as exc:
         return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
+
+
+
+@login_required
+@require_GET
+def whatsapp_midia_recebida(request, message_id):
+    try:
+        conteudo, content_type, disposition = baixar_midia_mensagem(message_id)
+        resposta = HttpResponse(conteudo, content_type=content_type)
+        if disposition:
+            resposta["Content-Disposition"] = disposition
+        resposta["Cache-Control"] = "private, max-age=300"
+        return resposta
+    except WhatsAppGatewayError as exc:
+        return JsonResponse(
+            {"ok": False, "erro": str(exc)},
+            status=exc.status_code or 502,
+        )
