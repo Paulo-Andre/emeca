@@ -42,7 +42,11 @@ echo "[7/7] Atualizando EMECA e conferindo integração"
 cd "$ROOT"
 docker compose up -d --build
 docker compose exec -T web python manage.py migrate
-docker compose exec -T web python manage.py test usuarioSec.test_whatsapp
+docker compose exec -T web python manage.py test \
+  usuarioSec.test_whatsapp \
+  usuarioSec.test_isolamento_contas_whatsapp \
+  usuarioSec.test_limpeza_sessao_whatsapp \
+  usuarioSec.test_grupos_agendamentos_whatsapp
 docker compose exec -T web python manage.py diagnosticar_contatos_whatsapp
 
 echo "Implantação concluída. Faça Ctrl+Shift+R na página de mensagens."
