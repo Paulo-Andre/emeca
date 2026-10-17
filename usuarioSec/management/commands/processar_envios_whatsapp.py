@@ -11,6 +11,7 @@ from site_publico.boletim_services import gerar_pdf_boletim
 from site_publico.models import ConfiguracaoSite
 
 from usuarioSec.models import EnvioBoletimWhatsApp, ItemEnvioBoletimWhatsApp
+from usuarioSec.sessao_whatsapp import sessao_atual_id
 from usuarioSec.whatsapp_gateway import WhatsAppGatewayError, enviar_documento
 
 
@@ -56,7 +57,7 @@ def recuperar_lotes_obsoletos():
 def claim_proximo_lote():
     candidato_id = (
         EnvioBoletimWhatsApp.objects
-        .filter(status="PENDENTE")
+        .filter(status="PENDENTE", sessao=sessao_atual_id())
         .order_by("criado_em")
         .values_list("pk", flat=True)
         .first()
@@ -133,11 +134,16 @@ class Command(BaseCommand):
                             f"{item.boletim.periodo.ano}.pdf"
                         )
 
+                        if envio.sessao != sessao_atual_id():
+                            raise WhatsAppGatewayError(
+                                "Conta WhatsApp alterada: envio da sessão anterior cancelado."
+                            )
                         enviar_documento(
                             item.jid,
                             conteudo,
                             nome_arquivo,
                             _legenda(envio, item, escola),
+                            sessao_id=envio.sessao,
                         )
 
                         item.status = "ENVIADO"
