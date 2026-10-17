@@ -37,6 +37,7 @@ urlpatterns = [
     path('whatsapp/destinatarios/', whatsapp_views.whatsapp_destinatarios, name='whatsapp_destinatarios'),
     path('whatsapp/boletins-preview/', whatsapp_views.whatsapp_boletins_preview, name='whatsapp_boletins_preview'),
     path('whatsapp/conectar/', whatsapp_views.whatsapp_conectar, name='whatsapp_conectar'),
+    path('whatsapp/desconectar/', whatsapp_views.whatsapp_desconectar, name='whatsapp_desconectar'),
     path('whatsapp/qr/', whatsapp_views.whatsapp_qr, name='whatsapp_qr'),
     path('whatsapp/enviar/', whatsapp_views.whatsapp_enviar, name='whatsapp_enviar'),
     path('whatsapp/mensagens/', whatsapp_views.whatsapp_mensagens, name='whatsapp_mensagens'),
