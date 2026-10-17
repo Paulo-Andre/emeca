@@ -341,6 +341,7 @@ def whatsapp(request):
             "gateway_status": status,
             "gateway_status_detalhe": status_detalhe,
             "pode_desconectar": _pode_desconectar_whatsapp(request.user),
+            "wa_sessao_id": sessao_atual_id(),
             "delay_segundos": round(
                 settings.WA_AKG_BROADCAST_DELAY_MS / 1000,
                 1,
@@ -520,6 +521,9 @@ def whatsapp_boletins_preview(request):
 @login_required
 @require_POST
 def whatsapp_conectar(request):
+    if _validar_sessao_cliente(request) is not None:
+        messages.error(request, "A conta WhatsApp foi alterada. Reabra a página.")
+        return redirect("whatsapp")
     if not gateway_configurado():
         messages.error(
             request,
@@ -546,6 +550,9 @@ def whatsapp_desconectar(request):
     Pausar preserva credenciais WhatsApp; desvincular invalida o aparelho
     associado e exige um novo QR Code para voltar a enviar mensagens.
     """
+    if _validar_sessao_cliente(request) is not None:
+        messages.error(request, "A conta WhatsApp foi alterada. Reabra a página.")
+        return redirect("whatsapp")
     if not _pode_desconectar_whatsapp(request.user):
         return HttpResponseForbidden("Somente administradores podem desconectar o WhatsApp.")
 
@@ -717,6 +724,9 @@ def _enfileirar_boletins(request):
 @login_required
 @require_POST
 def whatsapp_enviar(request):
+    if _validar_sessao_cliente(request) is not None:
+        messages.error(request, "A conta WhatsApp foi alterada. Nenhuma mensagem foi enviada.")
+        return redirect("whatsapp")
     if (request.POST.get("conteudo") or "mensagem") == "boletim":
         return _enfileirar_boletins(request)
 
@@ -1404,7 +1414,11 @@ def whatsapp_identificar_contato_api(request):
 
 def _validar_sessao_cliente(request):
     """Impede operações de abas antigas após a troca da conta WhatsApp."""
-    informada = (request.headers.get("X-EMECA-WA-SESSION") or "").strip()
+    informada = (
+        request.headers.get("X-EMECA-WA-SESSION")
+        or request.POST.get("wa_session_id")
+        or ""
+    ).strip()
     if informada and informada != sessao_atual_id():
         return JsonResponse({
             "ok": False,
