@@ -1049,7 +1049,8 @@ def _enriquecer_chats(chats):
                 "",
             )
         if not nome and phone_jid:
-            nome = _nome_local_por_telefone(phone_jid)
+            # Evitar pesquisar toda a base escolar para contatos já importados.
+            nome = nomes_agenda.get(phone_jid) or _nome_local_por_telefone(phone_jid)
         if not nome and not phone_jid:
             nome = next(
                 (texto for texto in apelidos if texto.casefold() not in genericos),
