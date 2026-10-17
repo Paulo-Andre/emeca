@@ -55,6 +55,22 @@ class ExclusaoConversaWhatsAppTests(TestCase):
             len(_filtrar_conversas_excluidas_wa(self.colega, [self.chat])), 1
         )
 
+    @patch("usuarioSec.whatsapp_views._sincronizar_nao_lidas",
+           side_effect=lambda usuario, chats: chats)
+    @patch("usuarioSec.whatsapp_views._enriquecer_chats")
+    @patch("usuarioSec.whatsapp_views.listar_chats")
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
+    def test_api_de_conversas_oculta_a_excluida_no_refresh(
+        self, _gateway, listar, enriquecer, _nao_lidas
+    ):
+        listar.return_value = {"status": True, "data": [{"jid": self.jid}]}
+        enriquecer.return_value = [self.chat]
+        resposta = self._excluir()
+        self.assertEqual(resposta.status_code, 200)
+        carregamento = self.client.get(reverse("whatsapp_chats_api"))
+        self.assertEqual(carregamento.status_code, 200)
+        self.assertEqual(carregamento.json()["chats"], [])
+
     @patch("usuarioSec.whatsapp_views._enriquecer_chats")
     @patch("usuarioSec.whatsapp_views.listar_chats")
     @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
