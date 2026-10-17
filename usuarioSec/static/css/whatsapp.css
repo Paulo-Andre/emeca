@@ -453,3 +453,91 @@ textarea.wa-new-chat-input{resize:vertical;min-height:94px}
   .wa-message-actions{opacity:1}
   .wa-chat-actions{overflow-x:auto;max-width:48vw}
 }
+
+
+/* Painel de gerenciamento integrado ao WA-AKG */
+.wa-manager-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:18px;
+}
+.wa-manager-card{
+  padding:20px;
+  border:1px solid #dfe7ef;
+  border-radius:18px;
+  background:#fff;
+  box-shadow:0 8px 24px rgba(15,23,42,.05);
+}
+.wa-manager-card-head{
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  margin-bottom:16px;
+}
+.wa-manager-card-head>svg{
+  width:22px;height:22px;flex:0 0 22px;color:#15803d;
+}
+.wa-manager-card-head h3{margin:0;color:#0f172a}
+.wa-manager-card-head p{margin:4px 0 0;color:#64748b;font-size:.82rem;line-height:1.45}
+.wa-manager-form{display:grid;gap:10px;margin-bottom:16px}
+.wa-manager-form label{display:grid;gap:6px;color:#334155;font-size:.78rem;font-weight:700}
+.wa-manager-form input,
+.wa-manager-form textarea,
+.wa-manager-form select{
+  width:100%;
+  box-sizing:border-box;
+  padding:10px 11px;
+  border:1px solid #dbe3ee;
+  border-radius:10px;
+  background:#fff;
+  color:#0f172a;
+  font:inherit;
+  outline:none;
+}
+.wa-manager-form input:focus,
+.wa-manager-form textarea:focus,
+.wa-manager-form select:focus{
+  border-color:#22c55e;
+  box-shadow:0 0 0 3px rgba(34,197,94,.09);
+}
+.wa-manager-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.wa-manager-list{display:grid;gap:7px;max-height:280px;overflow-y:auto}
+.wa-manager-list-row{
+  padding:10px 11px;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  border:1px solid #edf2f7;
+  border-radius:10px;
+  background:#f8fafc;
+}
+.wa-manager-list-row strong{color:#0f172a;font-size:.82rem}
+.wa-manager-list-row small{margin-left:auto;color:#64748b;font-size:.72rem}
+.wa-manager-list-row--actions{justify-content:space-between}
+.wa-manager-list-row--actions>div{min-width:0;display:grid;gap:3px}
+.wa-manager-list-row--actions small{margin-left:0}
+.wa-manager-list-row--actions form{margin-left:auto}
+.wa-label-dot{width:10px;height:10px;border-radius:50%;flex:0 0 10px}
+.wa-danger-icon{
+  width:32px;height:32px;
+  display:grid;place-items:center;
+  border:1px solid #fecaca;
+  border-radius:9px;
+  background:#fff;
+  color:#b91c1c;
+  cursor:pointer;
+}
+.wa-danger-icon svg{width:15px;height:15px}
+.wa-manager-empty{margin:0;padding:12px;color:#94a3b8;text-align:center;font-size:.8rem}
+.wa-manager-history{margin-top:18px}
+.wa-manager-alert{margin:0 0 14px;padding:11px 13px;border-radius:10px;background:#eff6ff;color:#1e3a8a}
+.wa-manager-alert.success{background:#ecfdf5;color:#166534}
+.wa-manager-alert.error{background:#fef2f2;color:#991b1b}
+
+@media(max-width:1000px){
+  .wa-manager-grid{grid-template-columns:1fr}
+}
+@media(max-width:620px){
+  .wa-manager-two{grid-template-columns:1fr}
+  .wa-manager-card{padding:15px}
+}
