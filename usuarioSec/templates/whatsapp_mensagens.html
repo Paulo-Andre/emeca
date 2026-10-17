@@ -10,47 +10,12 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
   <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-unified-05">
-  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-label-strong-17">
+  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-inbox-compact-18">
 </head>
 <body>
   {% include 'includes/sidebar.html' %}
 
   <main class="main whatsapp-main whatsapp-inbox-main">
-    <header class="header whatsapp-inbox-header">
-      <div class="header-icon whatsapp-icon"><i data-lucide="messages-square"></i></div>
-      <div>
-        <h2>Mensagens do WhatsApp</h2>
-        <p>Leia e responda aos pais e responsáveis pelo número institucional da escola.</p>
-      </div>
-      <div class="wa-header-actions">
-        <button class="btn-primary" type="button" id="newChatButton">
-          <i data-lucide="message-square-plus"></i> Nova conversa
-        </button>
-        <a class="btn-secondary inbox-back-send" href="{% url 'whatsapp' %}">
-          <i data-lucide="send"></i> Envios
-        </a>
-        {% if gateway_status == "CONNECTED" and pode_desconectar %}
-          <form method="post" action="{% url 'whatsapp_desconectar' %}" class="wa-disconnect-header-form"
-            onsubmit="return confirm('Pausar o WhatsApp? O histórico e o vínculo com o celular serão preservados.');">
-            {% csrf_token %}
-          <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
-            <input type="hidden" name="acao" value="pausar">
-            <input type="hidden" name="origem" value="mensagens">
-            <button type="submit" class="btn-secondary" title="Pausar conexão"><i data-lucide="pause-circle"></i> Pausar</button>
-          </form>
-          <form method="post" action="{% url 'whatsapp_desconectar' %}" class="wa-disconnect-header-form"
-            onsubmit="return confirm('Desvincular o WhatsApp desta escola? Será necessário um novo QR Code para conectar. As mensagens armazenadas serão mantidas.');">
-            {% csrf_token %}
-          <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
-            <input type="hidden" name="acao" value="desvincular">
-            <input type="hidden" name="confirmacao" value="DESVINCULAR">
-            <input type="hidden" name="origem" value="mensagens">
-            <button type="submit" class="btn-secondary wa-disconnect-btn" title="Desvincular WhatsApp do aparelho"><i data-lucide="log-out"></i> Desvincular</button>
-          </form>
-        {% endif %}
-      </div>
-    </header>
-
     {% for message in messages %}
       <div class="wa-manager-alert{% if message.tags %} {{ message.tags }}{% endif %}" role="status">{{ message }}</div>
     {% endfor %}
@@ -91,9 +56,14 @@
             <strong>Conversas</strong>
             <small id="chatCount">Carregando…</small>
           </div>
-          <button type="button" class="wa-icon-button" id="refreshChats" aria-label="Atualizar conversas" title="Atualizar">
-            <i data-lucide="refresh-cw"></i>
-          </button>
+          <div class="wa-chat-list-tools">
+            <button type="button" class="wa-icon-button wa-new-chat-compact" id="newChatButton" aria-label="Nova conversa" title="Nova conversa">
+              <i data-lucide="message-square-plus"></i>
+            </button>
+            <button type="button" class="wa-icon-button" id="refreshChats" aria-label="Atualizar conversas" title="Atualizar">
+              <i data-lucide="refresh-cw"></i>
+            </button>
+          </div>
         </div>
 
         <div class="wa-chat-search">
