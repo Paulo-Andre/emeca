@@ -1809,11 +1809,40 @@ def whatsapp_buscar_mensagens_api(request):
         return JsonResponse({"ok": False, "erro": "Informe uma busca ou conversa."}, status=400)
 
     try:
-        payload = buscar_mensagens(q=q, jid=jid, tipo=tipo, page=page, limit=50)
+        # Conversas unificadas por LID/telefone podem ter mensagens
+        # armazenadas sob mais de um JID. Pesquisar todos os aliases conhecidos.
+        aliases = _aliases_contato_wa(jid) if jid else []
+        if not aliases:
+            aliases = [jid] if jid else [""]
+        mensagens_por_id = {}
+        paginas = []
+        for alias in aliases[:12]:
+            payload = buscar_mensagens(q=q, jid=alias, tipo=tipo, page=page, limit=50)
+            if isinstance(payload, dict) and payload.get("status") is False:
+                raise WhatsAppGatewayError(str(payload.get("message") or "Busca recusada pelo WA-AKG."))
+            encontrados = payload.get("data") if isinstance(payload, dict) else []
+            if not isinstance(encontrados, list):
+                encontrados = []
+            for msg in encontrados:
+                if isinstance(msg, dict):
+                    ident = str(msg.get("keyId") or msg.get("id") or (
+                        f'{msg.get("timestamp")}-{msg.get("content")}-{msg.get("fromMe")}'
+                    ))
+                    mensagens_por_id[ident] = msg
+            pagination = payload.get("pagination") if isinstance(payload, dict) else None
+            if isinstance(pagination, dict):
+                paginas.append(pagination)
+        mensagens = sorted(
+            mensagens_por_id.values(),
+            key=lambda msg: str(msg.get("timestamp") or ""),
+        )
         return JsonResponse({
             "ok": True,
-            "mensagens": payload.get("data", []) if isinstance(payload, dict) else [],
-            "pagination": payload.get("pagination", {}) if isinstance(payload, dict) else {},
+            "mensagens": mensagens,
+            "pagination": {
+                "total": sum(int(p.get("total") or 0) for p in paginas),
+                "page": page, "limit": 50,
+            },
         })
     except WhatsAppGatewayError as exc:
         return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
