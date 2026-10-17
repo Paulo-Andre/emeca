@@ -755,10 +755,17 @@ def _enriquecer_chats(chats):
     for contato in contatos:
         if not isinstance(contato, dict):
             continue
-        for chave in ("jid", "lid", "remoteJidAlt"):
+        for chave in ("jid", "lid", "remoteJidAlt", "phoneJid"):
             valor = contato.get(chave)
             if valor:
                 mapa[str(valor)] = contato
+        # O registro original do Baileys pode conter o JID telefônico
+        # mesmo quando o registro normalizado usa um LID.
+        dados = contato.get("data")
+        if isinstance(dados, dict):
+            jid_original = dados.get("id")
+            if _jid_eh_telefone(jid_original):
+                mapa.setdefault(str(jid_original), contato)
 
     vistos = set()
     resultado = []
@@ -771,6 +778,8 @@ def _enriquecer_chats(chats):
             contato.get("remoteJidAlt"),
             contato.get("jid"),
             contato.get("phoneJid"),
+            (contato.get("data") or {}).get("id")
+            if isinstance(contato.get("data"), dict) else None,
             chat.get("phoneJid"),
             chat.get("remoteJidAlt"),
             jid,
@@ -808,6 +817,18 @@ def _enriquecer_chats(chats):
         )
         if not nome and phone_jid:
             nome = _nome_local_por_telefone(phone_jid)
+        # Sem JID telefônico, priorizar o apelido real informado pelo
+        # WhatsApp em vez de repetir "Número não identificado".
+        if not nome and not phone_jid:
+            nome = next(
+                (
+                    str(valor).strip()
+                    for valor in (contato.get("notify"), chat.get("notify"))
+                    if str(valor or "").strip().casefold()
+                    not in {"", "contato whatsapp", "whatsapp", "unknown", "sem nome"}
+                ),
+                "",
+            )
         chat["name"] = nome
         chat["notify"] = contato.get("notify") or chat.get("notify") or ""
         chat["aliases"] = _aliases_contato_wa(jid, contatos)
