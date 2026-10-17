@@ -22,7 +22,10 @@ from site_publico.boletim_importacao import normalizar_nome
 from site_publico.models import BoletimAluno, PeriodoBoletim
 
 from .access_control import usuario_tem_modulo
-from .sessao_whatsapp import sessao_atual_id, criar_sessao_isolada
+from .sessao_whatsapp import (
+    sessao_atual_id, criar_sessao_isolada,
+    limpeza_historico_pendente, marcar_limpeza_historico_pendente,
+)
 from .agenda_android import AgendaImportError, MAX_VCF_BYTES, processar_agenda_vcf
 from .limpeza_historico_whatsapp import limpar_emeca_e_criar_sessao_nova
 from .models import (
@@ -548,6 +551,13 @@ def whatsapp_boletins_preview(request):
 @login_required
 @require_POST
 def whatsapp_conectar(request):
+    if limpeza_historico_pendente():
+        messages.error(
+            request,
+            "Não é permitido conectar outro número até concluir a exclusão "
+            "do histórico anterior em Gerenciamento."
+        )
+        return redirect("whatsapp")
     if _validar_sessao_cliente(request) is not None:
         messages.error(request, "A conta WhatsApp foi alterada. Reabra a página.")
         return redirect("whatsapp")
@@ -625,7 +635,20 @@ def whatsapp_desconectar(request):
 
     try:
         sessao_id = sessao_atual_id()
-        sessao = obter_sessao()
+        pendente = limpeza_historico_pendente()
+        sessao_remota_ja_excluida = False
+        try:
+            sessao = obter_sessao()
+        except WhatsAppGatewayError as exc:
+            # Se o WA-AKG concluiu a purga mas o EMECA falhou ao rotacionar
+            # o ponteiro, permitir finalizar só quando temos pendência
+            # previamente registrada E a sessão não existe mais no WA-AKG.
+            if (exc.status_code == 404 and pendente
+                    and acao == "finalizar_limpeza"):
+                sessao = {}
+                sessao_remota_ja_excluida = True
+            else:
+                raise
         dados = sessao.get("data") if isinstance(sessao, dict) else {}
         dados = dados if isinstance(dados, dict) else {}
         status = str(dados.get("status") or sessao.get("status") or "").upper()
@@ -645,10 +668,13 @@ def whatsapp_desconectar(request):
         # Somente LOGGED_OUT pode ser limpo. Uma falha de rede (DISCONNECTED)
         # nunca deve apagar registros do atendimento institucional.
         if status == "CONNECTED" and acao != "finalizar_limpeza":
+            marcar_limpeza_historico_pendente(sessao_id)
             resposta = desvincular_sessao()
             if not isinstance(resposta, dict) or resposta.get("status") is not True:
                 raise WhatsAppGatewayError("O WA-AKG não confirmou o logout.")
-        elif status != "LOGGED_OUT":
+        elif status == "LOGGED_OUT":
+            marcar_limpeza_historico_pendente(sessao_id)
+        elif not sessao_remota_ja_excluida:
             raise WhatsAppGatewayError(
                 "É preciso desvincular realmente o WhatsApp. "
                 "Não é permitido apagar histórico de uma sessão pausada ou ativa."
@@ -658,14 +684,20 @@ def whatsapp_desconectar(request):
         # Se o endpoint recusar (409), não liberar a próxima conexão.
         import time
         resposta_limpeza = None
-        for tentativa in range(8):
-            try:
-                resposta_limpeza = excluir_historico_sessao(sessao_id)
-                break
-            except WhatsAppGatewayError as exc:
-                if exc.status_code != 409 or tentativa == 7:
-                    raise
-                time.sleep(1)
+        if sessao_remota_ja_excluida:
+            resposta_limpeza = {
+                "status": True,
+                "data": {"alreadyDeleted": True, "mediaWarning": False},
+            }
+        else:
+            for tentativa in range(8):
+                try:
+                    resposta_limpeza = excluir_historico_sessao(sessao_id)
+                    break
+                except WhatsAppGatewayError as exc:
+                    if exc.status_code != 409 or tentativa == 7:
+                        raise
+                    time.sleep(1)
         if not isinstance(resposta_limpeza, dict) or resposta_limpeza.get("status") is not True:
             raise WhatsAppGatewayError("O WA-AKG não confirmou a remoção do histórico.")
 
