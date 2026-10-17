@@ -1194,3 +1194,82 @@ class WhatsAppVisualizacaoPerfilTests(TestCase):
         self.assertContains(response, 'id="contactProfileDialog"')
         self.assertContains(response, 'id="viewContactProfile"')
         self.assertContains(response, "whatsapp_perfil_api")
+
+
+class WhatsAppDesconexaoTests(TestCase):
+    def setUp(self):
+        self.usuario = get_user_model().objects.create_user(
+            username="administrador_desconexao_wa",
+            password="SenhaDeTeste-local",
+            is_staff=True,
+        )
+        self.client.force_login(self.usuario)
+        self.url = reverse("whatsapp_desconectar")
+
+    @patch("usuarioSec.whatsapp_views.pausar_sessao", return_value={"status": True})
+    @patch("usuarioSec.whatsapp_views.obter_sessao",
+           return_value={"data": {"status": "CONNECTED"}})
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
+    def test_pausar_sem_apagar_sessao(self, _config, _sessao, pausar):
+        result = self.client.post(self.url, {"acao": "pausar"})
+        self.assertRedirects(result, reverse("whatsapp"), fetch_redirect_response=False)
+        pausar.assert_called_once_with()
+
+    @patch("usuarioSec.whatsapp_views.desvincular_sessao", return_value={"status": True})
+    @patch("usuarioSec.whatsapp_views.obter_sessao",
+           return_value={"data": {"status": "CONNECTED"}})
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
+    def test_desvinculacao_confirmada(self, _config, _sessao, desvincular):
+        result = self.client.post(self.url, {
+            "acao": "desvincular", "confirmacao": "DESVINCULAR",
+            "origem": "mensagens",
+        })
+        self.assertRedirects(
+            result, reverse("whatsapp_mensagens"), fetch_redirect_response=False
+        )
+        desvincular.assert_called_once_with()
+
+    @patch("usuarioSec.whatsapp_views.desvincular_sessao")
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
+    def test_nao_desvincula_sem_confirmacao(self, _config, desvincular):
+        result = self.client.post(self.url, {"acao": "desvincular"})
+        self.assertEqual(result.status_code, 302)
+        desvincular.assert_not_called()
+
+    @patch("usuarioSec.whatsapp_views.desvincular_sessao")
+    @patch("usuarioSec.whatsapp_views.obter_sessao",
+           return_value={"data": {"status": "STOPPED"}})
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
+    def test_nao_confunde_status_offline_com_logout_real(
+        self, _config, _sessao, desvincular
+    ):
+        result = self.client.post(self.url, {
+            "acao": "desvincular", "confirmacao": "DESVINCULAR"
+        })
+        self.assertEqual(result.status_code, 302)
+        desvincular.assert_not_called()
+
+    @patch("usuarioSec.whatsapp_views.pausar_sessao")
+    @patch("usuarioSec.whatsapp_views.desvincular_sessao")
+    def test_usuario_comum_nao_pode_desconectar(self, desvincular, pausar):
+        comum = get_user_model().objects.create_user(username="colaborador_sem_permissao")
+        self.client.force_login(comum)
+        resposta = self.client.post(self.url, {
+            "acao": "desvincular", "confirmacao": "DESVINCULAR"
+        })
+        self.assertEqual(resposta.status_code, 403)
+        desvincular.assert_not_called()
+        pausar.assert_not_called()
+
+    def test_desconexao_usa_post(self):
+        self.assertEqual(self.client.get(self.url).status_code, 405)
+
+    @patch("usuarioSec.whatsapp_views.obter_sessao",
+           return_value={"data": {"status": "CONNECTED"}})
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
+    def test_botoes_visiveis_em_tela_de_conexao(self, _config, _sessao):
+        resposta = self.client.get(reverse("whatsapp"))
+        self.assertEqual(resposta.status_code, 200)
+        self.assertContains(resposta, "Desvincular número")
+        self.assertContains(resposta, "Pausar")
+        self.assertContains(resposta, "whatsapp/desconectar")
