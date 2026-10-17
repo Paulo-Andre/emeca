@@ -162,6 +162,41 @@ class GerenciamentoWhatsAppTests(TestCase):
         sair.assert_not_called()
         apagar.assert_not_called()
 
+    def test_remover_grupo_oculta_tambem_na_lista_de_conversas(self):
+        from .whatsapp_views import _filtrar_conversas_excluidas_wa
+        grupo = {
+            "jid": self.grupo_jid,
+            "aliases": [self.grupo_jid],
+            "lastMessage": {"timestamp": "2026-10-17T15:00:00Z"}
+        }
+        GrupoOcultoWhatsApp.objects.create(
+            sessao=sessao_atual_id(), jid=self.grupo_jid
+        )
+        self.assertEqual(
+            _filtrar_conversas_excluidas_wa(self.admin, [grupo]), []
+        )
+        self.assertEqual(
+            _filtrar_conversas_excluidas_wa(self.admin, [{
+                "jid": "5538999990000@s.whatsapp.net",
+                "aliases": ["5538999990000@s.whatsapp.net"],
+                "lastMessage": {"timestamp": "2026-10-17T15:00:00Z"},
+            }])[0]["jid"],
+            "5538999990000@s.whatsapp.net"
+        )
+
+    @patch("usuarioSec.whatsapp_gateway._request",
+           return_value={"status": True})
+    def test_gateway_usa_apis_de_etiqueta_e_grupo_correta(self, chamada):
+        from .whatsapp_gateway import apagar_etiqueta, sair_grupo
+        apagar_etiqueta("label-1")
+        self.assertEqual(chamada.call_args.args[:2], (
+            "DELETE", "labels/sessao-escola-teste/label-1"
+        ))
+        sair_grupo(self.grupo_jid)
+        self.assertEqual(chamada.call_args.args[:2], (
+            "POST", "groups/sessao-escola-teste/" + self.grupo_jid + "/leave"
+        ))
+
     @patch("usuarioSec.whatsapp_views.listar_grupos")
     @patch("usuarioSec.whatsapp_views.sair_grupo", return_value={"status": True})
     def test_grupos_de_conta_anterior_nao_ficam_ocultos_em_nova_conta(
