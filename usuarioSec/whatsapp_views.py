@@ -1142,6 +1142,73 @@ def _marcar_como_vista_no_emeca(usuario, jid, mensagens=None):
 
 
 @login_required
+@require_POST
+def whatsapp_identificar_contato_api(request):
+    """Define apelido interno ou une um LID a uma conversa telefônica existente.
+
+    Não altera a agenda do WhatsApp nem inventa telefone a partir do LID.
+    A vinculação é uma confirmação explícita feita pelo operador.
+    """
+    jid = (request.POST.get("jid") or "").strip()
+    nome = (request.POST.get("nome") or "").strip()
+    telefone = (request.POST.get("telefone_jid") or "").strip().replace(
+        "@c.us", "@s.whatsapp.net"
+    )
+    if not re.fullmatch(r"[0-9]{5,25}@(lid|s\\.whatsapp\\.net)", jid):
+        return JsonResponse({"ok": False, "erro": "Contato inválido."}, status=400)
+    if len(nome) > 160 or any(ord(char) < 32 for char in nome):
+        return JsonResponse({"ok": False, "erro": "Nome inválido."}, status=400)
+    if telefone and (
+        not jid.endswith("@lid")
+        or not re.fullmatch(r"[0-9]{10,15}@s\\.whatsapp\\.net", telefone)
+    ):
+        return JsonResponse({"ok": False, "erro": "Selecione uma conversa telefônica válida."}, status=400)
+
+    try:
+        payload = listar_chats()
+    except WhatsAppGatewayError as exc:
+        return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
+    chats = payload.get("data") if isinstance(payload, dict) else []
+    if not isinstance(chats, list):
+        chats = []
+    disponiveis = {
+        str(chat.get("jid") or "")
+        for chat in chats if isinstance(chat, dict)
+    }
+    # Não permitir que um operador informe um JID inexistente/aleatório.
+    if jid not in disponiveis:
+        ja_registrado = IdentidadeContatoWhatsApp.objects.filter(
+            sessao=settings.WA_AKG_SESSION_ID, jid=jid
+        ).exists()
+        if not ja_registrado:
+            return JsonResponse({"ok": False, "erro": "Contato não encontrado nas conversas."}, status=400)
+    if telefone and telefone not in disponiveis:
+        return JsonResponse({
+            "ok": False,
+            "erro": "O número escolhido precisa constar na lista de conversas do WhatsApp.",
+        }, status=400)
+
+    with transaction.atomic():
+        if nome or telefone:
+            IdentidadeContatoWhatsApp.objects.update_or_create(
+                sessao=settings.WA_AKG_SESSION_ID,
+                jid=jid,
+                defaults={
+                    "telefone_jid": telefone,
+                    "nome_exibicao": nome,
+                    "origem": "MANUAL",
+                },
+            )
+        else:
+            IdentidadeContatoWhatsApp.objects.filter(
+                sessao=settings.WA_AKG_SESSION_ID, jid=jid, origem="MANUAL"
+            ).delete()
+    if jid.endswith("@lid"):
+        cache.delete("emeca:whatsapp:lid:" + sha256(jid.encode("utf-8")).hexdigest())
+    return JsonResponse({"ok": True, "jid": jid, "nome": nome, "telefone_jid": telefone})
+
+
+@login_required
 def whatsapp_mensagens(request):
     status = "NAO_CONFIGURADO"
     status_detalhe = ""
