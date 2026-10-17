@@ -542,11 +542,12 @@ def criar_grupo(subject, participants):
 
 def criar_etiqueta(name, color=0):
     session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
-    return _request(
+    resposta = _request(
         "POST",
         f"labels/{session_id}",
         {"name": name, "color": int(color)},
     )
+    return confirmar_operacao_wa(resposta, "criação da etiqueta")
 
 
 def listar_respostas_automaticas():
