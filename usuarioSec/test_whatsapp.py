@@ -1278,6 +1278,29 @@ class WhatsAppDesconexaoTests(TestCase):
     def test_desconexao_usa_post(self):
         self.assertEqual(self.client.get(self.url).status_code, 405)
 
+    @patch("usuarioSec.whatsapp_views.limpeza_historico_pendente")
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
+    def test_falha_migracao_retorna_orientacao_sem_http_500(
+        self, _config, pendente
+    ):
+        from django.db import OperationalError
+        pendente.side_effect = OperationalError("no such column: limpeza_pendente")
+        resposta = self.client.post(self.url, {"acao": "pausar"})
+        self.assertRedirects(resposta, reverse("whatsapp"), fetch_redirect_response=False)
+        avisos = [str(item) for item in list(resposta.wsgi_request._messages)]
+        self.assertTrue(any("migrações" in aviso.lower() for aviso in avisos))
+
+    @patch("usuarioSec.whatsapp_views.limpeza_historico_pendente")
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
+    def test_erro_inesperado_antes_do_logout_nao_devolve_http_500(
+        self, _config, pendente
+    ):
+        pendente.side_effect = RuntimeError("falha simulada")
+        resposta = self.client.post(self.url, {"acao": "pausar"})
+        self.assertRedirects(resposta, reverse("whatsapp"), fetch_redirect_response=False)
+        avisos = [str(item) for item in list(resposta.wsgi_request._messages)]
+        self.assertTrue(any("não foi possível" in aviso.lower() for aviso in avisos))
+
     @patch("usuarioSec.whatsapp_views.pausar_sessao", return_value={"status": True})
     @patch("usuarioSec.whatsapp_views.obter_sessao",
            return_value={"data": {"status": "CONNECTED"}})
