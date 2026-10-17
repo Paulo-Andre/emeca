@@ -279,3 +279,305 @@ def gerenciar_chat(jid, acao, ativo=True):
     if acao == "read":
         return marcar_chat_como_lido(jid)
     raise WhatsAppGatewayError("Ação de conversa inválida.")
+
+
+def buscar_mensagens(q="", jid="", tipo="", page=1, limit=50):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    params = []
+    if q:
+        params.append(f"q={quote(str(q), safe='')}")
+    if jid:
+        params.append(f"jid={quote(str(jid), safe='')}")
+    if tipo:
+        params.append(f"type={quote(str(tipo), safe='')}")
+    params.append(f"page={int(page)}")
+    params.append(f"limit={min(max(int(limit), 1), 100)}")
+    return _request("GET", f"messages/{session_id}/search?{'&'.join(params)}")
+
+
+def responder_mensagem_citada(jid, message_id, texto):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    message_id_codificado = quote(message_id, safe="")
+    return _request(
+        "POST",
+        f"messages/{session_id}/{jid_codificado}/{message_id_codificado}/reply",
+        {"message": {"text": texto}},
+    )
+
+
+def favoritar_mensagem(jid, message_id, star=True, from_me=False):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    message_id_codificado = quote(message_id, safe="")
+    return _request(
+        "POST",
+        f"messages/{session_id}/{jid_codificado}/{message_id_codificado}/star",
+        {"star": bool(star), "fromMe": bool(from_me)},
+    )
+
+
+def reagir_mensagem(jid, message_id, emoji):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    message_id_codificado = quote(message_id, safe="")
+    return _request(
+        "POST",
+        f"messages/{session_id}/{jid_codificado}/{message_id_codificado}/react",
+        {"emoji": emoji},
+    )
+
+
+def editar_mensagem(jid, message_id, texto):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    message_id_codificado = quote(message_id, safe="")
+    return _request(
+        "PATCH",
+        f"messages/{session_id}/{jid_codificado}/{message_id_codificado}",
+        {"text": texto},
+    )
+
+
+def apagar_mensagem(jid, message_id):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    message_id_codificado = quote(message_id, safe="")
+    return _request(
+        "DELETE",
+        f"messages/{session_id}/{jid_codificado}/{message_id_codificado}",
+    )
+
+
+def encaminhar_mensagem(from_jid, message_id, to_jids):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    return _request(
+        "POST",
+        f"messages/{session_id}/forward",
+        {
+            "fromJid": from_jid,
+            "messageId": message_id,
+            "toJids": to_jids,
+        },
+    )
+
+
+def bloquear_contato(jid, bloquear=True):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    acao = "block" if bloquear else "unblock"
+    return _request(
+        "POST",
+        f"contacts/{session_id}/{jid_codificado}/{acao}",
+        {},
+    )
+
+
+def enviar_presenca(jid, presence):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    return _request(
+        "POST",
+        f"chat/{session_id}/{jid_codificado}/presence",
+        {"presence": presence},
+    )
+
+
+def listar_etiquetas():
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    return _request("GET", f"labels/{session_id}")
+
+
+def listar_etiquetas_chat(jid):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    return _request("GET", f"labels/{session_id}/chat/{jid_codificado}/labels")
+
+
+def atualizar_etiquetas_chat(jid, label_ids, action):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    jid_codificado = quote(jid, safe="")
+    return _request(
+        "PUT",
+        f"labels/{session_id}/chat/{jid_codificado}/labels",
+        {"labelIds": label_ids, "action": action},
+    )
+
+
+
+def baixar_midia_mensagem(message_id):
+    if not configurado():
+        raise WhatsAppGatewayError(
+            "A integração com o WhatsApp ainda não foi configurada no servidor."
+        )
+
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    message_id_codificado = quote(message_id, safe="")
+    base_url = settings.WA_AKG_BASE_URL.rstrip("/")
+    url = f"{base_url}/messages/{session_id}/download/{message_id_codificado}/media"
+    request = Request(
+        url,
+        headers={
+            "Accept": "*/*",
+            "X-API-Key": settings.WA_AKG_API_KEY,
+        },
+        method="GET",
+    )
+    try:
+        with urlopen(request, timeout=max(settings.WA_AKG_TIMEOUT_SECONDS, 30)) as response:
+            return (
+                response.read(),
+                response.headers.get("Content-Type") or "application/octet-stream",
+                response.headers.get("Content-Disposition") or "",
+            )
+    except HTTPError as exc:
+        raw = exc.read().decode("utf-8", errors="replace")
+        try:
+            data = json.loads(raw) if raw else {}
+        except json.JSONDecodeError:
+            data = {}
+        raise WhatsAppGatewayError(
+            str(data.get("message") or data.get("error") or f"HTTP {exc.code}"),
+            exc.code,
+            data,
+        ) from exc
+    except URLError as exc:
+        raise WhatsAppGatewayError(
+            "Não foi possível baixar a mídia do WA-AKG."
+        ) from exc
+
+
+def listar_grupos():
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    return _request("GET", f"groups/{session_id}")
+
+
+def criar_grupo(subject, participants):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    return _request(
+        "POST",
+        f"groups/{session_id}/create",
+        {"subject": subject, "participants": participants},
+    )
+
+
+def criar_etiqueta(name, color=0):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    return _request(
+        "POST",
+        f"labels/{session_id}",
+        {"name": name, "color": int(color)},
+    )
+
+
+def listar_respostas_automaticas():
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    return _request("GET", f"autoreplies/{session_id}")
+
+
+def criar_resposta_automatica(keyword, response, match_type="EXACT", trigger_type="ALL"):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    return _request(
+        "POST",
+        f"autoreplies/{session_id}",
+        {
+            "keyword": keyword,
+            "response": response,
+            "matchType": match_type,
+            "triggerType": trigger_type,
+            "isMedia": False,
+        },
+    )
+
+
+def apagar_resposta_automatica(reply_id):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    reply_id = quote(reply_id, safe="")
+    return _request("DELETE", f"autoreplies/{session_id}/{reply_id}")
+
+
+def listar_agendamentos(tab="pending"):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    return _request("GET", f"scheduler/{session_id}?tab={quote(tab, safe='')}")
+
+
+def criar_agendamento(jid, content, send_at):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    return _request(
+        "POST",
+        f"scheduler/{session_id}",
+        {
+            "jid": jid,
+            "content": content,
+            "sendAt": send_at,
+        },
+    )
+
+
+def apagar_agendamento(schedule_id):
+    session_id = quote(settings.WA_AKG_SESSION_ID, safe="")
+    schedule_id = quote(schedule_id, safe="")
+    return _request("DELETE", f"scheduler/{session_id}/{schedule_id}")
+
+
+def obter_config_sistema():
+    return _request("GET", "settings/system")
+
+
+def salvar_config_sistema(app_name, logo_url, favicon_url, timezone, enable_registration=False):
+    return _request(
+        "POST",
+        "settings/system",
+        {
+            "appName": app_name,
+            "logoUrl": logo_url,
+            "faviconUrl": favicon_url,
+            "timezone": timezone,
+            "enableRegistration": bool(enable_registration),
+        },
+    )
+
+
+def baixar_midia_por_caminho(media_url):
+    """Baixa mídia privada usando a rota /api/media/{filename} do WA-AKG."""
+    media_url = str(media_url or "").strip()
+    prefixos = ("/api/media/", "api/media/", "/media/", "media/")
+    prefixo = next((item for item in prefixos if media_url.startswith(item)), None)
+    if not prefixo:
+        raise WhatsAppGatewayError("Caminho de mídia inválido.", 400)
+
+    filename = media_url[len(prefixo):].strip("/")
+    if not filename or "/" in filename or "\\" in filename or ".." in filename:
+        raise WhatsAppGatewayError("Nome de mídia inválido.", 400)
+
+    base_url = settings.WA_AKG_BASE_URL.rstrip("/")
+    # WA_AKG_BASE_URL termina em /api. A rota de mídia também vive sob /api.
+    url = f"{base_url}/media/{quote(filename, safe='')}"
+    request = Request(
+        url,
+        headers={
+            "Accept": "*/*",
+            "X-API-Key": settings.WA_AKG_API_KEY,
+        },
+        method="GET",
+    )
+    try:
+        with urlopen(request, timeout=max(settings.WA_AKG_TIMEOUT_SECONDS, 30)) as response:
+            return (
+                response.read(),
+                response.headers.get("Content-Type") or "application/octet-stream",
+                response.headers.get("Content-Disposition") or "",
+            )
+    except HTTPError as exc:
+        raw = exc.read().decode("utf-8", errors="replace")
+        try:
+            data = json.loads(raw) if raw else {}
+        except json.JSONDecodeError:
+            data = {}
+        raise WhatsAppGatewayError(
+            str(data.get("message") or data.get("error") or f"HTTP {exc.code}"),
+            exc.code,
+            data,
+        ) from exc
+    except URLError as exc:
+        raise WhatsAppGatewayError("Não foi possível baixar a mídia do WA-AKG.") from exc

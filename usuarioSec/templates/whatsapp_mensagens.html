@@ -9,8 +9,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
-  <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-unified-04">
-  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-inbox-04">
+  <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-unified-05">
+  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-inbox-06">
 </head>
 <body>
   {% include 'includes/sidebar.html' %}
@@ -97,15 +97,32 @@
               <small id="contactNumber"></small>
             </div>
             <div class="wa-chat-actions">
+              <button type="button" class="wa-icon-button" id="messageSearchButton" title="Buscar mensagens"><i data-lucide="search"></i></button>
+              <button type="button" class="wa-icon-button" id="labelsButton" title="Etiquetas"><i data-lucide="tags"></i></button>
               <button type="button" class="wa-icon-button" data-chat-action="read" title="Marcar como lida"><i data-lucide="check-check"></i></button>
               <button type="button" class="wa-icon-button" data-chat-action="pin" title="Fixar conversa"><i data-lucide="pin"></i></button>
               <button type="button" class="wa-icon-button" data-chat-action="mute" title="Silenciar conversa"><i data-lucide="bell-off"></i></button>
               <button type="button" class="wa-icon-button" data-chat-action="archive" title="Arquivar conversa"><i data-lucide="archive"></i></button>
+              <button type="button" class="wa-icon-button" id="blockContactButton" title="Bloquear/desbloquear contato"><i data-lucide="shield-ban"></i></button>
             </div>
             <span class="wa-live-badge"><span></span> Atualização automática</span>
           </header>
 
+          <div class="wa-message-searchbar" id="messageSearchBar" hidden>
+            <i data-lucide="search"></i>
+            <input id="messageSearchInput" type="search" placeholder="Buscar no histórico desta conversa">
+            <button type="button" class="wa-icon-button" id="closeMessageSearch" title="Fechar busca"><i data-lucide="x"></i></button>
+          </div>
+
           <div class="wa-message-thread" id="messageThread" aria-live="polite"></div>
+
+          <div class="wa-quoted-banner" id="quotedBanner" hidden>
+            <div>
+              <strong>Respondendo a uma mensagem</strong>
+              <span id="quotedPreview"></span>
+            </div>
+            <button type="button" class="wa-icon-button" id="cancelQuoted" title="Cancelar resposta"><i data-lucide="x"></i></button>
+          </div>
 
           <form class="wa-reply-form" id="replyForm">
             {% csrf_token %}
@@ -158,6 +175,18 @@
     </form>
   </dialog>
 
+  <dialog class="wa-labels-dialog" id="labelsDialog">
+    <div class="wa-labels-card">
+      <div class="wa-new-chat-head">
+        <div><strong>Etiquetas da conversa</strong><small>Organize os atendimentos como no WA-AKG.</small></div>
+        <button type="button" class="wa-icon-button" id="closeLabels"><i data-lucide="x"></i></button>
+      </div>
+      <div id="labelsList" class="wa-labels-list"></div>
+      <div class="wa-new-chat-status" id="labelsStatus"></div>
+      <button type="button" class="btn-primary" id="saveLabels">Salvar etiquetas</button>
+    </div>
+  </dialog>
+
   {{ chats_iniciais|json_script:"wa-chats-iniciais" }}
   <script>
     lucide.createIcons();
@@ -188,10 +217,19 @@
     const waSelectedJid = document.getElementById("waSelectedJid");
     const waSelectedContact = document.getElementById("waSelectedContact");
     const waNewChatStatus = document.getElementById("waNewChatStatus");
+    const messageSearchBar = document.getElementById("messageSearchBar");
+    const messageSearchInput = document.getElementById("messageSearchInput");
+    const quotedBanner = document.getElementById("quotedBanner");
+    const quotedPreview = document.getElementById("quotedPreview");
+    const labelsDialog = document.getElementById("labelsDialog");
+    const labelsList = document.getElementById("labelsList");
+    const labelsStatus = document.getElementById("labelsStatus");
 
     let chats = Array.isArray(initialChats) ? initialChats : [];
     let activeJid = "";
     let refreshTimer = null;
+    let quotedMessage = null;
+    let currentMessages = [];
     const photoCache = new Map();
 
     function csrfToken() {
@@ -246,36 +284,13 @@
       const photoJid = chat.photoJid || chat.phoneJid || chat.jid;
       if (!photoJid) return;
 
-      if (chat.profilePic) {
-        photoCache.set(photoJid, chat.profilePic);
+      if (chat.profilePic && /^https?:\/\//i.test(chat.profilePic)) {
         setAvatarContent(element, chat, chat.profilePic);
         return;
       }
 
-      if (photoCache.has(photoJid)) {
-        setAvatarContent(element, chat, photoCache.get(photoJid) || "");
-        return;
-      }
-
-      try {
-        const body = new FormData();
-        body.append("jid", photoJid);
-        body.append("csrfmiddlewaretoken", csrfToken());
-        const resp = await fetch("{% url 'whatsapp_foto_api' %}", {
-          method: "POST",
-          body,
-          headers: {"X-CSRFToken": csrfToken()}
-        });
-        const data = await resp.json();
-        const url = resp.ok && data.ok ? (data.url || "") : "";
-        photoCache.set(photoJid, url);
-        if (url) {
-          chat.profilePic = url;
-          setAvatarContent(element, chat, url);
-        }
-      } catch (_) {
-        photoCache.set(photoJid, "");
-      }
+      const proxyUrl = "{% url 'whatsapp_foto_imagem' %}?jid=" + encodeURIComponent(photoJid);
+      setAvatarContent(element, chat, proxyUrl);
     }
 
     const avatarObserver = ("IntersectionObserver" in window)
@@ -373,15 +388,142 @@
       return type ? "[" + type + "]" : "Mensagem";
     }
 
+    function mediaUrl(msg) {
+      const id = encodeURIComponent(String(msg.id || ""));
+      if (!id) return "";
+      let url = "{% url 'whatsapp_midia_recebida' '__ID__' %}".replace("__ID__", id);
+      if (msg.mediaUrl) {
+        url += "?media=" + encodeURIComponent(String(msg.mediaUrl));
+      }
+      return url;
+    }
+
+    async function messageAction(action, msg, extra={}) {
+      if (!activeJid || !(msg.keyId || msg.id)) return;
+      const body = new FormData();
+      body.append("jid", activeJid);
+      body.append("message_id", msg.keyId || msg.id);
+      body.append("acao", action);
+      body.append("from_me", msg.fromMe ? "1" : "0");
+      if (extra.texto) body.append("texto", extra.texto);
+      if (extra.emoji !== undefined) body.append("emoji", extra.emoji);
+      body.append("csrfmiddlewaretoken", csrfToken());
+      const resp = await fetch("{% url 'whatsapp_acao_mensagem_api' %}", {
+        method:"POST", body, headers:{"X-CSRFToken":csrfToken()}
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.ok) throw new Error(data.erro || "Não foi possível concluir a ação.");
+      return data;
+    }
+
     function renderMessages(messages) {
+      currentMessages = Array.isArray(messages) ? messages : [];
       thread.innerHTML = "";
-      (messages || []).forEach(msg => {
+      currentMessages.forEach(msg => {
         const bubble = document.createElement("article");
         bubble.className = "wa-message " + (msg.fromMe ? "outgoing" : "incoming");
+        bubble.dataset.messageId = msg.keyId || msg.id || "";
 
-        const text = document.createElement("div");
-        text.className = "wa-message-text";
-        text.textContent = messageText(msg);
+        const type = String(msg.type || "").toUpperCase();
+        const proxy = mediaUrl(msg);
+
+        if (proxy && ["IMAGE","VIDEO","AUDIO","DOCUMENT","STICKER"].includes(type)) {
+          const media = document.createElement("div");
+          media.className = "wa-message-media";
+          if (type === "IMAGE" || type === "STICKER") {
+            const img = document.createElement("img");
+            img.src = proxy;
+            img.alt = msg.content || "Imagem recebida";
+            img.loading = "lazy";
+            media.appendChild(img);
+          } else if (type === "VIDEO") {
+            const video = document.createElement("video");
+            video.src = proxy; video.controls = true; video.preload = "metadata";
+            media.appendChild(video);
+          } else if (type === "AUDIO") {
+            const audio = document.createElement("audio");
+            audio.src = proxy; audio.controls = true; audio.preload = "metadata";
+            media.appendChild(audio);
+          } else {
+            const link = document.createElement("a");
+            link.href = proxy; link.target = "_blank"; link.rel = "noopener";
+            link.textContent = "📄 Abrir/baixar documento";
+            media.appendChild(link);
+          }
+          bubble.appendChild(media);
+        }
+
+        const textValue = messageText(msg);
+        if (textValue && !(/^📷 Imagem$|^🎵 Áudio$|^🎥 Vídeo$|^📄 Documento$|^Sticker$/.test(textValue) && proxy)) {
+          const text = document.createElement("div");
+          text.className = "wa-message-text";
+          text.textContent = textValue;
+          bubble.appendChild(text);
+        }
+
+        const actions = document.createElement("div");
+        actions.className = "wa-message-actions";
+        const specs = [
+          ["reply","reply","Responder"],
+          ["star","star","Favoritar"],
+          ["react","smile-plus","Reagir"],
+          ["forward","forward","Encaminhar"]
+        ];
+        if (msg.fromMe) {
+          specs.push(["edit","pencil","Editar"],["delete","trash-2","Apagar"]);
+        }
+        specs.forEach(([action,icon,title]) => {
+          const btn = document.createElement("button");
+          btn.type = "button"; btn.className = "wa-message-action";
+          btn.title = title; btn.innerHTML = '<i data-lucide="'+icon+'"></i>';
+          btn.addEventListener("click", async () => {
+            try {
+              if (action === "reply") {
+                quotedMessage = msg;
+                quotedPreview.textContent = messageText(msg).slice(0,140);
+                quotedBanner.hidden = false;
+                replyMessage.focus();
+                return;
+              }
+              if (action === "react") {
+                const emoji = prompt("Digite um emoji para reagir:", "👍");
+                if (emoji === null) return;
+                await messageAction("react", msg, {emoji});
+              } else if (action === "edit") {
+                const texto = prompt("Novo texto da mensagem:", String(msg.content || ""));
+                if (!texto) return;
+                await messageAction("edit", msg, {texto});
+              } else if (action === "delete") {
+                if (!confirm("Apagar esta mensagem para todos?")) return;
+                await messageAction("delete", msg);
+              } else if (action === "star") {
+                await messageAction("star", msg);
+              } else if (action === "forward") {
+                const numero = prompt("Digite o número com DDD para encaminhar:");
+                if (!numero) return;
+                let digits = numero.replace(/\D/g,"");
+                if (!digits.startsWith("55") && (digits.length===10 || digits.length===11)) digits="55"+digits;
+                const toJid = digits+"@s.whatsapp.net";
+                const body = new FormData();
+                body.append("from_jid", activeJid);
+                body.append("message_id", msg.keyId || msg.id);
+                body.append("to_jids", toJid);
+                body.append("csrfmiddlewaretoken", csrfToken());
+                const resp = await fetch("{% url 'whatsapp_encaminhar_api' %}", {method:"POST",body,headers:{"X-CSRFToken":csrfToken()}});
+                const data = await resp.json();
+                if (!resp.ok || !data.ok) throw new Error(data.erro || "Não foi possível encaminhar.");
+              }
+              replyStatus.textContent = "Ação realizada.";
+              replyStatus.className = "wa-reply-status success";
+              setTimeout(() => openChat(chats.find(x=>x.jid===activeJid)||{jid:activeJid}, true), 500);
+            } catch(err) {
+              replyStatus.textContent = err.message;
+              replyStatus.className = "wa-reply-status error";
+            }
+          });
+          actions.appendChild(btn);
+        });
+        bubble.appendChild(actions);
 
         const meta = document.createElement("div");
         meta.className = "wa-message-meta";
@@ -390,16 +532,19 @@
           sender.textContent = msg.pushName;
           meta.appendChild(sender);
         }
+        const status = document.createElement("span");
+        if (msg.fromMe && msg.status) status.textContent = String(msg.status).toLowerCase();
         const time = document.createElement("time");
         const d = msg.timestamp ? new Date(msg.timestamp) : null;
         time.textContent = d && !Number.isNaN(d.getTime())
           ? d.toLocaleString("pt-BR", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"})
           : "";
+        if (status.textContent) meta.appendChild(status);
         meta.appendChild(time);
-
-        bubble.append(text, meta);
+        bubble.appendChild(meta);
         thread.appendChild(bubble);
       });
+      if (window.lucide) window.lucide.createIcons();
       thread.scrollTop = thread.scrollHeight;
     }
 
@@ -453,6 +598,111 @@
       }
     }
 
+
+
+    document.getElementById("messageSearchButton").addEventListener("click", () => {
+      messageSearchBar.hidden = false;
+      messageSearchInput.focus();
+    });
+    document.getElementById("closeMessageSearch").addEventListener("click", async () => {
+      messageSearchBar.hidden = true;
+      messageSearchInput.value = "";
+      const current = chats.find(x=>x.jid===activeJid);
+      if (current) await openChat(current, true);
+    });
+    messageSearchInput.addEventListener("keydown", async (event) => {
+      if (event.key !== "Enter" || !activeJid) return;
+      const q = messageSearchInput.value.trim();
+      if (!q) return;
+      const resp = await fetch("{% url 'whatsapp_buscar_mensagens_api' %}?jid="+encodeURIComponent(activeJid)+"&q="+encodeURIComponent(q));
+      const data = await resp.json();
+      if (!resp.ok || !data.ok) {
+        replyStatus.textContent = data.erro || "Falha na busca.";
+        replyStatus.className = "wa-reply-status error";
+        return;
+      }
+      renderMessages(data.mensagens || []);
+      replyStatus.textContent = (data.mensagens || []).length + " resultado(s) encontrado(s).";
+      replyStatus.className = "wa-reply-status";
+    });
+
+    document.getElementById("cancelQuoted").addEventListener("click", () => {
+      quotedMessage = null;
+      quotedBanner.hidden = true;
+      quotedPreview.textContent = "";
+    });
+
+    document.getElementById("labelsButton").addEventListener("click", async () => {
+      if (!activeJid) return;
+      labelsStatus.textContent = "Carregando…";
+      labelsList.innerHTML = "";
+      labelsDialog.showModal();
+      try {
+        const resp = await fetch("{% url 'whatsapp_etiquetas_api' %}?jid="+encodeURIComponent(activeJid));
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) throw new Error(data.erro || "Falha ao carregar etiquetas.");
+        const currentIds = new Set((data.atuais||[]).map(x=>String(x.id)));
+        (data.etiquetas||[]).forEach(label => {
+          const row = document.createElement("label");
+          row.className = "wa-label-row";
+          const input = document.createElement("input");
+          input.type="checkbox"; input.value=label.id; input.checked=currentIds.has(String(label.id));
+          input.dataset.initial = input.checked ? "1" : "0";
+          const swatch = document.createElement("span");
+          swatch.className="wa-label-color"; swatch.style.background=label.colorHex || "#94a3b8";
+          const text = document.createElement("span"); text.textContent=label.name || "Etiqueta";
+          row.append(input,swatch,text); labelsList.appendChild(row);
+        });
+        labelsStatus.textContent = "";
+      } catch(err) { labelsStatus.textContent=err.message; }
+    });
+    document.getElementById("closeLabels").addEventListener("click",()=>labelsDialog.close());
+    document.getElementById("saveLabels").addEventListener("click", async () => {
+      const inputs=[...labelsList.querySelectorAll('input[type="checkbox"]')];
+      const added=inputs.filter(x=>x.checked&&x.dataset.initial==="0").map(x=>x.value);
+      const removed=inputs.filter(x=>!x.checked&&x.dataset.initial==="1").map(x=>x.value);
+      try {
+        for (const [action, ids] of [["add",added],["remove",removed]]) {
+          if (!ids.length) continue;
+          const body=new FormData();
+          body.append("jid",activeJid); body.append("action",action); body.append("csrfmiddlewaretoken",csrfToken());
+          ids.forEach(id=>body.append("label_ids",id));
+          const resp=await fetch("{% url 'whatsapp_etiquetas_atualizar_api' %}",{method:"POST",body,headers:{"X-CSRFToken":csrfToken()}});
+          const data=await resp.json();
+          if(!resp.ok||!data.ok) throw new Error(data.erro||"Falha ao salvar etiquetas.");
+        }
+        labelsDialog.close();
+      } catch(err){ labelsStatus.textContent=err.message; }
+    });
+
+    document.getElementById("blockContactButton").addEventListener("click", async () => {
+      if (!activeJid) return;
+      const escolha = prompt('Digite "bloquear" ou "desbloquear":', "bloquear");
+      if (!escolha) return;
+      const bloquear = escolha.toLowerCase().startsWith("bloq");
+      const body = new FormData();
+      body.append("jid", activeJid);
+      body.append("bloquear", bloquear ? "1" : "0");
+      body.append("csrfmiddlewaretoken", csrfToken());
+      const resp = await fetch("{% url 'whatsapp_bloqueio_api' %}", {method:"POST",body,headers:{"X-CSRFToken":csrfToken()}});
+      const data = await resp.json();
+      replyStatus.textContent = resp.ok && data.ok ? (bloquear ? "Contato bloqueado." : "Contato desbloqueado.") : (data.erro || "Falha na operação.");
+      replyStatus.className = resp.ok && data.ok ? "wa-reply-status success" : "wa-reply-status error";
+    });
+
+    let presenceTimer = null;
+    replyMessage.addEventListener("input", () => {
+      if (!activeJid) return;
+      clearTimeout(presenceTimer);
+      const body=new FormData();
+      body.append("jid",activeJid); body.append("presence","composing"); body.append("csrfmiddlewaretoken",csrfToken());
+      fetch("{% url 'whatsapp_presenca_api' %}",{method:"POST",body,headers:{"X-CSRFToken":csrfToken()}}).catch(()=>{});
+      presenceTimer=setTimeout(()=>{
+        const paused=new FormData();
+        paused.append("jid",activeJid); paused.append("presence","paused"); paused.append("csrfmiddlewaretoken",csrfToken());
+        fetch("{% url 'whatsapp_presenca_api' %}",{method:"POST",body:paused,headers:{"X-CSRFToken":csrfToken()}}).catch(()=>{});
+      },1200);
+    });
 
     async function manageActiveChat(action) {
       if (!activeJid) return;
@@ -646,15 +896,32 @@
 
       const formData = new FormData(replyForm);
       try {
-        const resp = await fetch("{% url 'whatsapp_responder_api' %}", {
-          method: "POST",
-          body: formData,
-          headers: {"X-CSRFToken": formData.get("csrfmiddlewaretoken")}
-        });
+        let resp;
+        if (quotedMessage) {
+          const body = new FormData();
+          body.append("jid", activeJid);
+          body.append("message_id", quotedMessage.keyId || quotedMessage.id);
+          body.append("acao", "reply");
+          body.append("from_me", quotedMessage.fromMe ? "1" : "0");
+          body.append("texto", text);
+          body.append("csrfmiddlewaretoken", csrfToken());
+          resp = await fetch("{% url 'whatsapp_acao_mensagem_api' %}", {
+            method:"POST", body, headers:{"X-CSRFToken":csrfToken()}
+          });
+        } else {
+          resp = await fetch("{% url 'whatsapp_responder_api' %}", {
+            method: "POST",
+            body: formData,
+            headers: {"X-CSRFToken": formData.get("csrfmiddlewaretoken")}
+          });
+        }
         const data = await resp.json();
         if (!resp.ok || !data.ok) throw new Error(data.erro || "Não foi possível enviar.");
         replyMessage.value = "";
         replyMessage.style.height = "auto";
+        quotedMessage = null;
+        quotedBanner.hidden = true;
+        quotedPreview.textContent = "";
         replyStatus.textContent = "Mensagem enviada.";
         replyStatus.className = "wa-reply-status success";
         const current = chats.find(c => c.jid === activeJid) || {jid:activeJid};
