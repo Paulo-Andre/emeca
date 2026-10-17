@@ -1402,6 +1402,18 @@ def whatsapp_identificar_contato_api(request):
     return JsonResponse({"ok": True, "jid": jid, "nome": nome, "telefone_jid": telefone})
 
 
+def _validar_sessao_cliente(request):
+    """Impede operações de abas antigas após a troca da conta WhatsApp."""
+    informada = (request.headers.get("X-EMECA-WA-SESSION") or "").strip()
+    if informada and informada != sessao_atual_id():
+        return JsonResponse({
+            "ok": False,
+            "erro": "A conta do WhatsApp foi alterada. Recarregue a página antes de continuar.",
+            "sessao_alterada": True,
+        }, status=409)
+    return None
+
+
 @login_required
 def whatsapp_mensagens(request):
     status = "NAO_CONFIGURADO"
@@ -1434,6 +1446,7 @@ def whatsapp_mensagens(request):
             "gateway_status": status,
             "gateway_status_detalhe": status_detalhe,
             "pode_desconectar": _pode_desconectar_whatsapp(request.user),
+            "wa_sessao_id": sessao_atual_id(),
             "chats_iniciais": chats[:50],
         },
     )
@@ -1442,6 +1455,9 @@ def whatsapp_mensagens(request):
 @login_required
 @require_GET
 def whatsapp_chats_api(request):
+    erro_sessao = _validar_sessao_cliente(request)
+    if erro_sessao is not None:
+        return erro_sessao
     if not gateway_configurado():
         return JsonResponse(
             {"ok": False, "erro": "Integração ainda não configurada."},
@@ -1458,6 +1474,7 @@ def whatsapp_chats_api(request):
             "ok": True,
             "chats": chats,
             "totalNaoLidas": sum(chat.get("naoLidas", 0) for chat in chats),
+            "sessao_id": sessao_atual_id(),
         })
     except WhatsAppGatewayError as exc:
         return JsonResponse(
@@ -1469,6 +1486,9 @@ def whatsapp_chats_api(request):
 @login_required
 @require_GET
 def whatsapp_chat_api(request):
+    erro_sessao = _validar_sessao_cliente(request)
+    if erro_sessao is not None:
+        return erro_sessao
     jid = (request.GET.get("jid") or "").strip()
     if not jid or len(jid) > 120:
         return JsonResponse({"ok": False, "erro": "Conversa inválida."}, status=400)
@@ -1540,6 +1560,9 @@ def whatsapp_chat_api(request):
 @login_required
 @require_GET
 def whatsapp_perfil_api(request):
+    erro_sessao = _validar_sessao_cliente(request)
+    if erro_sessao is not None:
+        return erro_sessao
     """Perfil de conversa retornado pelo WA-AKG, sem adivinhar telefone pelo LID.
 
     Dados privados só são entregues a usuários autenticados; não expomos
@@ -1644,6 +1667,9 @@ def whatsapp_perfil_api(request):
 @login_required
 @require_POST
 def whatsapp_foto_api(request):
+    erro_sessao = _validar_sessao_cliente(request)
+    if erro_sessao is not None:
+        return erro_sessao
     jid = (request.POST.get("jid") or "").strip()
     if not jid or len(jid) > 120:
         return JsonResponse({"ok": False, "erro": "Contato inválido."}, status=400)
@@ -1663,6 +1689,9 @@ def whatsapp_foto_api(request):
 @login_required
 @require_POST
 def whatsapp_nova_conversa_api(request):
+    erro_sessao = _validar_sessao_cliente(request)
+    if erro_sessao is not None:
+        return erro_sessao
     jid = (request.POST.get("jid") or "").strip()
     numero = re.sub(r"\D", "", request.POST.get("numero") or "")
     mensagem = (request.POST.get("mensagem") or "").strip()
@@ -1697,6 +1726,9 @@ def whatsapp_nova_conversa_api(request):
 @login_required
 @require_POST
 def whatsapp_gerenciar_chat_api(request):
+    erro_sessao = _validar_sessao_cliente(request)
+    if erro_sessao is not None:
+        return erro_sessao
     jid = (request.POST.get("jid") or "").strip()
     acao = (request.POST.get("acao") or "").strip()
     ativo = str(request.POST.get("ativo") or "1").lower() not in {"0", "false", "nao", "não"}
@@ -1731,6 +1763,9 @@ def whatsapp_gerenciar_chat_api(request):
 @login_required
 @require_POST
 def whatsapp_enviar_midia_api(request):
+    erro_sessao = _validar_sessao_cliente(request)
+    if erro_sessao is not None:
+        return erro_sessao
     jid = (request.POST.get("jid") or "").strip()
     legenda = (request.POST.get("legenda") or "").strip()
     arquivo = request.FILES.get("arquivo")
@@ -1784,6 +1819,9 @@ def whatsapp_enviar_midia_api(request):
 @login_required
 @require_POST
 def whatsapp_responder_api(request):
+    erro_sessao = _validar_sessao_cliente(request)
+    if erro_sessao is not None:
+        return erro_sessao
     try:
         dados = request.POST
         jid = (dados.get("jid") or "").strip()
@@ -1810,6 +1848,9 @@ def whatsapp_responder_api(request):
 @login_required
 @require_GET
 def whatsapp_buscar_mensagens_api(request):
+    erro_sessao = _validar_sessao_cliente(request)
+    if erro_sessao is not None:
+        return erro_sessao
     q = (request.GET.get("q") or "").strip()
     jid = (request.GET.get("jid") or "").strip()
     tipo = (request.GET.get("type") or "").strip()
@@ -1864,6 +1905,9 @@ def whatsapp_buscar_mensagens_api(request):
 @login_required
 @require_POST
 def whatsapp_acao_mensagem_api(request):
+    erro_sessao = _validar_sessao_cliente(request)
+    if erro_sessao is not None:
+        return erro_sessao
     jid = (request.POST.get("jid") or "").strip()
     message_id = (request.POST.get("message_id") or "").strip()
     acao = (request.POST.get("acao") or "").strip()
@@ -1907,6 +1951,9 @@ def whatsapp_acao_mensagem_api(request):
 @login_required
 @require_POST
 def whatsapp_encaminhar_api(request):
+    erro_sessao = _validar_sessao_cliente(request)
+    if erro_sessao is not None:
+        return erro_sessao
     from_jid = (request.POST.get("from_jid") or "").strip()
     message_id = (request.POST.get("message_id") or "").strip()
     destinos = [item.strip() for item in request.POST.getlist("to_jids") if item.strip()]
@@ -1924,6 +1971,9 @@ def whatsapp_encaminhar_api(request):
 @login_required
 @require_POST
 def whatsapp_bloqueio_api(request):
+    erro_sessao = _validar_sessao_cliente(request)
+    if erro_sessao is not None:
+        return erro_sessao
     jid = (request.POST.get("jid") or "").strip()
     bloquear = str(request.POST.get("bloquear") or "1").lower() not in {"0", "false", "nao", "não"}
     if not jid or len(jid) > 120 or jid.endswith("@g.us"):
@@ -1946,6 +1996,9 @@ def whatsapp_bloqueio_api(request):
 @login_required
 @require_POST
 def whatsapp_presenca_api(request):
+    erro_sessao = _validar_sessao_cliente(request)
+    if erro_sessao is not None:
+        return erro_sessao
     jid = (request.POST.get("jid") or "").strip()
     presence = (request.POST.get("presence") or "").strip()
     if presence not in {"composing", "recording", "paused", "available", "unavailable"}:
@@ -1960,6 +2013,9 @@ def whatsapp_presenca_api(request):
 @login_required
 @require_GET
 def whatsapp_etiquetas_api(request):
+    erro_sessao = _validar_sessao_cliente(request)
+    if erro_sessao is not None:
+        return erro_sessao
     jid = (request.GET.get("jid") or "").strip()
     try:
         gerais = listar_etiquetas()
@@ -1983,6 +2039,9 @@ def whatsapp_etiquetas_api(request):
 @login_required
 @require_POST
 def whatsapp_etiquetas_criar_api(request):
+    erro_sessao = _validar_sessao_cliente(request)
+    if erro_sessao is not None:
+        return erro_sessao
     """Permite criar etiquetas dentro da conversa sem sair da caixa de entrada."""
     nome = (request.POST.get("nome") or "").strip()
     try:
@@ -2004,6 +2063,9 @@ def whatsapp_etiquetas_criar_api(request):
 @login_required
 @require_POST
 def whatsapp_etiquetas_atualizar_api(request):
+    erro_sessao = _validar_sessao_cliente(request)
+    if erro_sessao is not None:
+        return erro_sessao
     jid = (request.POST.get("jid") or "").strip()
     action = (request.POST.get("action") or "").strip()
     label_ids = [item.strip() for item in request.POST.getlist("label_ids") if item.strip()]
