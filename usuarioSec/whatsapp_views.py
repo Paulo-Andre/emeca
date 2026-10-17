@@ -2031,6 +2031,7 @@ def whatsapp_gerenciamento(request):
 
     dados = {
         "gateway_configurado": gateway_configurado(),
+        "gateway_status": "NAO_CONFIGURADO",
         "etiquetas": [],
         "auto_respostas": [],
         "agendamentos": [],
@@ -2039,6 +2040,13 @@ def whatsapp_gerenciamento(request):
         "config_sistema": {},
     }
     if gateway_configurado():
+        try:
+            sessao = obter_sessao()
+            dados["gateway_status"] = str(
+                (sessao.get("data") or {}).get("status") or sessao.get("status") or ""
+            ).upper()
+        except WhatsAppGatewayError:
+            dados["gateway_status"] = "INDISPONIVEL"
         try:
             labels = listar_etiquetas()
             dados["etiquetas"] = labels.get("data", {}).get("labels", []) if isinstance(labels, dict) else []
