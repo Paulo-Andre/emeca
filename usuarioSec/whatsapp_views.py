@@ -32,6 +32,7 @@ from .models import (
     ItemEnvioBoletimWhatsApp,
     IdentidadeContatoWhatsApp,
     LeituraChatWhatsApp,
+    MensagemOcultaWhatsApp,
     TelefoneDeclaracao,
     declaracao,
 )
@@ -1613,6 +1614,20 @@ def whatsapp_chat_api(request):
 
     mensagens = list(mensagens_por_id.values())
     mensagens.sort(key=lambda item: str(item.get("timestamp") or ""))
+    ocultas = set(
+        MensagemOcultaWhatsApp.objects.filter(
+            usuario=request.user, sessao=sessao_atual_id(),
+            mensagem_id__in=[
+                str(msg.get("keyId") or msg.get("id") or "")
+                for msg in mensagens
+            ]
+        ).values_list("mensagem_id", flat=True)
+    )
+    if ocultas:
+        mensagens = [
+            msg for msg in mensagens
+            if str(msg.get("keyId") or msg.get("id") or "") not in ocultas
+        ]
 
     if not mensagens and erros and len(erros) == len(aliases):
         exc = erros[0]
@@ -2008,8 +2023,20 @@ def whatsapp_acao_mensagem_api(request):
     emoji = (request.POST.get("emoji") or "").strip()
     from_me = str(request.POST.get("from_me") or "").lower() in {"1", "true", "sim"}
 
-    if not jid or not message_id:
+    if not jid or not message_id or len(jid) > 120 or len(message_id) > 190:
         return JsonResponse({"ok": False, "erro": "Mensagem inválida."}, status=400)
+
+    # Remover da tela do operador não apaga o conteúdo em WA-AKG nem no celular.
+    if acao == "hide_local":
+        MensagemOcultaWhatsApp.objects.get_or_create(
+            usuario=request.user,
+            sessao=sessao_atual_id(),
+            mensagem_id=message_id
+        )
+        return JsonResponse({
+            "ok": True, "acao": "hide_local",
+            "mensagem": "Mensagem ocultada somente para você no EMECA."
+        })
 
     try:
         if acao == "reply":
@@ -2030,8 +2057,51 @@ def whatsapp_acao_mensagem_api(request):
             resposta = editar_mensagem(jid, message_id, texto)
         elif acao == "delete":
             if not from_me:
-                raise ValueError("Somente mensagens enviadas pela escola podem ser apagadas.")
-            resposta = apagar_mensagem(jid, message_id)
+                raise ValueError("Somente mensagens enviadas pela escola podem ser apagadas para todos.")
+            # Nunca confiar só no from_me enviado pelo navegador: conferir
+            # o remetente diretamente no histórico desta sessão WA-AKG.
+            mensagem_encontrada = None
+            for alias in _aliases_contato_wa(jid)[:12]:
+                historico = obter_mensagens_chat(alias)
+                dados = historico.get("data") if isinstance(historico, dict) else []
+                if isinstance(dados, dict):
+                    dados = dados.get("messages") or []
+                if not isinstance(dados, list):
+                    continue
+                mensagem_encontrada = next(
+                    (item for item in dados if isinstance(item, dict) and
+                     str(item.get("keyId") or item.get("id") or "") == message_id),
+                    None
+                )
+                if mensagem_encontrada is not None:
+                    break
+            if mensagem_encontrada is None:
+                raise ValueError(
+                    "Mensagem não localizada no histórico recente do WhatsApp. "
+                    "Não é seguro solicitar exclusão para todos."
+                )
+            if not mensagem_encontrada.get("fromMe"):
+                raise ValueError("A mensagem não foi enviada pela escola.")
+            resposta = apagar_mensagem(
+                str(mensagem_encontrada.get("remoteJid") or jid), message_id
+            )
+            if not isinstance(resposta, dict) or (
+                resposta.get("status") is not True and resposta.get("success") is not True
+            ) or resposta.get("status") is False or resposta.get("success") is False:
+                raise WhatsAppGatewayError(
+                    str((resposta or {}).get("error") or (resposta or {}).get("message")
+                        or "WA-AKG não confirmou a solicitação de exclusão.")
+                )
+            # A revogação pode levar alguns segundos para refletir no MySQL;
+            # evitar que reapareça na caixa deste operador durante o intervalo.
+            MensagemOcultaWhatsApp.objects.get_or_create(
+                usuario=request.user, sessao=sessao_atual_id(),
+                mensagem_id=message_id
+            )
+            return JsonResponse({
+                "ok": True, "resposta": resposta, "acao": acao,
+                "mensagem": "Exclusão para todos solicitada ao WhatsApp."
+            })
         else:
             raise ValueError("Ação de mensagem inválida.")
         return JsonResponse({"ok": True, "resposta": resposta})
