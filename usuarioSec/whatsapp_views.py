@@ -778,21 +778,7 @@ def _aliases_contato_wa(jid, contatos=None):
     registros = list(contatos if contatos is not None else _contatos_wa())
     registros.extend(_contatos_persistidos_wa())
     grupos = _mapa_aliases_wa(registros)
-    ligados = [jid] + [item for item in grupos.get(jid, ()) if item != jid]
-    # Ligações adicionais confirmadas pelo senderJid das mensagens recebidas.
-    # As duas direções são necessárias para abrir todo o histórico unificado.
-    for alias in list(ligados):
-        if alias.endswith("@lid"):
-            item = cache.get("emeca:whatsapp:lid:" + sha256(alias.encode("utf-8")).hexdigest())
-            telefone = item.get("telefone") if isinstance(item, dict) else ""
-            if _jid_eh_telefone(telefone) and telefone not in ligados:
-                ligados.append(telefone)
-        elif _jid_eh_telefone(alias):
-            chave = "emeca:whatsapp:phone:" + sha256(alias.encode("utf-8")).hexdigest()
-            for lid in cache.get(chave) or []:
-                if lid.endswith("@lid") and lid not in ligados:
-                    ligados.append(lid)
-    return ligados
+    return [jid] + [item for item in grupos.get(jid, ()) if item != jid]
 
 
 def _nome_local_por_telefone(phone_jid):
@@ -899,16 +885,22 @@ def _enriquecer_chats(chats):
             else:
                 cache.set(chave_cache, identidade, 45)
         if identidade.get("telefone") or identidade.get("nome"):
+            # Persistir também associações obtidas antes desta versão,
+            # ainda presentes em cache, para que o histórico seja uniforme.
             telefone_confirmado = identidade.get("telefone") or ""
             if _jid_eh_telefone(telefone_confirmado):
-                chave_reversa = (
-                    "emeca:whatsapp:phone:"
-                    + sha256(telefone_confirmado.encode("utf-8")).hexdigest()
+                salvo, criado = IdentidadeContatoWhatsApp.objects.get_or_create(
+                    sessao=settings.WA_AKG_SESSION_ID,
+                    jid=jid,
+                    defaults={
+                        "telefone_jid": telefone_confirmado,
+                        "nome_exibicao": str(identidade.get("nome") or "")[:160],
+                        "origem": "METADATA",
+                    },
                 )
-                lids = list(cache.get(chave_reversa) or [])
-                if jid not in lids:
-                    lids.append(jid)
-                cache.set(chave_reversa, lids, 900)
+                if not criado and salvo.origem == "METADATA" and not salvo.telefone_jid:
+                    salvo.telefone_jid = telefone_confirmado
+                    salvo.save(update_fields=["telefone_jid", "atualizado_em"])
             contatos.append({
                 "jid": jid,
                 "lid": jid,
@@ -1192,10 +1184,6 @@ def whatsapp_identificar_contato_api(request):
             "erro": "O número escolhido precisa constar na lista de conversas do WhatsApp.",
         }, status=400)
 
-    anterior = IdentidadeContatoWhatsApp.objects.filter(
-        sessao=settings.WA_AKG_SESSION_ID, jid=jid
-    ).first()
-    telefone_anterior = anterior.telefone_jid if anterior else ""
     with transaction.atomic():
         if nome or telefone:
             IdentidadeContatoWhatsApp.objects.update_or_create(
@@ -1213,13 +1201,6 @@ def whatsapp_identificar_contato_api(request):
             ).delete()
     if jid.endswith("@lid"):
         cache.delete("emeca:whatsapp:lid:" + sha256(jid.encode("utf-8")).hexdigest())
-        # Evitar que o cache temporário preserve um vínculo manual desfeito.
-        if telefone_anterior and telefone_anterior != telefone:
-            chave = "emeca:whatsapp:phone:" + sha256(
-                telefone_anterior.encode("utf-8")
-            ).hexdigest()
-            lids = [lid for lid in (cache.get(chave) or []) if lid != jid]
-            cache.set(chave, lids, 900)
     return JsonResponse({"ok": True, "jid": jid, "nome": nome, "telefone_jid": telefone})
 
 
