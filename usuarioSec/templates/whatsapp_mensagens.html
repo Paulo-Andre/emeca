@@ -10,7 +10,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
   <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-unified-05">
-  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-inbox-07">
+  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-inbox-08">
 </head>
 <body>
   {% include 'includes/sidebar.html' %}
@@ -228,6 +228,8 @@
     let chats = Array.isArray(initialChats) ? initialChats : [];
     let activeJid = "";
     let refreshTimer = null;
+    let refreshingChats = false;
+    let chatRequestId = 0;
     let quotedMessage = null;
     let currentMessages = [];
 
@@ -242,7 +244,7 @@
 
     function prettyPhone(jid) {
       const raw = String(jid || "");
-      if (!raw || raw.endsWith("@lid")) return "";
+      if (!raw || (raw.includes("@") && !/@(?:s\.whatsapp\.net|c\.us)$/i.test(raw))) return "";
       const digits = phoneFromJid(raw);
       if (digits.startsWith("55") && digits.length >= 12) {
         const n = digits.slice(2);
@@ -255,11 +257,17 @@
     }
 
     function realPhone(chat) {
-      return prettyPhone(chat.phoneJid || "");
+      return prettyPhone(chat.phoneJid || chat.remoteJidAlt || chat.jid || "");
+    }
+
+    function contactLabel(value) {
+      const text = String(value || "").trim();
+      return ["contato whatsapp", "whatsapp", "unknown", "sem nome"].includes(text.toLowerCase()) ? "" : text;
     }
 
     function chatDisplayName(chat) {
-      return chat.name || chat.notify || realPhone(chat) || "Contato WhatsApp";
+      // Número real é preferível ao apelido/pushName de um contato não salvo.
+      return contactLabel(chat.name) || realPhone(chat) || contactLabel(chat.notify) || "Número não identificado";
     }
 
     function setAvatarContent(element, chat, url="", fallbackUrl="") {
@@ -555,57 +563,99 @@
       thread.scrollTop = thread.scrollHeight;
     }
 
+    function lastMessageSignature(chat) {
+      const last = chat?.lastMessage || {};
+      return JSON.stringify([last.timestamp || "", last.content || "", last.type || ""]);
+    }
+
+    function chatListSignature(items) {
+      return JSON.stringify(items.map(chat => [
+        chat.jid, chat.name, chat.notify, chat.phoneJid, chat.profilePic,
+        lastMessageSignature(chat)
+      ]));
+    }
+
+    function highlightActiveChat() {
+      chatList.querySelectorAll(".wa-chat-item").forEach(button => {
+        button.classList.toggle("active", button.dataset.jid === activeJid);
+      });
+    }
+
     async function openChat(chat, quiet=false) {
+      if (!chat?.jid) return;
+      const switched = chat.jid !== activeJid;
       activeJid = chat.jid;
       replyJid.value = chat.jid;
-      const name = chatDisplayName(chat);
-      contactName.textContent = name;
-      contactNumber.textContent = realPhone(chat) || "Número real não disponível";
-      loadLivePhoto(chat, contactAvatar);
-      conversationEmpty.hidden = true;
-      conversation.hidden = false;
-      renderChats();
-      thread.textContent = "Carregando mensagens…";
 
+      if (switched || !quiet) {
+        contactName.textContent = chatDisplayName(chat);
+        contactNumber.textContent = realPhone(chat) || "Número não identificado pelo WhatsApp";
+        loadLivePhoto(chat, contactAvatar);
+        conversationEmpty.hidden = true;
+        conversation.hidden = false;
+        highlightActiveChat();
+        if (!quiet) thread.textContent = "Carregando mensagens…";
+      }
+
+      const requestId = ++chatRequestId;
       try {
         const resp = await fetch("{% url 'whatsapp_chat_api' %}?jid=" + encodeURIComponent(chat.jid), {
           headers: {"Accept":"application/json"}
         });
         const data = await resp.json();
+        // Respostas atrasadas de outro contato não podem substituir a conversa atual.
+        if (requestId !== chatRequestId || activeJid !== chat.jid) return;
         if (!resp.ok || !data.ok) throw new Error(data.erro || "Não foi possível carregar a conversa.");
-        renderMessages(data.mensagens);
-        if (data.nome && (!chat.name || chat.name === "Contato WhatsApp")) {
+
+        const keepScroll = quiet && thread.scrollHeight - thread.scrollTop - thread.clientHeight > 130;
+        const oldScrollTop = thread.scrollTop;
+        renderMessages(data.mensagens || []);
+        if (keepScroll) thread.scrollTop = oldScrollTop;
+
+        if (data.nome && !contactLabel(chat.name) && !realPhone(chat)) {
           chat.name = data.nome;
-          contactName.textContent = data.nome;
+          contactName.textContent = chatDisplayName(chat);
           renderChats();
         }
-        if (!quiet) replyStatus.textContent = "";
-      } catch (err) {
-        thread.textContent = "Não foi possível carregar as mensagens: " + err.message;
         if (!quiet) {
+          replyStatus.textContent = "";
+          replyStatus.className = "wa-reply-status";
+        }
+      } catch (err) {
+        if (requestId !== chatRequestId || activeJid !== chat.jid) return;
+        // Na atualização silenciosa, manter as mensagens já visíveis.
+        if (!quiet) {
+          thread.textContent = "Não foi possível carregar as mensagens: " + err.message;
           replyStatus.textContent = err.message;
           replyStatus.className = "wa-reply-status error";
         }
       }
     }
 
-    async function refreshChats() {
-      if (!connected) return;
+    async function refreshChats(force=false) {
+      if (!connected || refreshingChats || (document.hidden && !force)) return;
+      refreshingChats = true;
       try {
         const resp = await fetch("{% url 'whatsapp_chats_api' %}", {headers: {"Accept":"application/json"}});
         const data = await resp.json();
         if (!resp.ok || !data.ok) throw new Error(data.erro || "Falha ao atualizar conversas.");
-        chats = Array.isArray(data.chats) ? data.chats : [];
-        renderChats();
-        if (activeJid) {
-          const current = chats.find(c => c.jid === activeJid);
-          if (current) await openChat(current, true);
+        const incoming = Array.isArray(data.chats) ? data.chats : [];
+        const previousActive = chats.find(chat => chat.jid === activeJid);
+        const changed = chatListSignature(incoming) !== chatListSignature(chats);
+        chats = incoming;
+
+        // Não recriar a lista, as fotos e a conversa a cada verificação.
+        if (changed) renderChats();
+        const current = chats.find(chat => chat.jid === activeJid);
+        if (current && (force || lastMessageSignature(current) !== lastMessageSignature(previousActive))) {
+          await openChat(current, true);
         }
       } catch (err) {
-        chatCount.textContent = "Erro ao atualizar";
+        if (force || !chats.length) chatCount.textContent = "Erro ao atualizar";
+      } finally {
+        refreshingChats = false;
       }
     }
-
 
 
     document.getElementById("messageSearchButton").addEventListener("click", () => {
@@ -831,7 +881,7 @@
     });
 
     chatSearch.addEventListener("input", renderChats);
-    document.getElementById("refreshChats").addEventListener("click", refreshChats);
+    document.getElementById("refreshChats").addEventListener("click", () => refreshChats(true));
 
     replyMessage.addEventListener("input", () => {
       replyMessage.style.height = "auto";
@@ -946,7 +996,7 @@
 
     renderChats();
     if (connected) {
-      refreshTimer = window.setInterval(refreshChats, 5000);
+      refreshTimer = window.setInterval(() => refreshChats(false), 12000);
     }
   </script>
 </body>
