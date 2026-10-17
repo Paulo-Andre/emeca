@@ -1629,17 +1629,19 @@ def _combinar_chats_e_grupos_wa(chats):
     O endpoint chat do WA-AKG só enumera JIDs que já possuem mensagem,
     enquanto o endpoint de grupos guarda metadados inclusive após criação.
     """
-    existentes = list(chats) if isinstance(chats, list) else []
-    jids = {str(chat.get("jid") or "") for chat in existentes
-            if isinstance(chat, dict)}
+    ocultos = set(GrupoOcultoWhatsApp.objects.filter(
+        sessao=sessao_atual_id()
+    ).values_list("jid", flat=True))
+    existentes = [
+        chat for chat in (chats if isinstance(chats, list) else [])
+        if isinstance(chat, dict) and chat.get("jid") not in ocultos
+    ]
+    jids = {str(chat.get("jid") or "") for chat in existentes}
     try:
         payload = listar_grupos()
         grupos = payload.get("data") if isinstance(payload, dict) else []
         if not isinstance(grupos, list):
             return existentes
-        ocultos = set(GrupoOcultoWhatsApp.objects.filter(
-            sessao=sessao_atual_id()
-        ).values_list("jid", flat=True))
         for grupo in grupos:
             if not isinstance(grupo, dict):
                 continue
