@@ -39,8 +39,10 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
     target_file = source / "src/modules/whatsapp/store/emeca-identity.ts"
     profile_route_overlay = patch_dir / "overrides/src/app/api/chat/[sessionId]/[jid]/contact-profile/route.ts"
     profile_route_target = source / "src/app/api/chat/[sessionId]/[jid]/contact-profile/route.ts"
+    purge_route_overlay = patch_dir / "overrides/src/app/api/sessions/[sessionId]/purge-history/route.ts"
+    purge_route_target = source / "src/app/api/sessions/[sessionId]/purge-history/route.ts"
 
-    required = [instance, index, contact_store, chat_service, chat_route, messages_route, contacts_route, overlay_file, profile_route_overlay]
+    required = [instance, index, contact_store, chat_service, chat_route, messages_route, contacts_route, overlay_file, profile_route_overlay, purge_route_overlay]
     missing = [str(p) for p in required if not p.is_file()]
     if missing:
         raise RuntimeError("Arquivos não encontrados: " + ", ".join(missing))
@@ -269,6 +271,12 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
             "Para preservar suas alterações, revise o diff antes de continuar."
         )
     edits[profile_route_target] = profile_route_overlay.read_text(encoding="utf-8")
+    if purge_route_target.exists() and purge_route_target.read_bytes() != purge_route_overlay.read_bytes():
+        raise RuntimeError(
+            "purge-history/route.ts já existe e está diferente do módulo EMECA. "
+            "Revisar o diff antes de atualizar para não sobrescrever código local."
+        )
+    edits[purge_route_target] = purge_route_overlay.read_text(encoding="utf-8")
     edits[target_file] = overlay_file.read_text(encoding="utf-8")
     return edits
 
