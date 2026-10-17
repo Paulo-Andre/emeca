@@ -29,6 +29,11 @@
           <a class="sidebar-subitem{% if request.resolver_match.url_name == 'aluno_novo' %} active{% endif %}" href="{% url 'historico:aluno_novo' %}"><span>Novo aluno</span></a>
           <a class="sidebar-subitem{% if request.resolver_match.url_name == 'relatorios' or request.resolver_match.url_name == 'relatorio_aluno' %} active{% endif %}" href="{% url 'historico:relatorios' %}"><span>Relatórios</span></a>
           <a class="sidebar-subitem{% if request.resolver_match.url_name == 'integridade_dados' %} active{% endif %}" href="{% url 'historico:integridade_dados' %}"><span>Conferir dados</span></a>
+          {% if acessos_emeca.administracao %}
+            <a class="sidebar-subitem{% if request.resolver_match.url_name == 'importar_lista_alunos' %} active{% endif %}" href="{% url 'historico:importar_lista_alunos' %}"><span>Atualizar lista</span></a>
+            <a class="sidebar-subitem{% if request.resolver_match.url_name == 'importar_notas_pdf' %} active{% endif %}" href="{% url 'historico:importar_notas_pdf' %}"><span>Importar notas</span></a>
+            <a class="sidebar-subitem{% if request.resolver_match.url_name == 'dados_extras_anuais' %} active{% endif %}" href="{% url 'historico:dados_extras_anuais' %}"><span>Dados por ano</span></a>
+          {% endif %}
         </div>
       {% endif %}
     {% endif %}
