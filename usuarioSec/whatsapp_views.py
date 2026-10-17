@@ -26,7 +26,9 @@ from .whatsapp_gateway import (
     enviar_mensagem_chat,
     iniciar_sessao,
     listar_chats,
+    listar_contatos,
     marcar_chat_como_lido,
+    obter_foto_perfil,
     obter_mensagens_chat,
     obter_qr,
     obter_sessao,
@@ -563,6 +565,64 @@ def whatsapp_enviar(request):
     return redirect("whatsapp")
 
 
+def _jid_eh_telefone(jid):
+    return bool(jid and str(jid).endswith(("@s.whatsapp.net", "@c.us")))
+
+
+def _enriquecer_chats(chats):
+    """Acrescenta telefone real, nome e foto usando contatos do WA-AKG."""
+    chats = [dict(item) for item in (chats or []) if isinstance(item, dict)]
+    if not chats:
+        return chats
+
+    try:
+        resposta = listar_contatos()
+        contatos = resposta.get("data") if isinstance(resposta, dict) else []
+        if not isinstance(contatos, list):
+            contatos = []
+    except WhatsAppGatewayError:
+        contatos = []
+
+    mapa = {}
+    for contato in contatos:
+        if not isinstance(contato, dict):
+            continue
+        for chave in ("jid", "lid", "remoteJidAlt"):
+            valor = contato.get(chave)
+            if valor:
+                mapa[str(valor)] = contato
+
+    vistos = set()
+    resultado = []
+    for chat in chats:
+        jid = str(chat.get("jid") or "")
+        contato = mapa.get(jid) or {}
+
+        phone_jid = None
+        for candidato in (
+            contato.get("remoteJidAlt"),
+            contato.get("jid"),
+            chat.get("remoteJidAlt"),
+            jid,
+        ):
+            if _jid_eh_telefone(candidato):
+                phone_jid = str(candidato).replace("@c.us", "@s.whatsapp.net")
+                break
+
+        chave_dedupe = phone_jid or jid
+        if chave_dedupe in vistos:
+            continue
+        vistos.add(chave_dedupe)
+
+        chat["phoneJid"] = phone_jid or ""
+        chat["profilePic"] = contato.get("profilePic") or chat.get("profilePic") or ""
+        chat["name"] = contato.get("name") or contato.get("verifiedName") or chat.get("name") or ""
+        chat["notify"] = contato.get("notify") or chat.get("notify") or ""
+        chat["photoJid"] = phone_jid or jid
+        resultado.append(chat)
+
+    return resultado
+
 
 @login_required
 def whatsapp_mensagens(request):
@@ -583,6 +643,7 @@ def whatsapp_mensagens(request):
                 chats = payload.get("data") if isinstance(payload, dict) else []
                 if not isinstance(chats, list):
                     chats = []
+                chats = _enriquecer_chats(chats)
         except WhatsAppGatewayError as exc:
             status = "INDISPONIVEL"
             status_detalhe = str(exc)
@@ -610,7 +671,8 @@ def whatsapp_chats_api(request):
     try:
         payload = listar_chats()
         chats = payload.get("data") if isinstance(payload, dict) else []
-        return JsonResponse({"ok": True, "chats": chats if isinstance(chats, list) else []})
+        chats = _enriquecer_chats(chats if isinstance(chats, list) else [])
+        return JsonResponse({"ok": True, "chats": chats})
     except WhatsAppGatewayError as exc:
         return JsonResponse(
             {"ok": False, "erro": str(exc)},
@@ -642,6 +704,27 @@ def whatsapp_chat_api(request):
             status=exc.status_code or 502,
         )
 
+
+@login_required
+@require_POST
+def whatsapp_foto_api(request):
+    jid = (request.POST.get("jid") or "").strip()
+    if not jid or len(jid) > 120:
+        return JsonResponse({"ok": False, "erro": "Contato inválido."}, status=400)
+
+    try:
+        payload = obter_foto_perfil(jid)
+        url = payload.get("profilePicUrl") if isinstance(payload, dict) else None
+        if url and not str(url).startswith(("https://", "http://")):
+            url = None
+        return JsonResponse({"ok": True, "url": url})
+    except WhatsAppGatewayError as exc:
+        if exc.status_code in (404, 500):
+            return JsonResponse({"ok": True, "url": None})
+        return JsonResponse(
+            {"ok": False, "erro": str(exc)},
+            status=exc.status_code or 502,
+        )
 
 @login_required
 @require_POST
