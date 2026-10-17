@@ -14,6 +14,13 @@ não modifica as chaves e não apaga sessões/arquivos de mídia.
   tenta reconciliar os LIDs antigos de contatos e mensagens em lotes limitados,
   sem desconectar nem pedir QR novamente. O resultado aparece nos logs do
   `wa-akg-app`: `LID mappings recovered from existing Signal store`.
+- Procura ainda vínculos históricos em mensagens individuais recebidas, quando
+  um mesmo registro contém `remoteJid=@lid` e `senderJid=@s.whatsapp.net`.
+  Casos com telefones conflitantes são ignorados para não juntar pessoas
+  diferentes. A contagem aparece no log como
+  `LID mappings recovered from historical message pairs`.
+  **As duas métricas podem sobrepor-se:** não devem ser somadas como se
+  representassem pessoas distintas.
 - Persiste `phoneNumber`, `lid`, `notify`, `name` e `verifiedName` no banco
   MySQL já utilizado pelo WA-AKG.
 - Não usa `pushName` para sobrescrever o nome salvo de um contato.
@@ -63,7 +70,7 @@ docker compose exec -T web python manage.py test usuarioSec.test_whatsapp
 docker compose exec -T web python manage.py diagnosticar_contatos_whatsapp
 
 # Consultar somente estatísticas da reconciliação de LIDs (sem expor telefones)
-docker logs --tail=250 wa-akg-app 2>&1 | grep 'LID mappings recovered' || true
+docker logs --tail=400 wa-akg-app 2>&1 | grep 'LID mappings recovered' || true
 ```
 
 **Atenção:** valide se os contêineres são os esperados antes de implantar. Se
