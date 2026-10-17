@@ -42,7 +42,7 @@ cd /srv/projetos/emeca
 
 # Backup SQLite do EMECA: cópia consistente pela API do próprio SQLite
 mkdir -p /srv/backups/emeca
-docker compose exec -T web python -c 'import sqlite3; s=sqlite3.connect("/data/emeca.sqlite3"); d=sqlite3.connect("/backups/emeca/antes-isolamento-wa.sqlite3"); s.backup(d); d.close(); s.close()'
+docker compose exec -T web python -c 'import sqlite3; s=sqlite3.connect("/data/emeca.sqlite3"); d=sqlite3.connect("/backups/antes-isolamento-wa.sqlite3"); s.backup(d); d.close(); s.close()'
 
 # Backup MySQL do WA-AKG (ajuste env se necessário)
 # Executar a partir da pasta emeca; usando o compose seguro e seu .env WA-AKG.
