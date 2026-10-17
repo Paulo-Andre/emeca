@@ -21,19 +21,31 @@ from .models import (
 )
 from .whatsapp_gateway import (
     WhatsAppGatewayError,
+    apagar_mensagem,
+    atualizar_etiquetas_chat,
+    bloquear_contato,
+    buscar_mensagens,
     configurado as gateway_configurado,
+    editar_mensagem,
+    encaminhar_mensagem,
     enviar_broadcast,
     enviar_mensagem_chat,
     enviar_midia,
+    enviar_presenca,
+    favoritar_mensagem,
     gerenciar_chat,
     iniciar_sessao,
     listar_chats,
     listar_contatos,
+    listar_etiquetas,
+    listar_etiquetas_chat,
     marcar_chat_como_lido,
     obter_foto_perfil,
     obter_mensagens_chat,
     obter_qr,
     obter_sessao,
+    reagir_mensagem,
+    responder_mensagem_citada,
     verificar_numeros,
 )
 
@@ -1051,3 +1063,149 @@ def whatsapp_responder_api(request):
             {"ok": False, "erro": str(exc)},
             status=exc.status_code or 502,
         )
+
+
+
+@login_required
+@require_GET
+def whatsapp_buscar_mensagens_api(request):
+    q = (request.GET.get("q") or "").strip()
+    jid = (request.GET.get("jid") or "").strip()
+    tipo = (request.GET.get("type") or "").strip()
+    try:
+        page = max(int(request.GET.get("page") or 1), 1)
+    except ValueError:
+        page = 1
+
+    if not q and not jid:
+        return JsonResponse({"ok": False, "erro": "Informe uma busca ou conversa."}, status=400)
+
+    try:
+        payload = buscar_mensagens(q=q, jid=jid, tipo=tipo, page=page, limit=50)
+        return JsonResponse({
+            "ok": True,
+            "mensagens": payload.get("data", []) if isinstance(payload, dict) else [],
+            "pagination": payload.get("pagination", {}) if isinstance(payload, dict) else {},
+        })
+    except WhatsAppGatewayError as exc:
+        return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
+
+
+@login_required
+@require_POST
+def whatsapp_acao_mensagem_api(request):
+    jid = (request.POST.get("jid") or "").strip()
+    message_id = (request.POST.get("message_id") or "").strip()
+    acao = (request.POST.get("acao") or "").strip()
+    texto = (request.POST.get("texto") or "").strip()
+    emoji = (request.POST.get("emoji") or "").strip()
+    from_me = str(request.POST.get("from_me") or "").lower() in {"1", "true", "sim"}
+
+    if not jid or not message_id:
+        return JsonResponse({"ok": False, "erro": "Mensagem inválida."}, status=400)
+
+    try:
+        if acao == "reply":
+            if not texto:
+                raise ValueError("Digite a resposta.")
+            resposta = responder_mensagem_citada(jid, message_id, texto)
+        elif acao == "star":
+            resposta = favoritar_mensagem(jid, message_id, True, from_me)
+        elif acao == "unstar":
+            resposta = favoritar_mensagem(jid, message_id, False, from_me)
+        elif acao == "react":
+            resposta = reagir_mensagem(jid, message_id, emoji)
+        elif acao == "edit":
+            if not from_me:
+                raise ValueError("Somente mensagens enviadas pela escola podem ser editadas.")
+            if not texto:
+                raise ValueError("Digite o novo texto.")
+            resposta = editar_mensagem(jid, message_id, texto)
+        elif acao == "delete":
+            if not from_me:
+                raise ValueError("Somente mensagens enviadas pela escola podem ser apagadas.")
+            resposta = apagar_mensagem(jid, message_id)
+        else:
+            raise ValueError("Ação de mensagem inválida.")
+        return JsonResponse({"ok": True, "resposta": resposta})
+    except ValueError as exc:
+        return JsonResponse({"ok": False, "erro": str(exc)}, status=400)
+    except WhatsAppGatewayError as exc:
+        return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
+
+
+@login_required
+@require_POST
+def whatsapp_encaminhar_api(request):
+    from_jid = (request.POST.get("from_jid") or "").strip()
+    message_id = (request.POST.get("message_id") or "").strip()
+    destinos = [item.strip() for item in request.POST.getlist("to_jids") if item.strip()]
+    if not from_jid or not message_id or not destinos:
+        return JsonResponse({"ok": False, "erro": "Informe a mensagem e o destino."}, status=400)
+    if len(destinos) > 20:
+        return JsonResponse({"ok": False, "erro": "Encaminhe para no máximo 20 conversas por vez."}, status=400)
+    try:
+        resposta = encaminhar_mensagem(from_jid, message_id, destinos)
+        return JsonResponse({"ok": True, "resposta": resposta})
+    except WhatsAppGatewayError as exc:
+        return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
+
+
+@login_required
+@require_POST
+def whatsapp_bloqueio_api(request):
+    jid = (request.POST.get("jid") or "").strip()
+    bloquear = str(request.POST.get("bloquear") or "1").lower() not in {"0", "false", "nao", "não"}
+    if not jid:
+        return JsonResponse({"ok": False, "erro": "Contato inválido."}, status=400)
+    try:
+        resposta = bloquear_contato(jid, bloquear)
+        return JsonResponse({"ok": True, "resposta": resposta})
+    except WhatsAppGatewayError as exc:
+        return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
+
+
+@login_required
+@require_POST
+def whatsapp_presenca_api(request):
+    jid = (request.POST.get("jid") or "").strip()
+    presence = (request.POST.get("presence") or "").strip()
+    if presence not in {"composing", "recording", "paused", "available", "unavailable"}:
+        return JsonResponse({"ok": False, "erro": "Presença inválida."}, status=400)
+    try:
+        resposta = enviar_presenca(jid, presence)
+        return JsonResponse({"ok": True, "resposta": resposta})
+    except WhatsAppGatewayError as exc:
+        return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
+
+
+@login_required
+@require_GET
+def whatsapp_etiquetas_api(request):
+    jid = (request.GET.get("jid") or "").strip()
+    try:
+        gerais = listar_etiquetas()
+        todas = gerais.get("data", {}).get("labels", []) if isinstance(gerais, dict) else []
+        atuais = []
+        if jid:
+            payload = listar_etiquetas_chat(jid)
+            if isinstance(payload, dict):
+                atuais = payload.get("data", {}).get("labels", []) or payload.get("labels", []) or []
+        return JsonResponse({"ok": True, "etiquetas": todas, "atuais": atuais})
+    except WhatsAppGatewayError as exc:
+        return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
+
+
+@login_required
+@require_POST
+def whatsapp_etiquetas_atualizar_api(request):
+    jid = (request.POST.get("jid") or "").strip()
+    action = (request.POST.get("action") or "").strip()
+    label_ids = [item.strip() for item in request.POST.getlist("label_ids") if item.strip()]
+    if not jid or action not in {"add", "remove"} or not label_ids:
+        return JsonResponse({"ok": False, "erro": "Dados de etiqueta inválidos."}, status=400)
+    try:
+        resposta = atualizar_etiquetas_chat(jid, label_ids, action)
+        return JsonResponse({"ok": True, "resposta": resposta})
+    except WhatsAppGatewayError as exc:
+        return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
