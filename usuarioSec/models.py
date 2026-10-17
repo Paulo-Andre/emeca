@@ -289,6 +289,7 @@ class SessaoWhatsAppAtiva(models.Model):
     """
     chave = models.CharField(max_length=40, primary_key=True, default="secretaria")
     sessao_id = models.CharField(max_length=120, unique=True)
+    limpeza_pendente = models.BooleanField(default=False)
     atualizado_em = models.DateTimeField(auto_now=True)
 
     class Meta:
