@@ -1512,5 +1512,9 @@ class WhatsAppAcoesCabecalhoTests(TestCase):
         self.assertContains(response, "const chatElements = new Map()")
         self.assertContains(response, "const canAppend = quiet")
         self.assertContains(response, 'className = "wa-chat-labels"')
+        self.assertContains(response, "function setChatCardColor(node, chat)")
+        self.assertContains(response, "--wa-chat-selected")
+        self.assertContains(response, "tintChatColor(color, 0.21)")
+
         self.assertNotContains(response, 'chatList.innerHTML = ""')
 
