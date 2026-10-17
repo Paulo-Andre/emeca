@@ -31,7 +31,7 @@
       <div class="wa-manager-alert{% if message.tags %} {{ message.tags }}{% endif %}">{{ message }}</div>
     {% endfor %}
 
-    {% if request.user.is_staff and gateway_status == "CONNECTED" %}
+    {% if pode_desconectar and gateway_status == "CONNECTED" %}
       <section class="wa-manager-card wa-connection-management">
         <div class="wa-manager-card-head">
           <i data-lucide="shield"></i>
