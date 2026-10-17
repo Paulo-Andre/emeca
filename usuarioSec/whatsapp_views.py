@@ -1,5 +1,9 @@
 import re
 from collections import defaultdict
+from datetime import timezone as datetime_timezone
+
+from django.utils.dateparse import parse_datetime
+from django.utils import timezone
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -18,6 +22,7 @@ from site_publico.models import BoletimAluno, PeriodoBoletim
 from .models import (
     EnvioBoletimWhatsApp,
     ItemEnvioBoletimWhatsApp,
+    LeituraChatWhatsApp,
     TelefoneDeclaracao,
     declaracao,
 )
@@ -690,28 +695,64 @@ def _contatos_wa():
         return []
 
 
-def _aliases_contato_wa(jid, contatos=None):
-    """Retorna todas as formas conhecidas do mesmo contato (LID/telefone/JID)."""
-    jid = str(jid or "").strip()
-    aliases = []
-    if jid:
-        aliases.append(jid)
+def _jids_do_registro(registro):
+    """Somente JIDs explícitos: nomes/fotos iguais NÃO autorizam fusão."""
+    if not isinstance(registro, dict):
+        return set()
+    valores = {
+        str(registro.get(chave) or "").strip()
+        for chave in ("jid", "lid", "remoteJidAlt", "phoneJid")
+    }
+    dados = registro.get("data")
+    if isinstance(dados, dict):
+        valores.add(str(dados.get("id") or "").strip())
+        valores.add(str(dados.get("lid") or "").strip())
+    extras = registro.get("aliases")
+    if isinstance(extras, list):
+        valores.update(str(item or "").strip() for item in extras)
+    return {
+        valor for valor in valores
+        if valor.endswith(("@lid", "@s.whatsapp.net", "@c.us", "@g.us"))
+    }
 
-    for contato in contatos if contatos is not None else _contatos_wa():
-        if not isinstance(contato, dict):
+
+def _mapa_aliases_wa(contatos, chats=()):
+    """Componentes conexos de JIDs, inclusive ligações transitivas LID/telefone."""
+    vizinhos = defaultdict(set)
+    for registro in list(contatos) + list(chats):
+        ids = _jids_do_registro(registro)
+        for jid in ids:
+            vizinhos[jid].update(ids - {jid})
+            if jid.endswith("@c.us"):
+                normalizado = jid.replace("@c.us", "@s.whatsapp.net")
+                vizinhos[jid].add(normalizado)
+                vizinhos[normalizado].add(jid)
+
+    grupos = {}
+    for jid in sorted(vizinhos):
+        if jid in grupos:
             continue
-        valores = {
-            str(contato.get("jid") or ""),
-            str(contato.get("lid") or ""),
-            str(contato.get("remoteJidAlt") or ""),
-        }
-        valores.discard("")
-        if jid in valores or any(item in aliases for item in valores):
-            for item in valores:
-                if item not in aliases:
-                    aliases.append(item)
+        componente = set()
+        pendentes = [jid]
+        while pendentes:
+            atual = pendentes.pop()
+            if atual in componente:
+                continue
+            componente.add(atual)
+            pendentes.extend(vizinhos[atual] - componente)
+        aliases = tuple(sorted(componente))
+        for item in aliases:
+            grupos[item] = aliases
+    return grupos
 
-    return aliases
+
+def _aliases_contato_wa(jid, contatos=None):
+    """Retorna o JID informado e aliases com ligação comprovada no WA-AKG."""
+    jid = str(jid or "").strip()
+    if not jid:
+        return []
+    grupos = _mapa_aliases_wa(contatos if contatos is not None else _contatos_wa())
+    return [jid] + [item for item in grupos.get(jid, ()) if item != jid]
 
 
 def _nome_local_por_telefone(phone_jid):
@@ -744,103 +785,118 @@ def _nome_local_por_telefone(phone_jid):
 
 
 def _enriquecer_chats(chats):
-    """Acrescenta telefone real, nome e foto usando contatos do WA-AKG."""
-    chats = [dict(item) for item in (chats or []) if isinstance(item, dict)]
+    """Consolida LID/telefone com ligações explícitas e preserva o histórico."""
+    chats = [dict(item) for item in (chats or []) if isinstance(item, dict) and item.get("jid")]
     if not chats:
-        return chats
+        return []
 
     contatos = _contatos_wa()
-
-    mapa = {}
+    grupos_aliases = _mapa_aliases_wa(contatos, chats)
+    contatos_por_id = defaultdict(list)
     for contato in contatos:
         if not isinstance(contato, dict):
             continue
-        for chave in ("jid", "lid", "remoteJidAlt", "phoneJid"):
-            valor = contato.get(chave)
-            if valor:
-                mapa[str(valor)] = contato
-        # O registro original do Baileys pode conter o JID telefônico
-        # mesmo quando o registro normalizado usa um LID.
-        dados = contato.get("data")
-        if isinstance(dados, dict):
-            jid_original = dados.get("id")
-            if _jid_eh_telefone(jid_original):
-                mapa.setdefault(str(jid_original), contato)
+        for jid in _jids_do_registro(contato):
+            contatos_por_id[jid].append(contato)
 
-    vistos = set()
-    resultado = []
+    unidos = defaultdict(list)
     for chat in chats:
-        jid = str(chat.get("jid") or "")
-        contato = mapa.get(jid) or {}
-
-        phone_jid = None
-        for candidato in (
-            contato.get("remoteJidAlt"),
-            contato.get("jid"),
-            contato.get("phoneJid"),
-            (contato.get("data") or {}).get("id")
-            if isinstance(contato.get("data"), dict) else None,
-            chat.get("phoneJid"),
-            chat.get("remoteJidAlt"),
-            jid,
-        ):
-            if _jid_eh_telefone(candidato):
-                phone_jid = str(candidato).replace("@c.us", "@s.whatsapp.net")
-                break
-
-        chave_dedupe = phone_jid or jid
-        if chave_dedupe in vistos:
-            continue
-        vistos.add(chave_dedupe)
-
-        chat["phoneJid"] = phone_jid or ""
-        foto = contato.get("profilePic") or chat.get("profilePic") or ""
-        if foto and not str(foto).startswith(("https://", "http://")):
-            foto = ""
-        chat["profilePic"] = foto
-        # O pushName/notify não equivale a um contato salvo. Quando não
-        # existe nome cadastrado, a interface deve exibir o telefone real.
-        # Também não tratar rótulos genéricos como nomes de contatos.
-        nomes = (
-            contato.get("name"),
-            contato.get("verifiedName"),
-            chat.get("name"),
+        jid = str(chat["jid"])
+        aliases = grupos_aliases.get(jid, (jid,))
+        telefones = sorted(
+            item.replace("@c.us", "@s.whatsapp.net")
+            for item in aliases if _jid_eh_telefone(item)
         )
-        nome = next(
-            (
-                str(valor).strip()
-                for valor in nomes
-                if str(valor or "").strip().casefold()
-                not in {"", "contato whatsapp", "whatsapp", "unknown", "sem nome"}
-            ),
-            "",
+        chave = telefones[0] if telefones else aliases[0]
+        unidos[chave].append(chat)
+
+    resultado = []
+    genericos = {"", "contato whatsapp", "whatsapp", "unknown", "sem nome"}
+    for chave, partes in unidos.items():
+        ids = set()
+        for parte in partes:
+            jid = str(parte["jid"])
+            ids.update(grupos_aliases.get(jid, (jid,)))
+        aliases = sorted(ids)
+        telefones = sorted({
+            jid.replace("@c.us", "@s.whatsapp.net")
+            for jid in aliases if _jid_eh_telefone(jid)
+        })
+        phone_jid = telefones[0] if telefones else ""
+
+        # Não descartar mensagens de uma das metades: ambos os JIDs
+        # permanecem nos aliases usados pelo endpoint de histórico.
+        ultimo = max(
+            partes,
+            key=lambda item: str((item.get("lastMessage") or {}).get("timestamp") or ""),
         )
-        # O WA-AKG também armazena pushName em name ao receber mensagens.
-        # Se name e notify são iguais, não há confirmação de contato salvo:
-        # quando houver telefone real, apresentá-lo em vez do apelido.
-        apelido = str(contato.get("notify") or chat.get("notify") or "").strip()
-        if phone_jid and nome and apelido and nome.casefold() == apelido.casefold() and not contato.get("verifiedName"):
-            nome = ""
+        merged = dict(ultimo)
+        merged["jid"] = phone_jid or str(ultimo["jid"])
+        merged["aliases"] = [merged["jid"]] + [
+            jid for jid in aliases if jid != merged["jid"]
+        ]
+        merged["phoneJid"] = phone_jid
+        merged["photoJid"] = phone_jid or str(ultimo["jid"])
+
+        contatos_grupo = []
+        vistos_contatos = set()
+        for jid in aliases:
+            for contato in contatos_por_id.get(jid, []):
+                identificador = id(contato)
+                if identificador not in vistos_contatos:
+                    vistos_contatos.add(identificador)
+                    contatos_grupo.append(contato)
+
+        nomes = []
+        apelidos = []
+        for contato in contatos_grupo:
+            for chave_nome in ("name", "verifiedName"):
+                nome = str(contato.get(chave_nome) or "").strip()
+                apelido = str(contato.get("notify") or "").strip()
+                if nome.casefold() not in genericos:
+                    # Name=pushName não comprova que foi salvo no telefone.
+                    if not (phone_jid and apelido and nome.casefold() == apelido.casefold()
+                            and not contato.get("verifiedName")):
+                        nomes.append(nome)
+            if contato.get("notify"):
+                apelidos.append(str(contato["notify"]).strip())
+
+        for parte in partes:
+            nome = str(parte.get("name") or "").strip()
+            apelido = str(parte.get("notify") or "").strip()
+            if nome.casefold() not in genericos:
+                if not (phone_jid and apelido and nome.casefold() == apelido.casefold()):
+                    nomes.append(nome)
+            if apelido:
+                apelidos.append(apelido)
+
+        nome = nomes[0] if nomes else ""
         if not nome and phone_jid:
             nome = _nome_local_por_telefone(phone_jid)
-        # Sem JID telefônico, priorizar o apelido real informado pelo
-        # WhatsApp em vez de repetir "Número não identificado".
         if not nome and not phone_jid:
             nome = next(
-                (
-                    str(valor).strip()
-                    for valor in (contato.get("notify"), chat.get("notify"))
-                    if str(valor or "").strip().casefold()
-                    not in {"", "contato whatsapp", "whatsapp", "unknown", "sem nome"}
-                ),
+                (texto for texto in apelidos if texto.casefold() not in genericos),
                 "",
             )
-        chat["name"] = nome
-        chat["notify"] = contato.get("notify") or chat.get("notify") or ""
-        chat["aliases"] = _aliases_contato_wa(jid, contatos)
-        chat["photoJid"] = phone_jid or jid
-        resultado.append(chat)
+        merged["name"] = nome
+        merged["notify"] = next(
+            (texto for texto in apelidos if texto.casefold() not in genericos), ""
+        )
 
+        fotos = [
+            item.get("profilePic") for item in contatos_grupo + partes
+            if item.get("profilePic")
+        ]
+        merged["profilePic"] = next(
+            (foto for foto in fotos if str(foto).startswith(("https://", "http://"))),
+            "",
+        )
+        resultado.append(merged)
+
+    resultado.sort(
+        key=lambda item: str((item.get("lastMessage") or {}).get("timestamp") or ""),
+        reverse=True,
+    )
     return resultado
 
 
