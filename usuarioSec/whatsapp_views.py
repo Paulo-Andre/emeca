@@ -949,7 +949,7 @@ def _mapa_nomes_telefones_escola_wa():
     mapa = {}
     registros = TelefoneDeclaracao.objects.select_related("declaracao").all()
     for registro in registros.iterator(chunk_size=500):
-        salvo = re.sub(r"\\D", "", registro.telefone or "")
+        salvo = re.sub(r"\D", "", registro.telefone or "")
         if not salvo:
             continue
         sem_55 = salvo[2:] if salvo.startswith("55") and len(salvo) in (12, 13) else salvo
@@ -971,7 +971,7 @@ def _mapa_nomes_telefones_escola_wa():
 
 def _nome_local_por_telefone(phone_jid, *, mapa=None):
     """Consulta índice de telefones, não a tabela inteira por conversa."""
-    digitos = re.sub(r"\\D", "", str(phone_jid or "").split("@")[0])
+    digitos = re.sub(r"\D", "", str(phone_jid or "").split("@")[0])
     if not digitos:
         return ""
     base = mapa if mapa is not None else _mapa_nomes_telefones_escola_wa()
