@@ -554,7 +554,11 @@
       const button = document.createElement("button");
       button.type = "button";
       const unread = Math.max(0, Number(chat.naoLidas || 0));
-      button.className = "wa-chat-item" + (chat.jid === activeJid ? " active" : "") + (unread ? " has-unread" : "");
+      button.className = "wa-chat-item" +
+        (chat.jid === activeJid ? " active" : "") +
+        (unread ? " has-unread" : "") +
+        (chat.fixado ? " is-pinned" : "") +
+        (chat.arquivado ? " is-archived" : "");
       button.dataset.jid = chat.jid || "";
 
       const avatar = document.createElement("span");
@@ -577,6 +581,27 @@
       const time = document.createElement("time");
       time.textContent = formatDate(chat.lastMessage?.timestamp);
       trailing.appendChild(time);
+      if (chat.fixado) {
+        const mark = document.createElement("span");
+        mark.className = "wa-chat-state-mark";
+        mark.title = "Conversa fixada";
+        mark.textContent = "📌";
+        trailing.appendChild(mark);
+      }
+      if (chat.silenciado) {
+        const mark = document.createElement("span");
+        mark.className = "wa-chat-state-mark";
+        mark.title = "Conversa silenciada";
+        mark.textContent = "🔕";
+        trailing.appendChild(mark);
+      }
+      if (chat.arquivado) {
+        const mark = document.createElement("span");
+        mark.className = "wa-chat-state-mark";
+        mark.title = "Conversa arquivada";
+        mark.textContent = "🗃";
+        trailing.appendChild(mark);
+      }
       if (unread) {
         const badge = document.createElement("span");
         badge.className = "wa-unread-badge";
@@ -891,7 +916,7 @@
     function chatListSignature(items) {
       return JSON.stringify(items.map(chat => [
         chat.jid, chat.name, chat.notify, chat.phoneJid, chat.profilePic,
-        chat.naoLidas,
+        chat.naoLidas, chat.fixado, chat.silenciado, chat.arquivado, chat.bloqueado,
         lastMessageSignature(chat)
       ]));
     }
@@ -902,11 +927,35 @@
       });
     }
 
+    function updateChatActionButtons(chat) {
+      const settings = {
+        pin: ["fixado", "Fixar conversa", "Desafixar conversa"],
+        mute: ["silenciado", "Silenciar conversa", "Ativar notificações"],
+        archive: ["arquivado", "Arquivar conversa", "Desarquivar conversa"]
+      };
+      document.querySelectorAll("[data-chat-action]").forEach(button => {
+        const action = button.dataset.chatAction;
+        const spec = settings[action];
+        if (!spec) return;
+        const enabled = Boolean(chat && chat[spec[0]]);
+        button.classList.toggle("is-active", enabled);
+        button.setAttribute("aria-pressed", String(enabled));
+        button.title = enabled ? spec[2] : spec[1];
+        button.setAttribute("aria-label", button.title);
+      });
+      const blockButton = document.getElementById("blockContactButton");
+      const blocked = Boolean(chat?.bloqueado);
+      blockButton.classList.toggle("is-active", blocked);
+      blockButton.title = blocked ? "Desbloquear contato" : "Bloquear contato";
+      blockButton.setAttribute("aria-label", blockButton.title);
+    }
+
     async function openChat(chat, quiet=false) {
       if (!chat?.jid) return;
       const switched = chat.jid !== activeJid;
       activeJid = chat.jid;
       replyJid.value = chat.jid;
+      updateChatActionButtons(chat);
 
       if (switched || !quiet) {
         contactName.textContent = chatDisplayName(chat);
@@ -989,6 +1038,7 @@
         // Não recriar a lista, as fotos e a conversa a cada verificação.
         if (changed) renderChats();
         const current = chats.find(chat => chat.jid === activeJid);
+        if (current) updateChatActionButtons(current);
         if (current && (force || lastMessageSignature(current) !== lastMessageSignature(previousActive))) {
           await openChat(current, true);
         }
