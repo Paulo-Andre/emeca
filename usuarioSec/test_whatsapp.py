@@ -332,9 +332,12 @@ class WhatsAppInboxTests(TestCase):
         response = self.client.get(reverse("whatsapp_mensagens"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Mensagens do WhatsApp")
+        self.assertContains(response, "Conversas")
         self.assertContains(response, "RESPONSAVEL SINTETICO")
-        self.assertContains(response, "Envios")
+        self.assertContains(response, 'id="newChatButton"')
+        self.assertContains(response, 'id="refreshChats"')
+        self.assertNotContains(response, 'class="header whatsapp-inbox-header"')
+        self.assertNotContains(response, 'class="wa-header-actions"')
 
     @patch("usuarioSec.whatsapp_views.listar_contatos")
     def test_enriquece_lid_com_numero_real_nome_e_foto(self, listar_contatos_mock):
@@ -1514,7 +1517,7 @@ class WhatsAppAcoesCabecalhoTests(TestCase):
         self.assertContains(response, 'className = "wa-chat-labels"')
         self.assertContains(response, "function setChatCardColor(node, chat)")
         self.assertContains(response, "--wa-chat-selected")
-        self.assertContains(response, "tintChatColor(color, 0.21)")
+        self.assertContains(response, "tintChatColor(color, hasLabel ? 0.32 : 0.20)")
 
         self.assertNotContains(response, 'chatList.innerHTML = ""')
 
