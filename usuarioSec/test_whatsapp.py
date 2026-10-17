@@ -1295,3 +1295,116 @@ class WhatsAppDesconexaoTests(TestCase):
         self.assertContains(resposta, "Desvincular número")
         self.assertContains(resposta, "Pausar")
         self.assertContains(resposta, "whatsapp/desconectar")
+
+
+class WhatsAppAcoesCabecalhoTests(TestCase):
+    def setUp(self):
+        self.usuario = get_user_model().objects.create_user(
+            username="operador_acoes", password="senha_ficticia"
+        )
+        self.client.force_login(self.usuario)
+        self.jid = "5538999991234@s.whatsapp.net"
+
+    @patch("usuarioSec.whatsapp_views.gerenciar_chat", return_value={"success": True})
+    def test_fixar_e_desafixar_persistem_estado(self, gerenciar):
+        from .models import EstadoConversaWhatsApp
+        for enabled in ("1", "0"):
+            response = self.client.post(reverse("whatsapp_gerenciar_chat_api"), {
+                "jid": self.jid, "acao": "pin", "ativo": enabled,
+            })
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()["ativo"], enabled == "1")
+            estado = EstadoConversaWhatsApp.objects.get(jid=self.jid)
+            self.assertEqual(estado.fixado, enabled == "1")
+        self.assertEqual(gerenciar.call_count, 2)
+        self.assertEqual(EstadoConversaWhatsApp.objects.count(), 1)
+
+    @patch("usuarioSec.whatsapp_views.gerenciar_chat", return_value={"success": True})
+    def test_arquivar_e_silenciar_separadamente(self, _gerenciar):
+        from .models import EstadoConversaWhatsApp
+        self.client.post(reverse("whatsapp_gerenciar_chat_api"), {
+            "jid": self.jid, "acao": "archive", "ativo": "1",
+        })
+        self.client.post(reverse("whatsapp_gerenciar_chat_api"), {
+            "jid": self.jid, "acao": "mute", "ativo": "1",
+        })
+        estado = EstadoConversaWhatsApp.objects.get(jid=self.jid)
+        self.assertTrue(estado.arquivado)
+        self.assertTrue(estado.silenciado)
+        self.assertFalse(estado.fixado)
+
+    @patch("usuarioSec.whatsapp_views.gerenciar_chat")
+    def test_falha_wa_nao_grava_estado_falso(self, gerenciar):
+        from .models import EstadoConversaWhatsApp
+        from .whatsapp_gateway import WhatsAppGatewayError
+        gerenciar.side_effect = WhatsAppGatewayError("WA-AKG não confirmou pin", 502)
+        result = self.client.post(reverse("whatsapp_gerenciar_chat_api"), {
+            "jid": self.jid, "acao": "pin", "ativo": "1",
+        })
+        self.assertEqual(result.status_code, 502)
+        self.assertFalse(result.json()["ok"])
+        self.assertFalse(EstadoConversaWhatsApp.objects.exists())
+
+    @patch("usuarioSec.whatsapp_gateway._request")
+    def test_gateway_rejeita_status_false_mas_aceita_success_true(self, call):
+        from .whatsapp_gateway import (
+            WhatsAppGatewayError, gerenciar_chat, bloquear_contato
+        )
+        call.return_value = {"success": True}
+        self.assertEqual(gerenciar_chat(self.jid, "pin", True)["success"], True)
+        call.return_value = {"status": False, "message": "Falha no servidor"}
+        with self.assertRaises(WhatsAppGatewayError):
+            bloquear_contato(self.jid, True)
+
+    @patch("usuarioSec.whatsapp_views.bloquear_contato", return_value={"status": True})
+    def test_bloqueio_alterna_sem_apagar_mensagens(self, bloqueio):
+        from .models import EstadoConversaWhatsApp
+        for choice in ("1", "0"):
+            response = self.client.post(reverse("whatsapp_bloqueio_api"), {
+                "jid": self.jid, "bloquear": choice,
+            })
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()["bloqueado"], choice == "1")
+        self.assertFalse(EstadoConversaWhatsApp.objects.get(jid=self.jid).bloqueado)
+        self.assertEqual(bloqueio.call_count, 2)
+
+    @patch("usuarioSec.whatsapp_views.criar_etiqueta",
+           return_value={"status": True, "data": {"label": {"id": "teste", "name": "Matrícula"}}})
+    def test_criar_etiqueta_na_tela_de_mensagens(self, criar):
+        response = self.client.post(reverse("whatsapp_etiquetas_criar_api"), {
+            "nome": "Matrícula", "cor": "3",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["etiqueta"]["name"], "Matrícula")
+        criar.assert_called_once_with("Matrícula", 3)
+
+    @patch("usuarioSec.whatsapp_views.criar_etiqueta")
+    def test_nao_cria_etiqueta_com_nome_vazio(self, criar):
+        response = self.client.post(reverse("whatsapp_etiquetas_criar_api"), {
+            "nome": "  ", "cor": "0",
+        })
+        self.assertEqual(response.status_code, 400)
+        criar.assert_not_called()
+
+    @patch("usuarioSec.whatsapp_views.buscar_mensagens")
+    def test_busca_de_conversa_retorna_resultados(self, buscar):
+        buscar.return_value = {
+            "status": True,
+            "data": [{"keyId": "mensagem1", "content": "Matrícula",
+                      "timestamp": "2026-10-17T12:00:00Z"}],
+            "pagination": {"total": 1, "page": 1},
+        }
+        response = self.client.get(reverse("whatsapp_buscar_mensagens_api"), {
+            "jid": self.jid, "q": "Matrícula"
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()["mensagens"]), 1)
+
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=False)
+    def test_interface_tem_botoes_e_busca_explicita(self, _gateway):
+        response = self.client.get(reverse("whatsapp_mensagens"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="runMessageSearch"')
+        self.assertContains(response, 'id="createChatLabel"')
+        self.assertContains(response, 'id="blockContactButton"')
+        self.assertContains(response, 'data-chat-action="pin"')
