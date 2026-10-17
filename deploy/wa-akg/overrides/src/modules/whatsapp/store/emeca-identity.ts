@@ -88,11 +88,79 @@ export function bindEmecaContactIdentity(sock: WASocket, sessionId: string): voi
             }
         });
         if (lid && phoneJid) await persistPair(lid, phoneJid);
+        // A contact can be synced as only @lid, while its PN already exists
+        // in the encrypted Signal store from an earlier sync.
+        if (lid && !phoneJid) await resolveStoredLid(lid);
     }
 
     function quietly(promise: Promise<unknown>, label: string): void {
         promise.catch(error => logger.error("EMECA Identity", label, error));
     }
+
+    /**
+     * Baileys 7 keeps PN↔LID links in its encrypted Signal key store.
+     * The original WA-AKG never queried this store. Looking it up does not
+     * request anyone's private contacts, guess a phone number, or reconnect.
+     */
+    async function resolveStoredLid(lid: string): Promise<boolean> {
+        if (!isLid(lid)) return false;
+        const mappingStore = (sock as any).signalRepository?.lidMapping;
+        if (!mappingStore || typeof mappingStore.getPNForLID !== "function") return false;
+        const mapped = await mappingStore.getPNForLID(lid);
+        if (!isPhone(mapped)) return false;
+        await persistPair(lid, mapped);
+        return true;
+    }
+
+    let backfillStarted = false;
+    async function backfillKnownLids(): Promise<void> {
+        if (backfillStarted) return;
+        backfillStarted = true;
+        const dbSessionId = await sessionDbId();
+        if (!dbSessionId) {
+            backfillStarted = false;
+            return;
+        }
+
+        // The WA-AKG stores historical LIDs in both Contacts and Messages.
+        // Use bounded, local batches so reconnect is not blocked.
+        const [contactRows, messageRows] = await Promise.all([
+            prisma.contact.findMany({
+                where: { sessionId: dbSessionId,
+                    OR: [{ jid: { endsWith: "@lid" } }, { lid: { endsWith: "@lid" } }] },
+                select: { jid: true, lid: true },
+                take: 12000
+            }),
+            prisma.message.findMany({
+                where: { sessionId: dbSessionId, remoteJid: { endsWith: "@lid" } },
+                select: { remoteJid: true },
+                distinct: ["remoteJid"],
+                take: 12000
+            })
+        ]);
+        const lids = [...new Set([
+            ...contactRows.flatMap(c => [c.jid, c.lid]),
+            ...messageRows.map(m => m.remoteJid)
+        ].filter(isLid))];
+        let resolved = 0;
+        for (let i = 0; i < lids.length; i += 12) {
+            const results = await Promise.all(lids.slice(i, i + 12).map(lid =>
+                resolveStoredLid(lid).catch(() => false)
+            ));
+            resolved += results.filter(Boolean).length;
+        }
+        logger.info("EMECA Identity",
+            "LID mappings recovered from existing Signal store: " +
+            resolved + "/" + lids.length);
+    }
+
+    // Reconcile old contacts as soon as the existing session reconnects.
+    // No new QR code, logout or credential reset is performed.
+    sock.ev.on("connection.update", update => {
+        if (update.connection === "open") {
+            quietly(backfillKnownLids(), "backfill stored LID mappings");
+        }
+    });
 
     // The upstream store handles general contact sync. This listener preserves
     // phoneNumber/lid fields emitted by Baileys 7 which the original drops.
@@ -130,6 +198,16 @@ export function bindEmecaContactIdentity(sock: WASocket, sessionId: string): voi
             const alt = msg.key.remoteJidAlt;
             if (isLid(jid) && isPhone(alt)) await persistPair(jid, alt);
             else if (isPhone(jid) && isLid(alt)) await persistPair(alt, jid);
+            else if (isLid(jid)) await resolveStoredLid(jid);
+
+            // Contact identity in group participant metadata, when available.
+            const participant = msg.key.participant;
+            const participantAlt = msg.key.participantAlt;
+            if (isLid(participant) && isPhone(participantAlt)) {
+                await persistPair(participant, participantAlt);
+            } else if (isPhone(participant) && isLid(participantAlt)) {
+                await persistPair(participantAlt, participant);
+            }
         })), "message phone aliases");
     });
 }
