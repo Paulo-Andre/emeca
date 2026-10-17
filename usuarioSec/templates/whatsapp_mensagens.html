@@ -646,34 +646,165 @@
       const preview = document.createElement("span");
       preview.className = "wa-chat-preview";
       preview.textContent = previewText(chat);
-      body.append(row, preview);
+      const labels = document.createElement("span");
+      labels.className = "wa-chat-labels";
+      body.append(row, preview, labels);
+      renderChatLabels(labels, chat.etiquetas || []);
       button.append(avatar, body);
       button.addEventListener("click", event => {
         const clicouFoto = !!event.target.closest(".wa-chat-avatar");
-        openChat(chat);
+        // A lista é atualizada por partes: usar sempre o registro mais recente.
+        const atual = chats.find(item => item.jid === button.dataset.jid) || chat;
+        openChat(atual);
         if (clicouFoto) openPhotoViewer();
       });
       return button;
     }
 
-    function renderChats() {
-      const q = chatSearch.value.trim().toLowerCase();
-      const filtered = chats.filter(chat => {
-        if (!q) return true;
-        return [chatDisplayName(chat), chat.phoneJid, realPhone(chat), previewText(chat)]
-          .join(" ").toLowerCase().includes(q);
+    const chatElements = new Map();
+
+    function renderChatLabels(element, labels) {
+      const values = Array.isArray(labels) ? labels : [];
+      const signature = JSON.stringify(values.map(l => [l.id, l.name, l.colorHex]));
+      if (element.dataset.signature === signature) return;
+      element.dataset.signature = signature;
+      element.replaceChildren();
+      values.slice(0, 2).forEach(label => {
+        const chip = document.createElement("span");
+        chip.className = "wa-chat-label-chip";
+        const color = /^#[0-9a-fA-F]{6}$/.test(label.colorHex || "") ? label.colorHex : "#94a3b8";
+        chip.style.borderLeftColor = color;
+        chip.textContent = label.name || "Etiqueta";
+        element.appendChild(chip);
       });
-      chatList.innerHTML = "";
-      if (!filtered.length) {
-        const empty = document.createElement("div");
-        empty.className = "wa-empty-list";
-        empty.textContent = q ? "Nenhuma conversa encontrada." : "Nenhuma conversa recebida ainda.";
-        chatList.appendChild(empty);
-      } else {
-        filtered.forEach(chat => chatList.appendChild(createChatItem(chat)));
+      if (values.length > 2) {
+        const more = document.createElement("span");
+        more.className = "wa-chat-label-more";
+        more.textContent = "+" + (values.length - 2);
+        element.appendChild(more);
       }
-      const totalNaoLidas = chats.reduce((total, item) => total + Math.max(0, Number(item.naoLidas || 0)), 0);
-      chatCount.textContent = `${filtered.length} conversa(s)` + (totalNaoLidas ? ` · ${totalNaoLidas} nova(s)` : "");
+      element.hidden = values.length === 0;
+    }
+
+    function sortChats() {
+      chats.sort((a, b) => {
+        if (Boolean(a.fixado) !== Boolean(b.fixado)) return a.fixado ? -1 : 1;
+        const ta = String(a.lastMessage?.timestamp || "");
+        const tb = String(b.lastMessage?.timestamp || "");
+        return tb.localeCompare(ta);
+      });
+    }
+
+    function updateChatItem(node, chat) {
+      const unread = Math.max(0, Number(chat.naoLidas || 0));
+      node.classList.toggle("active", chat.jid === activeJid);
+      node.classList.toggle("has-unread", unread > 0);
+      node.classList.toggle("is-pinned", Boolean(chat.fixado));
+      node.classList.toggle("is-archived", Boolean(chat.arquivado));
+      const strong = node.querySelector(".wa-chat-item-row strong");
+      const displayName = chatDisplayName(chat);
+      if (strong && strong.textContent !== displayName) strong.textContent = displayName;
+      const preview = node.querySelector(".wa-chat-preview");
+      const nextPreview = previewText(chat);
+      if (preview && preview.textContent !== nextPreview) preview.textContent = nextPreview;
+      const time = node.querySelector(".wa-chat-item-trailing time");
+      const nextTime = formatDate(chat.lastMessage?.timestamp);
+      if (time && time.textContent !== nextTime) time.textContent = nextTime;
+      const trailing = node.querySelector(".wa-chat-item-trailing");
+      const types = [
+        ["pin", "fixado", "📌", "Conversa fixada"],
+        ["mute", "silenciado", "🔕", "Conversa silenciada"],
+        ["archive", "arquivado", "🗃", "Conversa arquivada"]
+      ];
+      types.forEach(([kind, key, glyph, title]) => {
+        let mark = trailing.querySelector('[data-state="' + kind + '"]');
+        if (chat[key] && !mark) {
+          mark = document.createElement("span");
+          mark.className = "wa-chat-state-mark";
+          mark.dataset.state = kind;
+          mark.title = title;
+          mark.textContent = glyph;
+          trailing.appendChild(mark);
+        } else if (!chat[key] && mark) {
+          mark.remove();
+        }
+      });
+      // Marcas criadas na renderização inicial não têm data-state; corrigir
+      // só na primeira atualização, sem criar ícones duplicados.
+      trailing.querySelectorAll(".wa-chat-state-mark:not([data-state])").forEach(n => n.remove());
+      let badge = trailing.querySelector(".wa-unread-badge");
+      if (unread) {
+        if (!badge) {
+          badge = document.createElement("span");
+          badge.className = "wa-unread-badge";
+          trailing.appendChild(badge);
+        }
+        badge.textContent = unread > 99 ? "99+" : String(unread);
+        badge.setAttribute("aria-label", unread + " mensagens novas não lidas");
+      } else if (badge) {
+        badge.remove();
+      }
+      const labels = node.querySelector(".wa-chat-labels");
+      if (labels) renderChatLabels(labels, chat.etiquetas || []);
+      const avatar = node.querySelector(".wa-chat-avatar");
+      if (avatar) {
+        const signature = String(chat.profilePic || "") + "|" + String(chat.photoJid || chat.phoneJid || chat.jid);
+        if (avatar.dataset.sourceSignature !== signature) {
+          avatar.dataset.sourceSignature = signature;
+          // Atualizar somente fotos realmente alteradas, não todas as 1.500.
+          if (avatarObserver) avatarObserver.observe(avatar);
+          else loadLivePhoto(chat, avatar);
+        }
+      }
+    }
+
+    function renderChats() {
+      sortChats();
+      const q = chatSearch.value.trim().toLowerCase();
+      const filtered = chats.filter(chat => !q || [
+        chatDisplayName(chat), chat.phoneJid, realPhone(chat), previewText(chat),
+        ...(chat.etiquetas || []).map(label => label.name || "")
+      ].join(" ").toLowerCase().includes(q));
+      const oldScroll = chatList.scrollTop;
+      const atTop = oldScroll < 40;
+      const visibleJids = new Set(filtered.map(chat => chat.jid));
+      // Nunca fazer chatList.innerHTML="" no polling: descartava 1.591
+      // avatares, perda de rolagem e recarregamento de mídia em cada atualização.
+      for (const [jid, node] of chatElements) {
+        if (!visibleJids.has(jid)) {
+          node.remove();
+          chatElements.delete(jid);
+        }
+      }
+      if (!filtered.length) {
+        let empty = chatList.querySelector(".wa-empty-list");
+        if (!empty) {
+          empty = document.createElement("div");
+          empty.className = "wa-empty-list";
+          chatList.appendChild(empty);
+        }
+        empty.textContent = q ? "Nenhuma conversa encontrada." : "Nenhuma conversa recebida ainda.";
+      } else {
+        chatList.querySelector(".wa-empty-list")?.remove();
+        let next = null;
+        // Percorrer de trás para a frente move só os itens cuja posição mudou.
+        for (let i = filtered.length - 1; i >= 0; i--) {
+          const chat = filtered[i];
+          let node = chatElements.get(chat.jid);
+          if (!node) {
+            node = createChatItem(chat);
+            chatElements.set(chat.jid, node);
+          }
+          updateChatItem(node, chat);
+          if (node.nextSibling !== next) chatList.insertBefore(node, next);
+          next = node;
+        }
+      }
+      if (!atTop) chatList.scrollTop = oldScroll;
+      const totalNaoLidas = chats.reduce((total, item) =>
+        total + Math.max(0, Number(item.naoLidas || 0)), 0);
+      chatCount.textContent = filtered.length + " conversa(s)" +
+        (totalNaoLidas ? " · " + totalNaoLidas + " nova(s)" : "");
     }
 
     function messageText(msg) {
@@ -951,6 +1082,7 @@
       return JSON.stringify(items.map(chat => [
         chat.jid, chat.name, chat.notify, chat.phoneJid, chat.profilePic,
         chat.naoLidas, chat.fixado, chat.silenciado, chat.arquivado, chat.bloqueado,
+        (chat.etiquetas || []).map(x => [x.id, x.name, x.colorHex]),
         lastMessageSignature(chat)
       ]));
     }
