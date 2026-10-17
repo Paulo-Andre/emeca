@@ -112,6 +112,22 @@
       </div>
     </section>
 
+    {% if gateway_status == "CONNECTED" and pode_desconectar %}
+      <section class="wa-account-isolation">
+        <div>
+          <strong><i data-lucide="shield-check"></i> Separação de contas WhatsApp</strong>
+          <p>Se conectou outro número e apareceram conversas da conta antiga, use esta opção. O sistema preserva o histórico anterior e cria uma sessão exclusiva para o número atual. Será necessário ler o QR Code novamente.</p>
+        </div>
+        <form method="post" action="{% url 'whatsapp_desconectar' %}"
+          onsubmit="return confirm('IMPORTANTE: desconectar a conta atual e criar uma nova sessão isolada? Será preciso ler o QR Code novamente. Nenhum histórico será apagado.');">
+          {% csrf_token %}
+          <input type="hidden" name="acao" value="isolar">
+          <input type="hidden" name="confirmacao" value="ISOLAR">
+          <button type="submit" class="btn-secondary"><i data-lucide="shield-check"></i> Separar conta atual</button>
+        </form>
+      </section>
+    {% endif %}
+
     <form method="post" action="{% url 'whatsapp_enviar' %}" id="formEnvio" class="send-grid">
       {% csrf_token %}
       <section class="card audience-card">
