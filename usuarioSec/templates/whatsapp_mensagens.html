@@ -10,7 +10,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
   <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-unified-05">
-  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-inbox-10">
+  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-inbox-11">
 </head>
 <body>
   {% include 'includes/sidebar.html' %}
@@ -97,6 +97,7 @@
               <small id="contactNumber"></small>
             </div>
             <div class="wa-chat-actions">
+              <button type="button" class="wa-icon-button" id="identifyContactButton" title="Identificar contato ou unir conversas" aria-label="Identificar contato ou unir conversas"><i data-lucide="contact-round-pen"></i></button>
               <button type="button" class="wa-icon-button" id="messageSearchButton" title="Buscar mensagens"><i data-lucide="search"></i></button>
               <button type="button" class="wa-icon-button" id="labelsButton" title="Etiquetas"><i data-lucide="tags"></i></button>
               <button type="button" class="wa-icon-button" data-chat-action="read" title="Marcar como lida"><i data-lucide="check-check"></i></button>
@@ -175,6 +176,38 @@
     </form>
   </dialog>
 
+  <dialog class="wa-new-chat-dialog wa-identity-dialog" id="identityDialog">
+    <form method="dialog" class="wa-new-chat-card wa-identity-card" id="identityForm">
+      <div class="wa-new-chat-head">
+        <div>
+          <strong>Identificar contato</strong>
+          <small>Corrija o nome ou una registros do mesmo WhatsApp.</small>
+        </div>
+        <button type="button" class="wa-icon-button" id="closeIdentityDialog" aria-label="Fechar"><i data-lucide="x"></i></button>
+      </div>
+
+      <label for="identitySource">Registro que será identificado</label>
+      <select class="wa-new-chat-input" id="identitySource" required></select>
+
+      <label for="identityName">Nome para exibir no EMECA</label>
+      <input class="wa-new-chat-input" id="identityName" type="text" maxlength="160" placeholder="Nome do contato (opcional)" autocomplete="off">
+      <small class="wa-identity-help">O nome é salvo apenas no EMECA; não altera os contatos do WhatsApp.</small>
+
+      <label for="identityPhone">Unir à conversa deste número</label>
+      <select class="wa-new-chat-input" id="identityPhone">
+        <option value="">Não unir a outra conversa</option>
+      </select>
+      <p class="wa-identity-warning">
+        Escolha um número somente se tiver certeza de que pertence à mesma pessoa.
+        O EMECA mostrará as duas conversas juntas sem apagar mensagens.
+      </p>
+      <div id="identityStatus" class="wa-new-chat-status" aria-live="polite"></div>
+      <button class="btn-primary wa-new-chat-send" type="submit" id="saveIdentityButton">
+        <i data-lucide="check"></i> Salvar identificação
+      </button>
+    </form>
+  </dialog>
+
   <dialog class="wa-labels-dialog" id="labelsDialog">
     <div class="wa-labels-card">
       <div class="wa-new-chat-head">
@@ -221,6 +254,12 @@
     const messageSearchInput = document.getElementById("messageSearchInput");
     const quotedBanner = document.getElementById("quotedBanner");
     const quotedPreview = document.getElementById("quotedPreview");
+    const identityDialog = document.getElementById("identityDialog");
+    const identityForm = document.getElementById("identityForm");
+    const identitySource = document.getElementById("identitySource");
+    const identityName = document.getElementById("identityName");
+    const identityPhone = document.getElementById("identityPhone");
+    const identityStatus = document.getElementById("identityStatus");
     const labelsDialog = document.getElementById("labelsDialog");
     const labelsList = document.getElementById("labelsList");
     const labelsStatus = document.getElementById("labelsStatus");
@@ -270,11 +309,7 @@
       const known = contactLabel(chat.name) || realPhone(chat) || contactLabel(chat.notify);
       if (known) return known;
       const jid = String(chat.jid || "");
-      if (jid.endsWith("@lid")) {
-        const suffix = jid.split("@")[0].slice(-6);
-        return "Contato · ID " + suffix;
-      }
-      return "Contato sem nome";
+      return "Contato sem identificação";
     }
 
     function setAvatarContent(element, chat, url="", fallbackUrl="") {
@@ -793,6 +828,83 @@
       }
     }
 
+
+    function prepareIdentityDialog() {
+      const chat = chats.find(item => item.jid === activeJid);
+      if (!chat) return;
+      identityStatus.textContent = "";
+      identitySource.replaceChildren();
+      identityPhone.replaceChildren();
+      const aliases = Array.from(new Set([chat.jid, ...(chat.aliases || [])]));
+      // É possível editar o apelido de um número mesmo que não exista LID.
+      const options = aliases.filter(jid => jid.endsWith("@lid"));
+      if (!options.length) options.push(chat.jid);
+      options.forEach(jid => {
+        const option = document.createElement("option");
+        option.value = jid;
+        option.textContent = jid.endsWith("@lid")
+          ? "Registro WhatsApp sem número (ID " + jid.split("@")[0].slice(-6) + ")"
+          : prettyPhone(jid) || jid;
+        identitySource.appendChild(option);
+      });
+      const empty = document.createElement("option");
+      empty.value = "";
+      empty.textContent = "Não unir a outra conversa";
+      identityPhone.appendChild(empty);
+      const seen = new Set();
+      chats.forEach(candidate => {
+        const phone = candidate.phoneJid || (candidate.jid.endsWith("@s.whatsapp.net") ? candidate.jid : "");
+        if (!phone || seen.has(phone)) return;
+        seen.add(phone);
+        const option = document.createElement("option");
+        option.value = phone;
+        option.textContent = chatDisplayName(candidate) + " · " + prettyPhone(phone);
+        identityPhone.appendChild(option);
+      });
+      const sync = () => {
+        const isLid = identitySource.value.endsWith("@lid");
+        identityPhone.disabled = !isLid;
+        identityPhone.value = isLid ? (chat.phoneJid || "") : "";
+      };
+      identitySource.onchange = sync;
+      sync();
+      identityName.value = chat.nomeManual ? (chat.name || "") : "";
+      identityDialog.showModal();
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    document.getElementById("identifyContactButton").addEventListener("click", prepareIdentityDialog);
+    document.getElementById("closeIdentityDialog").addEventListener("click", () => identityDialog.close());
+    identityForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      const jid = identitySource.value;
+      if (!jid) return;
+      const button = document.getElementById("saveIdentityButton");
+      button.disabled = true;
+      identityStatus.textContent = "Salvando identificação…";
+      try {
+        const payload = new FormData();
+        payload.append("jid", jid);
+        payload.append("nome", identityName.value.trim());
+        payload.append("telefone_jid", identityPhone.disabled ? "" : identityPhone.value);
+        payload.append("csrfmiddlewaretoken", csrfToken());
+        const response = await fetch("{% url 'whatsapp_identificar_contato_api' %}", {
+          method: "POST", body: payload, headers: {"X-CSRFToken": csrfToken()}
+        });
+        const data = await response.json();
+        if (!response.ok || !data.ok) throw new Error(data.erro || "Não foi possível identificar o contato.");
+        const telefone = identityPhone.value;
+        identityDialog.close();
+        await refreshChats(true);
+        const updated = chats.find(chat => chat.jid === telefone ||
+          chat.jid === jid || (Array.isArray(chat.aliases) && chat.aliases.includes(jid)));
+        if (updated) await openChat(updated);
+      } catch (error) {
+        identityStatus.textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
 
     document.getElementById("messageSearchButton").addEventListener("click", () => {
       messageSearchBar.hidden = false;
