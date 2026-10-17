@@ -245,6 +245,30 @@ ENRICH_METHOD = """    /**
                 profilePic: true, data: true
             }
         });
+        // Contacts without an address-book name can still have a verified
+        // display-name in an incoming message. Read one latest pushName per
+        // remote JID in a bounded batch rather than one API call per chat.
+        const unresolvedLids = rows
+            .filter(row => row.jid?.endsWith("@lid") && !row.name && !row.notify)
+            .map(row => row.jid as string);
+        const profileNames = new Map<string, string>();
+        if (unresolvedLids.length) {
+            const recentSenders = await prisma.message.findMany({
+                where: {
+                    sessionId: dbSessionId, fromMe: false,
+                    remoteJid: { in: unresolvedLids },
+                    pushName: { not: null }
+                },
+                select: { remoteJid: true, pushName: true },
+                orderBy: { timestamp: "desc" },
+                distinct: ["remoteJid"],
+                take: Math.min(unresolvedLids.length, 5000)
+            });
+            for (const message of recentSenders) {
+                const name = (message.pushName || "").trim();
+                if (name && name.length <= 160) profileNames.set(message.remoteJid, name);
+            }
+        }
         const known = new Map<string, Set<string>>();
         const byJid = new Map<string, typeof contacts>();
         const isPn = (jid: string) => /^\\d+@(s\\.whatsapp\\.net|c\\.us)$/.test(jid);
@@ -284,7 +308,8 @@ ENRICH_METHOD = """    /**
             const saved = related.find(c => c.name && c.name !== c.notify)?.name;
             const display = saved || related.find(c => c.verifiedName)?.verifiedName ||
                 related.find(c => c.name)?.name || related.find(c => c.notify)?.notify ||
-                row.name || row.notify || null;
+                row.name || row.notify ||
+                [...candidates].map(id => profileNames.get(id)).find(Boolean) || null;
             const photo = related.find(c => c.profilePic)?.profilePic || row.profilePic;
             const enriched = {
                 ...row,
