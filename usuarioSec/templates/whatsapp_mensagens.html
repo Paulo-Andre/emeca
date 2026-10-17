@@ -33,6 +33,7 @@
           <form method="post" action="{% url 'whatsapp_desconectar' %}" class="wa-disconnect-header-form"
             onsubmit="return confirm('Pausar o WhatsApp? O histórico e o vínculo com o celular serão preservados.');">
             {% csrf_token %}
+          <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
             <input type="hidden" name="acao" value="pausar">
             <input type="hidden" name="origem" value="mensagens">
             <button type="submit" class="btn-secondary" title="Pausar conexão"><i data-lucide="pause-circle"></i> Pausar</button>
@@ -40,6 +41,7 @@
           <form method="post" action="{% url 'whatsapp_desconectar' %}" class="wa-disconnect-header-form"
             onsubmit="return confirm('Desvincular o WhatsApp desta escola? Será necessário um novo QR Code para conectar. As mensagens armazenadas serão mantidas.');">
             {% csrf_token %}
+          <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
             <input type="hidden" name="acao" value="desvincular">
             <input type="hidden" name="confirmacao" value="DESVINCULAR">
             <input type="hidden" name="origem" value="mensagens">
@@ -74,6 +76,7 @@
         <div class="connection-actions">
           <form method="post" action="{% url 'whatsapp_conectar' %}">
             {% csrf_token %}
+          <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
             <button class="btn-primary" type="submit"><i data-lucide="power"></i> Conectar WhatsApp</button>
           </form>
           <a class="btn-secondary" href="{% url 'whatsapp' %}"><i data-lucide="qr-code"></i> Tela de conexão</a>
@@ -151,6 +154,7 @@
 
           <form class="wa-reply-form" id="replyForm">
             {% csrf_token %}
+          <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
             <input type="hidden" id="replyJid" name="jid">
             <input type="file" id="replyFile" hidden accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.odt,.ods,.zip">
             <button type="button" class="wa-attach-button" id="attachButton" aria-label="Anexar arquivo" title="Anexar imagem, vídeo, áudio ou documento">
