@@ -1,0 +1,189 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Importar agenda Android · EMECA</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+  <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-unified-05">
+  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-agenda-01">
+</head>
+<body>
+  {% include 'includes/sidebar.html' %}
+  <main class="main whatsapp-main">
+    <header class="header">
+      <div class="header-icon whatsapp-icon"><i data-lucide="contact-round"></i></div>
+      <div>
+        <h2>Importar contatos do Android</h2>
+        <p>Identifique pelo nome os números das conversas da Secretaria Escolar.</p>
+      </div>
+      <div class="wa-header-actions">
+        <a href="{% url 'whatsapp_gerenciamento' %}" class="btn-secondary"><i data-lucide="arrow-left"></i> Gerenciamento</a>
+        <a href="{% url 'whatsapp_mensagens' %}" class="btn-secondary"><i data-lucide="messages-square"></i> Mensagens</a>
+      </div>
+    </header>
+
+    <section class="wa-agenda-layout">
+      <article class="wa-manager-card wa-agenda-main">
+        <div class="wa-manager-card-head">
+          <i data-lucide="file-up"></i>
+          <div>
+            <h3>Arquivo de contatos (.vcf)</h3>
+            <p>Exportado do aplicativo Contatos do Android. Tamanho máximo: 8 MB.</p>
+          </div>
+        </div>
+        <form id="agendaImportForm" class="wa-manager-form" enctype="multipart/form-data" method="post">
+          {% csrf_token %}
+          <label for="agendaFile">Selecione o arquivo VCF</label>
+          <input id="agendaFile" type="file" name="arquivo" accept=".vcf,text/vcard,text/x-vcard" required>
+          <div class="wa-agenda-actions">
+            <button class="btn-secondary" type="submit" name="modo" value="previa" id="agendaPreview">
+              <i data-lucide="scan-eye"></i> Conferir arquivo
+            </button>
+            <button class="btn-primary" type="submit" name="modo" value="importar" id="agendaApply" disabled>
+              <i data-lucide="check-circle-2"></i> Confirmar importação
+            </button>
+          </div>
+          <div id="agendaMessage" class="wa-agenda-status" role="status" aria-live="polite"></div>
+        </form>
+
+        <div id="agendaResult" hidden>
+          <h3 class="wa-agenda-title">Resultado da análise</h3>
+          <div class="wa-agenda-stats" id="agendaStats"></div>
+          <p class="wa-agenda-hint" id="agendaNotes"></p>
+          <div id="agendaSamples"></div>
+        </div>
+      </article>
+
+      <aside class="wa-manager-card wa-agenda-help">
+        <div class="wa-manager-card-head"><i data-lucide="shield-check"></i>
+          <div><h3>Importação sem duplicatas</h3><p>{{ total_agenda }} telefone(s) já cadastrado(s) nesta agenda.</p></div>
+        </div>
+        <ol>
+          <li>No Android, abra o aplicativo <strong>Contatos</strong>.</li>
+          <li>Abra a opção <strong>Exportar</strong> e salve a agenda como <strong>.vcf</strong>. O caminho varia conforme o fabricante.</li>
+          <li>Transfira o arquivo para este computador e selecione-o aqui.</li>
+          <li>Clique em <strong>Conferir arquivo</strong>, revise os números e confirme.</li>
+        </ol>
+        <div class="wa-agenda-note">
+          <i data-lucide="info"></i>
+          <p>Os contatos são salvos somente no EMECA. O sistema não apaga nem modifica mensagens, sessões ou contatos do celular. Nomes existentes não são sobrescritos. Uma conversa identificada apenas por LID precisa de um vínculo telefônico comprovado.</p>
+        </div>
+      </aside>
+    </section>
+  </main>
+  <script>
+    (() => {
+      const form = document.getElementById("agendaImportForm");
+      const file = document.getElementById("agendaFile");
+      const apply = document.getElementById("agendaApply");
+      const preview = document.getElementById("agendaPreview");
+      const output = document.getElementById("agendaResult");
+      const message = document.getElementById("agendaMessage");
+      const stats = document.getElementById("agendaStats");
+      const samples = document.getElementById("agendaSamples");
+      const notes = document.getElementById("agendaNotes");
+      let inspected = "";
+
+      function identity() {
+        const f = file.files?.[0];
+        return f ? [f.name, f.size, f.lastModified].join(":") : "";
+      }
+      function reset() {
+        inspected = "";
+        apply.disabled = true;
+        output.hidden = true;
+        message.textContent = "";
+      }
+      file.addEventListener("change", reset);
+
+      function render(data, imported) {
+        output.hidden = false;
+        stats.replaceChildren();
+        const fields = [
+          ["Contatos no arquivo", data.cartoes],
+          ["Números únicos", data.telefones_unicos],
+          ["Novos para importar", data.novos],
+          ["Já cadastrados", data.ja_importados],
+          ["Nomes conflitantes", data.conflitos_no_arquivo],
+          ["Sem telefone BR com DDD", data.sem_telefone_brasileiro_com_ddd]
+        ];
+        if (imported) fields.push(["Importados nesta operação", data.importados]);
+        fields.forEach(([label, value]) => {
+          const item = document.createElement("div");
+          item.className = "wa-agenda-stat";
+          const number = document.createElement("strong");
+          number.textContent = String(value ?? 0);
+          const desc = document.createElement("span");
+          desc.textContent = label;
+          item.append(number, desc);
+          stats.appendChild(item);
+        });
+        notes.textContent = data.nomes_diferentes_preservados
+          ? data.nomes_diferentes_preservados + " telefone(s) já cadastrado(s) tinham nomes diferentes e foram preservados."
+          : "Telefones repetidos são importados uma única vez, sem sobrescrever nomes existentes.";
+        samples.replaceChildren();
+        if (!imported && Array.isArray(data.amostra) && data.amostra.length) {
+          const title = document.createElement("h4");
+          title.textContent = "Amostra dos novos contatos";
+          const list = document.createElement("div");
+          list.className = "wa-agenda-samples";
+          data.amostra.forEach(row => {
+            const el = document.createElement("div");
+            const name = document.createElement("strong");
+            const phone = document.createElement("span");
+            name.textContent = row.nome;
+            phone.textContent = "+" + row.numero;
+            el.append(name, phone);
+            list.appendChild(el);
+          });
+          samples.append(title, list);
+        }
+      }
+
+      form.addEventListener("submit", async event => {
+        event.preventDefault();
+        const mode = event.submitter?.value === "importar" ? "importar" : "previa";
+        if (!file.files?.length) return;
+        if (mode === "importar" && inspected !== identity()) return;
+        if (mode === "importar" && !confirm("Confirmar a importação dos novos contatos? Mensagens e contatos existentes serão preservados.")) return;
+        preview.disabled = true;
+        apply.disabled = true;
+        message.className = "wa-agenda-status";
+        message.textContent = mode === "previa" ? "Conferindo números e duplicatas…" : "Importando contatos…";
+        try {
+          const body = new FormData(form);
+          body.set("modo", mode);
+          const res = await fetch("{% url 'whatsapp_importar_agenda' %}", {
+            method: "POST",
+            body,
+            headers: {"X-CSRFToken": form.querySelector('[name="csrfmiddlewaretoken"]').value}
+          });
+          const json = await res.json();
+          if (!res.ok || !json.ok) throw new Error(json.erro || "Não foi possível importar o arquivo.");
+          render(json.result, mode === "importar");
+          if (mode === "previa") {
+            inspected = identity();
+            apply.disabled = Number(json.result.novos || 0) === 0;
+          } else {
+            inspected = "";
+            message.textContent = "Importação concluída. Os nomes já podem ser consultados na caixa de mensagens.";
+          }
+          if (mode === "previa") message.textContent = "Prévia pronta. Confirme para gravar os novos contatos.";
+        } catch (error) {
+          message.className = "wa-agenda-status is-error";
+          message.textContent = error.message || "Erro ao analisar o arquivo.";
+          inspected = "";
+        } finally {
+          preview.disabled = false;
+          if (mode === "importar") apply.disabled = true;
+        }
+      });
+      if (window.lucide) window.lucide.createIcons();
+    })();
+  </script>
+</body>
+</html>
