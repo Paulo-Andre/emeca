@@ -10,7 +10,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
   <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-unified-05">
-  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-inbox-06">
+  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-inbox-07">
 </head>
 <body>
   {% include 'includes/sidebar.html' %}
@@ -230,7 +230,7 @@
     let refreshTimer = null;
     let quotedMessage = null;
     let currentMessages = [];
-    const photoCache = new Map();
+
 
     function csrfToken() {
       return replyForm.querySelector('input[name="csrfmiddlewaretoken"]')?.value || "";
@@ -262,35 +262,41 @@
       return chat.name || chat.notify || realPhone(chat) || "Contato WhatsApp";
     }
 
-    function setAvatarContent(element, chat, url="") {
-      element.innerHTML = "";
-      if (url && /^https?:\/\//i.test(url)) {
-        const img = document.createElement("img");
-        img.src = url;
-        img.alt = "";
-        img.loading = "lazy";
-        img.referrerPolicy = "no-referrer";
-        img.addEventListener("error", () => {
-          element.innerHTML = "";
-          element.textContent = chatDisplayName(chat).trim().charAt(0).toUpperCase() || "?";
-        }, { once: true });
-        element.appendChild(img);
-      } else {
+    function setAvatarContent(element, chat, url="", fallbackUrl="") {
+      element.replaceChildren();
+      // URLs locais são usadas pelo proxy autenticado de fotos do EMECA.
+      // URLs externas só podem usar HTTP(S), nunca esquemas executáveis.
+      const allowed = /^https?:\/\//i.test(url) || /^\/(?!\/|\\)/.test(url);
+      if (!url || !allowed) {
         element.textContent = chatDisplayName(chat).trim().charAt(0).toUpperCase() || "?";
-      }
-    }
-
-    async function loadLivePhoto(chat, element) {
-      const photoJid = chat.photoJid || chat.phoneJid || chat.jid;
-      if (!photoJid) return;
-
-      if (chat.profilePic && /^https?:\/\//i.test(chat.profilePic)) {
-        setAvatarContent(element, chat, chat.profilePic);
         return;
       }
+      const img = document.createElement("img");
+      img.alt = "";
+      img.loading = element === contactAvatar ? "eager" : "lazy";
+      img.referrerPolicy = "no-referrer";
+      img.addEventListener("error", () => {
+        if (fallbackUrl && fallbackUrl !== url) {
+          setAvatarContent(element, chat, fallbackUrl);
+        } else {
+          element.replaceChildren();
+          element.textContent = chatDisplayName(chat).trim().charAt(0).toUpperCase() || "?";
+        }
+      }, { once: true });
+      img.src = url;
+      element.appendChild(img);
+    }
 
+    function loadLivePhoto(chat, element) {
+      const photoJid = chat.photoJid || chat.phoneJid || chat.jid;
+      if (!photoJid) {
+        setAvatarContent(element, chat, chat.profilePic || "");
+        return;
+      }
+      // Priorizar o proxy: URLs diretas do WA-AKG podem expirar ou ser bloqueadas.
       const proxyUrl = "{% url 'whatsapp_foto_imagem' %}?jid=" + encodeURIComponent(photoJid);
-      setAvatarContent(element, chat, proxyUrl);
+      const directUrl = /^https?:\/\//i.test(chat.profilePic || "") ? chat.profilePic : "";
+      setAvatarContent(element, chat, proxyUrl, directUrl);
     }
 
     const avatarObserver = ("IntersectionObserver" in window)
@@ -334,8 +340,9 @@
       avatar.className = "wa-chat-avatar";
       avatar.dataset.chatJid = chat.jid || "";
       const name = chatDisplayName(chat);
-      setAvatarContent(avatar, chat, chat.profilePic || "");
+      setAvatarContent(avatar, chat);
       if (avatarObserver) avatarObserver.observe(avatar);
+      else loadLivePhoto(chat, avatar);
 
       const body = document.createElement("span");
       body.className = "wa-chat-item-body";
@@ -554,11 +561,11 @@
       const name = chatDisplayName(chat);
       contactName.textContent = name;
       contactNumber.textContent = realPhone(chat) || "Número real não disponível";
-      setAvatarContent(contactAvatar, chat, chat.profilePic || "");
       loadLivePhoto(chat, contactAvatar);
       conversationEmpty.hidden = true;
       conversation.hidden = false;
       renderChats();
+      thread.textContent = "Carregando mensagens…";
 
       try {
         const resp = await fetch("{% url 'whatsapp_chat_api' %}?jid=" + encodeURIComponent(chat.jid), {
@@ -574,6 +581,7 @@
         }
         if (!quiet) replyStatus.textContent = "";
       } catch (err) {
+        thread.textContent = "Não foi possível carregar as mensagens: " + err.message;
         if (!quiet) {
           replyStatus.textContent = err.message;
           replyStatus.className = "wa-reply-status error";
