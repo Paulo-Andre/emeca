@@ -10,7 +10,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
   <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-unified-05">
-  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-delete-message-19">
+  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-delete-chat-20">
 </head>
 <body>
   {% include 'includes/sidebar.html' %}
@@ -99,6 +99,7 @@
               <button type="button" class="wa-icon-button" data-chat-action="pin" title="Fixar conversa" aria-label="Fixar conversa"><i data-lucide="pin"></i></button>
               <button type="button" class="wa-icon-button" data-chat-action="mute" title="Silenciar conversa" aria-label="Silenciar conversa"><i data-lucide="bell-off"></i></button>
               <button type="button" class="wa-icon-button" data-chat-action="archive" title="Arquivar conversa" aria-label="Arquivar conversa"><i data-lucide="archive"></i></button>
+              <button type="button" class="wa-icon-button wa-delete-chat-button" id="deleteChatButton" title="Excluir conversa" aria-label="Excluir conversa"><i data-lucide="trash-2"></i></button>
               <button type="button" class="wa-icon-button" id="blockContactButton" title="Bloquear/desbloquear contato" aria-label="Bloquear ou desbloquear contato"><i data-lucide="shield-ban"></i></button>
             </div>
             <span class="wa-live-badge"><span></span> Atualização automática</span>
@@ -206,6 +207,30 @@
     </form>
   </dialog>
 
+
+
+  <dialog class="wa-delete-dialog wa-delete-chat-dialog" id="deleteChatDialog" aria-labelledby="deleteChatTitle">
+    <div class="wa-delete-dialog-card">
+      <header class="wa-delete-dialog-title">
+        <div>
+          <strong id="deleteChatTitle">Excluir conversa</strong>
+          <p id="deleteChatName">Remover esta conversa da sua lista do EMECA?</p>
+        </div>
+        <button type="button" class="wa-icon-button" id="closeDeleteChat" title="Fechar" aria-label="Fechar"><i data-lucide="x"></i></button>
+      </header>
+      <p class="wa-delete-chat-explanation">
+        As mensagens anteriores deixarão de aparecer para você no EMECA.
+        O histórico original do WhatsApp e o atendimento dos demais operadores
+        <strong>não serão apagados</strong>. Se chegar uma nova mensagem, a
+        conversa poderá aparecer novamente, somente com as mensagens novas.
+      </p>
+      <div class="wa-delete-chat-buttons">
+        <button type="button" class="btn-secondary" id="cancelDeleteChat">Cancelar</button>
+        <button type="button" class="wa-delete-chat-confirm" id="confirmDeleteChat"><i data-lucide="trash-2"></i> Excluir conversa</button>
+      </div>
+      <p id="deleteChatStatus" class="wa-delete-dialog-status" role="status" aria-live="polite"></p>
+    </div>
+  </dialog>
 
   <dialog class="wa-delete-dialog" id="deleteMessageDialog" aria-labelledby="deleteMessageTitle">
     <div class="wa-delete-dialog-card">
@@ -327,6 +352,11 @@
     let pendingDeleteMessage = null;
     let pendingDeleteJid = null;
     const actionNotice = document.getElementById("waActionNotice");
+    const deleteChatDialog = document.getElementById("deleteChatDialog");
+    const deleteChatButton = document.getElementById("deleteChatButton");
+    const deleteChatStatus = document.getElementById("deleteChatStatus");
+    const confirmDeleteChatButton = document.getElementById("confirmDeleteChat");
+    let pendingDeleteChatJid = "";
     let actionNoticeTimer = null;
     function showActionNotice(message, error=false) {
       if (!message) return;
@@ -1337,6 +1367,64 @@
       }
     }
 
+
+    deleteChatButton.addEventListener("click", () => {
+      const chat = chats.find(item => item.jid === activeJid);
+      if (!chat) return;
+      pendingDeleteChatJid = chat.jid;
+      document.getElementById("deleteChatName").textContent =
+        "Excluir a conversa com " + chatDisplayName(chat) + " da sua caixa do EMECA?";
+      deleteChatStatus.textContent = "";
+      confirmDeleteChatButton.disabled = false;
+      deleteChatDialog.showModal();
+    });
+    document.getElementById("closeDeleteChat").addEventListener("click", () => deleteChatDialog.close());
+    document.getElementById("cancelDeleteChat").addEventListener("click", () => deleteChatDialog.close());
+    deleteChatDialog.addEventListener("close", () => {
+      pendingDeleteChatJid = "";
+      deleteChatStatus.textContent = "";
+    });
+    confirmDeleteChatButton.addEventListener("click", async () => {
+      const jid = pendingDeleteChatJid;
+      if (!jid || jid !== activeJid) {
+        deleteChatDialog.close();
+        return;
+      }
+      confirmDeleteChatButton.disabled = true;
+      deleteChatStatus.textContent = "Excluindo a conversa da sua lista…";
+      try {
+        const body = new FormData();
+        body.append("jid", jid);
+        body.append("confirmacao", "EXCLUIR");
+        body.append("csrfmiddlewaretoken", csrfToken());
+        const resp = await waFetch("{% url 'whatsapp_excluir_conversa_api' %}", {
+          method: "POST", body, headers: {"X-CSRFToken": csrfToken()}
+        });
+        const result = await resp.json();
+        if (!resp.ok || !result.ok) throw new Error(result.erro || "Não foi possível excluir a conversa.");
+        deleteChatDialog.close();
+        // Descartar solicitações de mensagens que estavam pendentes.
+        ++chatRequestId;
+        activeJid = "";
+        replyJid.value = "";
+        quotedMessage = null;
+        quotedBanner.hidden = true;
+        thread.replaceChildren();
+        conversation.hidden = true;
+        conversationEmpty.hidden = false;
+        const emptyText = conversationEmpty.querySelector("p");
+        if (emptyText) emptyText.textContent =
+          "Conversa removida da sua lista. O histórico do WhatsApp foi preservado.";
+        chats = chats.filter(chat => chat.jid !== jid &&
+          !(chat.aliases || []).includes(jid));
+        renderChats();
+        await refreshChats(true);
+      } catch (err) {
+        deleteChatStatus.textContent = err.message || "Erro ao excluir conversa.";
+      } finally {
+        confirmDeleteChatButton.disabled = false;
+      }
+    });
 
     function prepareIdentityDialog() {
       const chat = chats.find(item => item.jid === activeJid);
