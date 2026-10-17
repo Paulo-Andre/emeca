@@ -86,6 +86,7 @@ class EnvioBoletimWhatsApp(models.Model):
     modo = models.CharField(max_length=12, choices=MODOS)
     turma = models.CharField(max_length=160, blank=True)
     mensagem = models.TextField(blank=True)
+    sessao = models.CharField(max_length=120, default="")
     status = models.CharField(max_length=16, choices=STATUS, default="PENDENTE")
     total = models.PositiveIntegerField(default=0)
     enviados = models.PositiveIntegerField(default=0)
