@@ -90,8 +90,8 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
     value = chat_service.read_text(encoding="utf-8")
     value = substitute(
         value,
-        '        limit = 50,',
-        '        limit = 300,',
+        '        dbSessionId: string,\n        limit = 50,\n        before?: string,\n        search?: string',
+        '        dbSessionId: string,\n        limit = 300,\n        before?: string,\n        search?: string',
         "limite padrão de chats",
     )
     value = substitute(
