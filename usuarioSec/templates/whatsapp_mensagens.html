@@ -10,7 +10,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
   <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-unified-05">
-  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-live-update-15">
+  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-label-card-color-16">
 </head>
 <body>
   {% include 'includes/sidebar.html' %}
@@ -686,6 +686,26 @@
       element.hidden = values.length === 0;
     }
 
+    function tintChatColor(hex, share) {
+      const safe = /^#[0-9a-fA-F]{6}$/.test(hex || "") ? hex : "#2879C8";
+      const rgb = [1, 3, 5].map(offset => parseInt(safe.slice(offset, offset + 2), 16));
+      return "#" + rgb.map(value => Math.round(255 * (1 - share) + value * share)
+        .toString(16).padStart(2, "0")).join("");
+    }
+
+    function setChatCardColor(node, chat) {
+      // A primeira etiqueta aplicada define o fundo; sem etiqueta o cartão
+      // inteiro recebe azul suave. Mistura com branco para legibilidade.
+      const label = (chat.etiquetas || [])[0];
+      const color = /^#[0-9a-fA-F]{6}$/.test(label?.colorHex || "")
+        ? label.colorHex : "#2879C8";
+      node.style.setProperty("--wa-chat-accent", color);
+      node.style.setProperty("--wa-chat-bg", tintChatColor(color, 0.085));
+      node.style.setProperty("--wa-chat-hover", tintChatColor(color, 0.14));
+      node.style.setProperty("--wa-chat-selected", tintChatColor(color, 0.21));
+      node.classList.toggle("has-label-color", Boolean(label));
+    }
+
     function sortChats() {
       chats.sort((a, b) => {
         if (Boolean(a.fixado) !== Boolean(b.fixado)) return a.fixado ? -1 : 1;
@@ -710,6 +730,7 @@
       node.classList.toggle("has-unread", unread > 0);
       node.classList.toggle("is-pinned", Boolean(chat.fixado));
       node.classList.toggle("is-archived", Boolean(chat.arquivado));
+      setChatCardColor(node, chat);
       const strong = node.querySelector(".wa-chat-item-row strong");
       const displayName = chatDisplayName(chat);
       if (strong && strong.textContent !== displayName) strong.textContent = displayName;
