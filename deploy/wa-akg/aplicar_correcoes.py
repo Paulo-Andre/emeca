@@ -46,7 +46,7 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
         # Other custom local changes are NEVER overwritten automatically.
         old = target_file.read_bytes()
         git_blob = hashlib.sha1(
-            b"blob " + str(len(old)).encode() + b"\\0" + old
+            b"blob " + str(len(old)).encode() + b"\0" + old
         ).hexdigest()
         approved_prior_versions = {
             "3e44cfba9b5ea22bdbab55cdd6bbe7342244cb58",
