@@ -4,6 +4,7 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.cache import cache
 from django.urls import reverse
 from django.utils import timezone
 
@@ -861,6 +862,30 @@ class WhatsAppIdentidadeNotificacoesTests(TestCase):
             {"jid": self.telefone, "lastMessage": {"timestamp": "2026-10-17T12:01:00Z"}},
         ])
         self.assertEqual(len(chats), 2)
+
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
+    @patch("usuarioSec.whatsapp_views._mensagens_para_contar")
+    @patch("usuarioSec.whatsapp_views.listar_contatos", return_value={"data": []})
+    def test_lid_recupera_telefone_e_nome_do_historico(self, _contatos, mensagens, _gateway):
+        cache.clear()
+        mensagens.return_value = ([{
+            "keyId": "mensagem-real-1",
+            "timestamp": "2026-10-17T12:00:00Z",
+            "fromMe": False,
+            "type": "TEXT",
+            "content": "Olá",
+            "senderJid": self.telefone,
+            "pushName": "Pessoa identificada",
+        }], True)
+        chats = _enriquecer_chats([
+            {"jid": self.lid, "lastMessage": {"timestamp": "2026-10-17T12:00:00Z"}},
+            {"jid": self.telefone, "lastMessage": {"timestamp": "2026-10-17T12:01:00Z"}},
+        ])
+        self.assertEqual(len(chats), 1)
+        self.assertEqual(chats[0]["phoneJid"], self.telefone)
+        self.assertIn(self.lid, _aliases_contato_wa(self.telefone, []))
+        mensagens.assert_called_once_with([self.lid])
+        cache.clear()
 
     def test_aliases_apos_ligacao_transitiva(self):
         contatos = [
