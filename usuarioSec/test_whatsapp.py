@@ -16,11 +16,14 @@ from .management.commands.processar_envios_whatsapp import (
 from .models import (
     EnvioBoletimWhatsApp,
     ItemEnvioBoletimWhatsApp,
+    LeituraChatWhatsApp,
     TelefoneDeclaracao,
     declaracao,
 )
 from .whatsapp_views import (
     _enriquecer_chats,
+    _sincronizar_nao_lidas,
+    _aliases_contato_wa,
     _normalizar_jid,
     _resolver_boletins_destinatarios,
     _resolver_destinatarios,
@@ -815,3 +818,93 @@ class WhatsAppRecursosAvancadosTests(TestCase):
         self.assertContains(response, 'id="labelsButton"')
         self.assertContains(response, 'id="messageSearchButton"')
         self.assertContains(response, "Gerenciamento", count=1)
+
+
+class WhatsAppIdentidadeNotificacoesTests(TestCase):
+    def setUp(self):
+        self.usuario = get_user_model().objects.create_user(
+            username="teste_notificacoes_whatsapp",
+            password="Senha-Sintetica-2026!",
+        )
+        self.client.force_login(self.usuario)
+        self.lid = "184774392074394@lid"
+        self.telefone = "5538999990000@s.whatsapp.net"
+
+    @patch("usuarioSec.whatsapp_views.listar_contatos")
+    def test_lid_e_telefone_aparecem_uma_vez_e_preservam_aliases(self, listar):
+        listar.return_value = {"data": [{
+            "jid": self.lid, "lid": self.lid,
+            "remoteJidAlt": self.telefone, "name": "Pessoa da comunidade"
+        }]}
+        chats = _enriquecer_chats([
+            {"jid": self.lid, "lastMessage": {
+                "content": "Primeira mensagem", "timestamp": "2026-10-17T12:00:00Z"
+            }},
+            {"jid": self.telefone, "lastMessage": {
+                "content": "Mensagem mais recente", "timestamp": "2026-10-17T12:01:00Z"
+            }},
+        ])
+        self.assertEqual(len(chats), 1)
+        self.assertEqual(chats[0]["jid"], self.telefone)
+        self.assertEqual(chats[0]["lastMessage"]["content"], "Mensagem mais recente")
+        self.assertIn(self.lid, chats[0]["aliases"])
+        self.assertIn(self.telefone, chats[0]["aliases"])
+
+    @patch("usuarioSec.whatsapp_views.listar_contatos")
+    def test_igualdade_de_foto_ou_nome_nao_funde_contatos(self, listar):
+        listar.return_value = {"data": [
+            {"jid": self.lid, "name": "Mesmo nome", "profilePic": "https://example.invalid/a.jpg"},
+            {"jid": self.telefone, "name": "Mesmo nome", "profilePic": "https://example.invalid/a.jpg"},
+        ]}
+        chats = _enriquecer_chats([
+            {"jid": self.lid, "lastMessage": {"timestamp": "2026-10-17T12:00:00Z"}},
+            {"jid": self.telefone, "lastMessage": {"timestamp": "2026-10-17T12:01:00Z"}},
+        ])
+        self.assertEqual(len(chats), 2)
+
+    def test_aliases_apos_ligacao_transitiva(self):
+        contatos = [
+            {"jid": self.lid, "lid": self.lid, "remoteJidAlt": "5538999991111@s.whatsapp.net"},
+            {"jid": "5538999991111@s.whatsapp.net", "remoteJidAlt": self.telefone},
+        ]
+        aliases = _aliases_contato_wa(self.lid, contatos)
+        self.assertIn(self.telefone, aliases)
+
+    @patch("usuarioSec.whatsapp_views.obter_mensagens_chat")
+    def test_somente_recebidas_novas_entram_no_contador(self, carregar):
+        inicio = [{"jid": self.telefone, "aliases": [self.telefone], "lastMessage": {
+            "timestamp": "2026-10-17T12:00:00Z", "type": "TEXT", "content": "oi"
+        }}]
+        _sincronizar_nao_lidas(self.usuario, inicio)
+        self.assertEqual(inicio[0]["naoLidas"], 0)
+        carregar.return_value = {"data": [
+            {"keyId": "antes", "timestamp": "2026-10-17T12:00:00Z", "fromMe": False, "type": "TEXT", "content": "oi"},
+            {"keyId": "nova-1", "timestamp": "2026-10-17T12:01:00Z", "fromMe": False, "type": "TEXT", "content": "olá"},
+            {"keyId": "nova-2", "timestamp": "2026-10-17T12:02:00Z", "fromMe": True, "type": "TEXT", "content": "resposta"},
+            {"keyId": "sistema", "timestamp": "2026-10-17T12:02:30Z", "fromMe": False, "type": "TEXT", "content": ""},
+        ]}
+        atualizado = [{"jid": self.telefone, "aliases": [self.telefone], "lastMessage": {
+            "timestamp": "2026-10-17T12:03:00Z", "type": "TEXT", "content": "mensagem técnica"
+        }}]
+        _sincronizar_nao_lidas(self.usuario, atualizado)
+        self.assertEqual(atualizado[0]["naoLidas"], 1)
+        _sincronizar_nao_lidas(self.usuario, atualizado)
+        self.assertEqual(atualizado[0]["naoLidas"], 1)
+
+    @patch("usuarioSec.whatsapp_views.listar_contatos", return_value={"data": []})
+    @patch("usuarioSec.whatsapp_views.obter_mensagens_chat")
+    @patch("usuarioSec.whatsapp_views.marcar_chat_como_lido")
+    def test_abrir_chat_limpa_alerta_local(self, marcar, carregar, _contatos):
+        estado = LeituraChatWhatsApp.objects.create(
+            usuario=self.usuario, jid=self.telefone, nao_lidas=3
+        )
+        carregar.return_value = {"data": [{
+            "keyId": "msg-1", "timestamp": "2026-10-17T12:30:00Z",
+            "fromMe": False, "content": "Tudo bem?", "type": "TEXT"
+        }]}
+        response = self.client.get(reverse("whatsapp_chat_api"), {"jid": self.telefone})
+        self.assertEqual(response.status_code, 200)
+        estado.refresh_from_db()
+        self.assertEqual(estado.nao_lidas, 0)
+        self.assertIsNotNone(estado.ultima_verificacao_em)
+        marcar.assert_called_once_with(self.telefone)
