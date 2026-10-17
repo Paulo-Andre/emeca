@@ -1,3 +1,4 @@
+import logging
 import re
 from collections import defaultdict
 from hashlib import sha256
@@ -12,7 +13,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.core.cache import cache
 from django.contrib.auth.decorators import login_required
-from django.db import transaction
+from django.db import DatabaseError, transaction
 from django.db.models import Q
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import redirect, render
@@ -20,6 +21,8 @@ from django.views.decorators.http import require_GET, require_POST
 
 from site_publico.boletim_importacao import normalizar_nome
 from site_publico.models import BoletimAluno, PeriodoBoletim
+
+logger = logging.getLogger(__name__)
 
 from .access_control import usuario_tem_modulo
 from .sessao_whatsapp import (
@@ -649,7 +652,8 @@ def whatsapp_desconectar(request):
                 sessao_remota_ja_excluida = True
             else:
                 raise
-        dados = sessao.get("data") if isinstance(sessao, dict) else {}
+        sessao = sessao if isinstance(sessao, dict) else {}
+        dados = sessao.get("data") or {}
         dados = dados if isinstance(dados, dict) else {}
         status = str(dados.get("status") or sessao.get("status") or "").upper()
 
@@ -715,10 +719,37 @@ def whatsapp_desconectar(request):
             "Os registros apagados não poderão ser recuperados por este sistema."
         )
     except (WhatsAppGatewayError, ValueError) as exc:
+        logger.warning(
+            "Desconexão WhatsApp incompleta na sessão %s: %s",
+            sessao_atual_id(), exc,
+        )
         messages.error(
             request,
             "A exclusão do histórico não foi concluída. NÃO conecte outro número. "
             f"Verifique a sessão anterior e tente finalizar a limpeza: {exc}"
+        )
+    except DatabaseError:
+        logger.exception(
+            "Falha de banco durante a desconexão do WhatsApp. "
+            "Verifique a migração usuarioSec.0018 e o estado da sessão."
+        )
+        messages.error(
+            request,
+            "Erro no banco de dados ao desconectar o WhatsApp. Não conecte outro "
+            "número. Verifique as migrações com 'python manage.py showmigrations "
+            "usuarioSec' e execute 'python manage.py migrate' se necessário. "
+            "O logout pode já ter ocorrido; consulte os logs antes de repetir a ação."
+        )
+    except Exception:
+        logger.exception(
+            "Erro inesperado ao desconectar WhatsApp. Verifique se o logout "
+            "ou a exclusão remota já ocorreram antes de repetir a ação."
+        )
+        messages.error(
+            request,
+            "Não foi possível concluir a desconexão. Não conecte outro número "
+            "nem repita a exclusão antes de verificar os logs do servidor: "
+            "a operação pode ter sido parcialmente executada."
         )
     return redirect(destino)
 
