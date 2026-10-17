@@ -31,10 +31,12 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
     index = source / "src/modules/whatsapp/store/index.ts"
     chat_service = source / "src/modules/whatsapp/chat.service.ts"
     chat_route = source / "src/app/api/chat/[sessionId]/route.ts"
+    messages_route = source / "src/app/api/chat/[sessionId]/[jid]/route.ts"
+    contacts_route = source / "src/app/api/contacts/[sessionId]/route.ts"
     overlay_file = patch_dir / "overrides/src/modules/whatsapp/store/emeca-identity.ts"
     target_file = source / "src/modules/whatsapp/store/emeca-identity.ts"
 
-    required = [instance, index, chat_service, chat_route, overlay_file]
+    required = [instance, index, chat_service, chat_route, messages_route, contacts_route, overlay_file]
     missing = [str(p) for p in required if not p.is_file()]
     if missing:
         raise RuntimeError("Arquivos não encontrados: " + ", ".join(missing))
@@ -130,6 +132,89 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
         "cursor para todos os chats",
     )
     edits[chat_route] = value
+
+    value = messages_route.read_text(encoding="utf-8")
+    value = substitute(
+        value,
+        '        const messages = await prisma.message.findMany({\n'
+        '            where: {\n'
+        '                sessionId: dbSessionId,\n'
+        '                remoteJid: decodedJid\n'
+        '            },\n'
+        '            orderBy: { timestamp: \'desc\' }, // Fetch NEWEST first\n'
+        '            take: 100\n'
+        '        });\n\n'
+        '        // Reverse to show oldest -> newest\n'
+        '        messages.reverse();',
+        '        const params = new URL(request.url).searchParams;\n'
+        '        const wanted = Number.parseInt(params.get("limit") || "100", 10);\n'
+        '        const limit = Number.isFinite(wanted) ? Math.max(1, Math.min(wanted, 500)) : 100;\n'
+        '        const before = params.get("before");\n'
+        '        if (before && Number.isNaN(Date.parse(before))) {\n'
+        '            return NextResponse.json({ status: false, error: "Invalid cursor" }, { status: 400 });\n'
+        '        }\n'
+        '        // The same conversation may have been stored under phone and LID.\n'
+        '        const contact = await prisma.contact.findFirst({\n'
+        '            where: { sessionId: dbSessionId, OR: [\n'
+        '                { jid: decodedJid }, { lid: decodedJid },\n'
+        '                { remoteJidAlt: decodedJid }\n'
+        '            ] },\n'
+        '            select: { jid: true, lid: true, remoteJidAlt: true }\n'
+        '        });\n'
+        '        const aliasJids = [...new Set([\n'
+        '            decodedJid, contact?.jid, contact?.lid, contact?.remoteJidAlt\n'
+        '        ].filter((id): id is string => typeof id === "string" && !!id))];\n'
+        '        const messages = await prisma.message.findMany({\n'
+        '            where: { sessionId: dbSessionId,\n'
+        '                remoteJid: { in: aliasJids },\n'
+        '                ...(before ? { timestamp: { lt: new Date(before) } } : {})\n'
+        '            },\n'
+        '            orderBy: { timestamp: "desc" },\n'
+        '            take: limit + 1\n'
+        '        });\n'
+        '        const hasMore = messages.length > limit;\n'
+        '        if (hasMore) messages.pop();\n'
+        '        messages.reverse();\n'
+        '        const nextBefore = messages.length ? messages[0].timestamp.toISOString() : null;',
+        "paginação e resolução de aliases do histórico",
+    )
+    value = substitute(
+        value,
+        'return NextResponse.json({ status: true, data: enrichedMessages });',
+        'return NextResponse.json({ status: true, data: enrichedMessages, meta: { hasMore, nextBefore } });',
+        "cursor de mensagens de grupo",
+    )
+    value = substitute(
+        value,
+        'return NextResponse.json({ status: true, data: messages });',
+        'return NextResponse.json({ status: true, data: messages, meta: { hasMore, nextBefore } });',
+        "cursor de mensagens",
+    )
+    edits[messages_route] = value
+
+    value = contacts_route.read_text(encoding="utf-8")
+    value = substitute(
+        value,
+        '            data: contacts,',
+        '            data: contacts.map(contact => {\n'
+        '                const raw = (contact.data && typeof contact.data === "object")\n'
+        '                    ? contact.data as Record<string, any> : {};\n'
+        '                const candidates = [contact.jid, contact.lid, contact.remoteJidAlt,\n'
+        '                    raw.phoneNumber, raw.pnJid].filter(\n'
+        '                    (jid): jid is string => typeof jid === "string" && !!jid\n'
+        '                );\n'
+        '                const aliases = [...new Set(candidates.map(jid =>\n'
+        '                    jid.replace("@c.us", "@s.whatsapp.net")))];\n'
+        '                const phoneJid = aliases.find(jid =>\n'
+        '                    /^[0-9]+@s\.whatsapp\.net$/.test(jid)) || "";\n'
+        '                return { ...contact, aliases, phoneJid,\n'
+        '                    displayName: contact.name || contact.verifiedName ||\n'
+        '                        contact.notify || (phoneJid ? phoneJid.split("@")[0] : null)\n'
+        '                };\n'
+        '            }),',
+        "formato completo de contatos",
+    )
+    edits[contacts_route] = value
 
     edits[target_file] = overlay_file.read_text(encoding="utf-8")
     return edits
