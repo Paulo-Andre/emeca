@@ -21,6 +21,7 @@ from django.views.decorators.http import require_GET, require_POST
 from site_publico.boletim_importacao import normalizar_nome
 from site_publico.models import BoletimAluno, PeriodoBoletim
 
+from .access_control import usuario_tem_modulo
 from .agenda_android import AgendaImportError, MAX_VCF_BYTES, processar_agenda_vcf
 from .models import (
     EnvioBoletimWhatsApp,
@@ -289,6 +290,11 @@ def _resolver_boletins_destinatarios(
     }
 
 
+def _pode_desconectar_whatsapp(usuario):
+    """Apenas a Administração EMECA pode controlar a sessão institucional."""
+    return usuario_tem_modulo(usuario, "administracao", strict=True)
+
+
 @login_required
 def whatsapp(request):
     turmas = list(
@@ -332,6 +338,7 @@ def whatsapp(request):
             "gateway_configurado": gateway_configurado(),
             "gateway_status": status,
             "gateway_status_detalhe": status_detalhe,
+            "pode_desconectar": _pode_desconectar_whatsapp(request.user),
             "delay_segundos": round(
                 settings.WA_AKG_BROADCAST_DELAY_MS / 1000,
                 1,
@@ -537,7 +544,7 @@ def whatsapp_desconectar(request):
     Pausar preserva credenciais WhatsApp; desvincular invalida o aparelho
     associado e exige um novo QR Code para voltar a enviar mensagens.
     """
-    if not request.user.is_staff:
+    if not _pode_desconectar_whatsapp(request.user):
         return HttpResponseForbidden("Somente administradores podem desconectar o WhatsApp.")
 
     destino = "whatsapp_gerenciamento" if request.POST.get("origem") == "gerenciamento" else (
@@ -1398,6 +1405,7 @@ def whatsapp_mensagens(request):
             "gateway_configurado": gateway_configurado(),
             "gateway_status": status,
             "gateway_status_detalhe": status_detalhe,
+            "pode_desconectar": _pode_desconectar_whatsapp(request.user),
             "chats_iniciais": chats[:50],
         },
     )
@@ -2032,6 +2040,7 @@ def whatsapp_gerenciamento(request):
     dados = {
         "gateway_configurado": gateway_configurado(),
         "gateway_status": "NAO_CONFIGURADO",
+        "pode_desconectar": _pode_desconectar_whatsapp(request.user),
         "etiquetas": [],
         "auto_respostas": [],
         "agendamentos": [],
