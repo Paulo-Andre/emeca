@@ -1127,3 +1127,70 @@ class WhatsAppGatewayPaginacaoTests(TestCase):
         resposta = listar_chats()
         self.assertEqual(len(resposta["data"]), 1)
         self.assertLessEqual(requisicao.call_count, 3)
+
+
+class WhatsAppVisualizacaoPerfilTests(TestCase):
+    def setUp(self):
+        self.usuario = get_user_model().objects.create_user(
+            username="operador_perfil", password="senha-local-exemplo"
+        )
+        self.client.force_login(self.usuario)
+
+    @patch("usuarioSec.whatsapp_views.obter_perfil_contato")
+    @patch("usuarioSec.whatsapp_views.listar_contatos")
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
+    def test_perfil_exibe_nome_numero_sobre_e_foto_disponivel(
+        self, _config, contatos_mock, perfil_mock
+    ):
+        contatos_mock.return_value = {"data": [{
+            "jid": "5538999991234@s.whatsapp.net",
+            "name": "Maria Teste",
+            "notify": "Maria",
+            "profilePic": "https://example.invalid/foto.jpg",
+        }]}
+        perfil_mock.return_value = {
+            "status": True, "data": {"about": "Atendimento disponível"}
+        }
+        response = self.client.get(reverse("whatsapp_perfil_api"), {
+            "jid": "5538999991234@s.whatsapp.net"
+        })
+        self.assertEqual(response.status_code, 200)
+        perfil = response.json()["perfil"]
+        self.assertEqual(perfil["nome"], "Maria Teste")
+        self.assertEqual(perfil["telefoneJid"], "5538999991234@s.whatsapp.net")
+        self.assertEqual(perfil["sobre"], "Atendimento disponível")
+        self.assertTrue(perfil["fotoDisponivel"])
+
+    @patch("usuarioSec.whatsapp_views.obter_perfil_contato")
+    @patch("usuarioSec.whatsapp_views.listar_contatos", return_value={"data": []})
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
+    def test_lid_nao_aparece_como_numero_real(self, _gateway, _contatos, perfil_mock):
+        perfil_mock.return_value = {"status": True, "data": {"about": None}}
+        response = self.client.get(reverse("whatsapp_perfil_api"), {
+            "jid": "184774392074394@lid"
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["perfil"]["telefoneJid"], "")
+        self.assertEqual(response.json()["perfil"]["nome"], "Contato sem identificação")
+
+    def test_perfil_exige_login(self):
+        self.client.logout()
+        response = self.client.get(reverse("whatsapp_perfil_api"), {
+            "jid": "5538999991234@s.whatsapp.net"
+        })
+        self.assertEqual(response.status_code, 302)
+
+    def test_perfil_rejeita_identificadores_invalidos(self):
+        response = self.client.get(reverse("whatsapp_perfil_api"), {
+            "jid": "https://example.invalid"
+        })
+        self.assertEqual(response.status_code, 400)
+
+    def test_dialogs_foto_e_perfil_aparecem_na_tela(self):
+        with patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=False):
+            response = self.client.get(reverse("whatsapp_mensagens"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="contactPhotoDialog"')
+        self.assertContains(response, 'id="contactProfileDialog"')
+        self.assertContains(response, 'id="viewContactProfile"')
+        self.assertContains(response, "whatsapp_perfil_api")
