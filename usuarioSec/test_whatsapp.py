@@ -253,11 +253,13 @@ class WhatsAppBoletimTests(TestCase):
 
 class WhatsAppWorkerConcorrenciaTests(TestCase):
     def _envio(self, status="PENDENTE", iniciado_em=None):
+        from .sessao_whatsapp import sessao_atual_id
         envio = EnvioBoletimWhatsApp.objects.create(
             tipo_periodo="TRIMESTRE",
             numero_periodo=1,
             ano=2026,
             modo="todos",
+            sessao=sessao_atual_id(),
             status=status,
         )
         if iniciado_em is not None:
