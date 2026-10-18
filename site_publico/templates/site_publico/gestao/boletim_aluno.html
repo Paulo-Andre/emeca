@@ -15,6 +15,13 @@
 
   <div class="bulletin-grade-editor__student bulletin-grade-editor__student--details">
     <div class="manager-field manager-field--full">
+      <label for="{{ form.declaracao_aluno.id_for_label }}">{{ form.declaracao_aluno.label }}</label>
+      {{ form.declaracao_aluno }}
+      {% if form.declaracao_aluno.help_text %}<small>{{ form.declaracao_aluno.help_text }}</small>{% endif %}
+      {% for error in form.declaracao_aluno.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
+      <small>Não encontrou o aluno? Cadastre ou corrija primeiro em <a href="{% url 'telaDeclaracao' %}">Declarações</a>.</small>
+    </div>
+    <div class="manager-field manager-field--full">
       <label for="{{ form.nome_aluno.id_for_label }}">{{ form.nome_aluno.label }}</label>
       {{ form.nome_aluno }}
       {% if form.nome_aluno.help_text %}<small>{{ form.nome_aluno.help_text }}</small>{% endif %}
@@ -36,8 +43,8 @@
   <div class="manager-info-box">
     <i data-lucide="link-2"></i>
     <div>
-      <strong>Dados vinculados automaticamente</strong>
-      <p>Os dados necessários à consulta do boletim são localizados na base de Declarações pelo mesmo nome da criança.</p>
+      <strong>Identidade ligada a Declarações</strong>
+      <p>CPF da mãe, CPF do responsável e nascimento vêm exclusivamente do cadastro em Declarações. Matrículas e Histórico não são alterados.</p>
     </div>
   </div>
 
