@@ -20,13 +20,13 @@ def _legenda(envio, item, escola):
     modelo = (envio.mensagem or "").strip()
     if not modelo:
         return (
-            f"Olá! Segue o boletim escolar de {boletim.aluno.nome}, referente ao "
+            f"Olá! Segue o boletim escolar de {boletim.aluno.nome_oficial}, referente ao "
             f"{boletim.periodo.nome_periodo} de {boletim.periodo.ano}. "
             f"Documento enviado pela {escola}."
         )
 
     substituicoes = {
-        "{aluno}": boletim.aluno.nome,
+        "{aluno}": boletim.aluno.nome_oficial,
         "{periodo}": boletim.periodo.nome_periodo,
         "{ano}": str(boletim.periodo.ano),
         "{turma}": boletim.periodo.turma,
@@ -127,7 +127,7 @@ class Command(BaseCommand):
                         conteudo = arquivo.getvalue()
                         arquivo.close()
 
-                        aluno_slug = slugify(item.boletim.aluno.nome) or "aluno"
+                        aluno_slug = slugify(item.boletim.aluno.nome_oficial_oficial) or "aluno"
                         periodo_slug = slugify(item.boletim.periodo.nome_periodo) or "periodo"
                         nome_arquivo = (
                             f"boletim-{aluno_slug}-{periodo_slug}-"
