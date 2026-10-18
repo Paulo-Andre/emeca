@@ -164,7 +164,7 @@ class QACaixaCinzaSistemaTests(TestCase):
         self.assertContains(resposta, "Integração ainda não configurada")
         self.assertContains(resposta, 'id="newChatButton"')
         self.assertContains(resposta, 'id="attachButton"')
-        self.assertNotContains(resposta, "Mensagem enviada.")
+        self.assertContains(resposta, "const connected = false;")
 
     def test_ajax_privado_sem_login_nao_retorna_lista_de_chats(self):
         with patch(
