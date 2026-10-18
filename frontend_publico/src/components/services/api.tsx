@@ -6,7 +6,7 @@ function getCookie(name: string): string {
   return item ? decodeURIComponent(item.slice(prefix.length)) : "";
 }
 
-export async function enviarMatricula(dados: any) {
+export async function enviarMatricula(dados: import('../useState_SalvandoDados/salvandoDadosUseState').SetDados) {
   const csrfToken = getCookie("csrftoken");
   const response = await fetch("/matricula/", {
     method: "POST",
