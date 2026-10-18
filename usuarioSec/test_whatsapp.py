@@ -947,8 +947,10 @@ class WhatsAppIdentidadeNotificacoesTests(TestCase):
     @patch("usuarioSec.whatsapp_views.obter_mensagens_chat")
     @patch("usuarioSec.whatsapp_views.marcar_chat_como_lido")
     def test_abrir_chat_limpa_alerta_local(self, marcar, carregar, _contatos):
+        from .sessao_whatsapp import sessao_atual_id
         estado = LeituraChatWhatsApp.objects.create(
-            usuario=self.usuario, jid=self.telefone, nao_lidas=3
+            usuario=self.usuario, sessao=sessao_atual_id(),
+            jid=self.telefone, nao_lidas=3,
         )
         carregar.return_value = {"data": [{
             "keyId": "msg-1", "timestamp": "2026-10-17T12:30:00Z",
@@ -1220,7 +1222,7 @@ class WhatsAppVisualizacaoPerfilTests(TestCase):
         self.assertContains(response, 'id="contactPhotoDialog"')
         self.assertContains(response, 'id="contactProfileDialog"')
         self.assertContains(response, 'id="viewContactProfile"')
-        self.assertContains(response, "whatsapp_perfil_api")
+        self.assertContains(response, reverse("whatsapp_perfil_api"))
 
 
 class WhatsAppDesconexaoTests(TestCase):
