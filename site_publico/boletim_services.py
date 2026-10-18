@@ -444,6 +444,57 @@ def _pdf_texto(valor):
     return str(valor)
 
 
+def _imagem_simbolo_boletim(config_site):
+    """Retorna o símbolo institucional em PNG e suas dimensões originais.
+
+    Usa o logo definido no painel do site. Na ausência dele, utiliza o
+    símbolo oficial distribuído com o EMECA, sem distorcer a proporção.
+    Ambos os meios (download e WhatsApp) utilizam este mesmo gerador.
+    """
+    from django.contrib.staticfiles import finders
+    from PIL import Image as ImagemPillow
+
+    fontes = []
+    if config_site is not None and getattr(config_site, "logo_site", None):
+        try:
+            config_site.logo_site.open("rb")
+            try:
+                dados = config_site.logo_site.read()
+            finally:
+                config_site.logo_site.close()
+            if dados:
+                fontes.append(dados)
+        except (OSError, ValueError):
+            pass
+
+    caminho_padrao = finders.find("imagens/logo2.png.png")
+    if caminho_padrao:
+        try:
+            from pathlib import Path
+            fontes.append(Path(caminho_padrao).read_bytes())
+        except OSError:
+            pass
+
+    for dados in fontes:
+        try:
+            with ImagemPillow.open(BytesIO(dados)) as imagem:
+                imagem.load()
+                # Não embutir a imagem original de vários megapixels em
+                # centenas de PDFs enviados pela fila de WhatsApp.
+                imagem.thumbnail((600, 600), ImagemPillow.Resampling.LANCZOS)
+                largura, altura = imagem.size
+                if largura <= 0 or altura <= 0:
+                    continue
+                if imagem.mode not in {"RGB", "RGBA"}:
+                    imagem = imagem.convert("RGBA" if "A" in imagem.getbands() else "RGB")
+                saida = BytesIO()
+                imagem.save(saida, format="PNG", optimize=True)
+                return saida.getvalue(), largura, altura
+        except (OSError, ValueError):
+            continue
+    return None
+
+
 def gerar_pdf_boletim(boletim, config_site=None):
     from reportlab.lib import colors
     from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
@@ -592,16 +643,15 @@ def gerar_pdf_boletim(boletim, config_site=None):
     )
 
     logo = None
-    if config_site and getattr(config_site, "logo_site", None):
-        try:
-            config_site.logo_site.open("rb")
-            logo_bytes = config_site.logo_site.read()
-            config_site.logo_site.close()
-            if logo_bytes:
-                logo = Image(BytesIO(logo_bytes), width=22 * mm, height=22 * mm)
-                logo._restrictSize(22 * mm, 22 * mm)
-        except Exception:
-            logo = None
+    simbolo = _imagem_simbolo_boletim(config_site)
+    if simbolo:
+        dados, largura_pixels, altura_pixels = simbolo
+        fator = min(22 * mm / largura_pixels, 22 * mm / altura_pixels)
+        logo = Image(
+            BytesIO(dados),
+            width=largura_pixels * fator,
+            height=altura_pixels * fator,
+        )
 
     contato_linhas = [cidade]
     if endereco:
