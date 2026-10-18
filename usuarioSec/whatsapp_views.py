@@ -262,9 +262,12 @@ def _resolver_boletins_destinatarios(
         .prefetch_related("resultados__disciplina")
     )
 
-    por_nome = defaultdict(list)
+    # O boletim só pode ser associado ao aluno da mesma Declaração.
+    # Nunca enviar boletim por mera igualdade de nome (homônimos).
+    por_declaracao = defaultdict(list)
     for boletim in boletins:
-        por_nome[normalizar_nome(boletim.aluno.nome)].append(boletim)
+        if boletim.aluno.declaracao_id:
+            por_declaracao[boletim.aluno.declaracao_id].append(boletim)
 
     itens = []
     vistos = set()
@@ -279,17 +282,12 @@ def _resolver_boletins_destinatarios(
             continue
 
         declaracao_aluno = contato.declaracao
-        candidatos = por_nome.get(normalizar_nome(declaracao_aluno.nomeDoAluno), [])
-
-        if len(candidatos) > 1 and declaracao_aluno.turmaDoAluno:
-            turma_normalizada = normalizar_nome(declaracao_aluno.turmaDoAluno)
-            por_turma = [
-                item
-                for item in candidatos
-                if normalizar_nome(item.periodo.turma) == turma_normalizada
+        candidatos = por_declaracao.get(declaracao_aluno.pk, [])
+        if turma:
+            candidatos = [
+                item for item in candidatos
+                if normalizar_nome(item.periodo.turma) == normalizar_nome(turma)
             ]
-            if por_turma:
-                candidatos = por_turma
 
         if not candidatos:
             sem_boletim.add(declaracao_aluno.pk)
