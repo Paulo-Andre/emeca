@@ -468,7 +468,7 @@ def gerar_pdf_boletim(boletim, config_site=None):
         leftMargin=15 * mm,
         topMargin=13 * mm,
         bottomMargin=16 * mm,
-        title=f"Boletim - {boletim.aluno.nome}",
+        title=f"Boletim - {boletim.aluno.nome_oficial}",
         author=(
             config_site.nome_escola
             if config_site and config_site.nome_escola
@@ -683,7 +683,7 @@ def gerar_pdf_boletim(boletim, config_site=None):
 
     dados = [
         [
-            [Paragraph("ALUNO(A)", label), Paragraph(escape(boletim.aluno.nome), valor)],
+            [Paragraph("ALUNO(A)", label), Paragraph(escape(boletim.aluno.nome_oficial), valor)],
             [Paragraph("TURMA", label), Paragraph(escape(boletim.periodo.turma), valor)],
         ],
         [
