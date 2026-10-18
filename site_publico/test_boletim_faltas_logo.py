@@ -67,15 +67,15 @@ class ImportacaoFaltasColunaHTests(TestCase):
         leitura = self._ler(0)
         self.assertEqual(leitura["alunos"][0]["faltas_totais"], 0)
 
-    def test_arquivo_sem_coluna_h_nao_gera_faltas_inventadas(self):
+    def test_arquivo_sem_coluna_h_mantem_notas_sem_inventar_total(self):
         arquivo = SimpleUploadedFile("notas.xls", b"planilha-de-teste")
         sem_h = planilha_turma().iloc[:, :7].copy()
         with patch(
             "site_publico.boletim_importacao.pd.read_excel",
             return_value=sem_h,
         ):
-            with self.assertRaisesRegex(ImportacaoBoletimErro, "coluna H"):
-                ler_planilha_boletim(arquivo)
+            leitura = ler_planilha_boletim(arquivo)
+        self.assertIsNone(leitura["alunos"][0]["faltas_totais"])
 
 
 class PDFBoletimSimboloTests(TestCase):
