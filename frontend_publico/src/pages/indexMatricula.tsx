@@ -11,7 +11,7 @@ type Props = {
   setDados: React.Dispatch<React.SetStateAction<SetDados>>;
 };
 
-export default function DadosAluno({ dado, setDados }: Props) {
+export default function DadosAluno({ setDados }: Props) {
   const navigate = useNavigate();
 
   // CONTROLE DOS CAMPOS DINÂMICOS
