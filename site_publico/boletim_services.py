@@ -713,10 +713,13 @@ def gerar_pdf_boletim(boletim, config_site=None):
         )
     )
 
+    data_oficial = (
+        boletim.aluno.declaracao.dataNascimentoAluno
+        if boletim.aluno.declaracao_id else None
+    )
     nascimento = (
-        boletim.aluno.data_nascimento.strftime("%d/%m/%Y")
-        if boletim.aluno.data_nascimento
-        else "Não informado"
+        data_oficial.strftime("%d/%m/%Y")
+        if data_oficial else "Não informado"
     )
     resumo = Table(
         [
