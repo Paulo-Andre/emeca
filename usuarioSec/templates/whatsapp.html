@@ -363,7 +363,7 @@
             <span class="step"><i data-lucide="history"></i></span>
             <h3>Envios recentes de boletins</h3>
           </div>
-          <span class="helper">Atualize a página para acompanhar o processamento.</span>
+          <span class="helper">Envio aceito pela API não confirma entrega no aparelho. Atualize para acompanhar.</span>
         </div>
         <div class="history-list">
           {% for envio in envios_boletim %}
@@ -378,7 +378,7 @@
               </div>
               <div class="history-numbers">
                 <span class="history-status status-job-{{ envio.status|lower }}">{{ envio.get_status_display }}</span>
-                <small>{{ envio.enviados }} enviados · {{ envio.falhas }} falhas</small>
+                <small>{{ envio.enviados }} aceitos pelo gateway · {{ envio.falhas }} falhas</small>
               </div>
             </div>
           {% endfor %}
