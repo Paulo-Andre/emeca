@@ -8,11 +8,12 @@ interface DadosSelect {
 import "../css/input.css";
 import { useState } from "react";
 function Inputf({ required = false, placeholder, ...rest }: InputProps) {
+  const campoId = rest.id || rest.name;
   return (
     <>
       <div className="campo">
-        <input {...rest} required={required} />
-        <label>{placeholder}</label>
+        <input {...rest} id={campoId} required={required} />
+        <label htmlFor={campoId}>{placeholder}</label>
       </div>
     </>
   );
@@ -39,6 +40,7 @@ function Select({
   return (
     <div className="campo">
       <select
+        id={nomeResposta}
         name={nomeResposta}
         value={valorSelect}
         required
@@ -49,12 +51,12 @@ function Select({
         <option value="SIM">SIM</option>
       </select>
 
-      <label>{placeholder}</label>
+      <label htmlFor={nomeResposta}>{placeholder}</label>
 
       {valorSelect === "SIM" && (
         <div className="campo">
-          <input name={nomeResposta2} onChange={onChange} />
-          <label>{placeholder2}</label>
+          <input id={nomeResposta2} name={nomeResposta2} onChange={onChange} />
+          <label htmlFor={nomeResposta2}>{placeholder2}</label>
         </div>
       )}
     </div>
