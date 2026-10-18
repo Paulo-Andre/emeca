@@ -51,23 +51,42 @@ const checkScheduledMessages = async () => {
                         content = { text: msg.content };
                     }
 
-                    const sent = await instance.socket.sendMessage(msg.jid, content);
-                    if (!sent?.key?.id) {
-                        throw new Error("WhatsApp não confirmou o envio agendado.");
+                    // Reserva atômica: somente um worker/processo pode
+                    // enviar um agendamento. Nunca executar sendMessage()
+                    // diretamente sobre uma linha ainda PENDING.
+                    const claim = await prisma.scheduledMessage.updateMany({
+                        where: { id: msg.id, status: "PENDING" },
+                        data: { status: "PROCESSING" },
+                    });
+                    if (claim.count !== 1) {
+                        logger.debug("Scheduler", `Msg ${msg.id} claimed elsewhere; skipping.`);
+                        continue;
                     }
 
-                    await prisma.scheduledMessage.update({
-                        where: { id: msg.id },
-                        data: { status: "SENT" }
-                    });
-                    logger.success("Scheduler", `Msg ${msg.id} sent to ${msg.jid}`);
+                    try {
+                        const sent = await instance.socket.sendMessage(msg.jid, content);
+                        if (!sent?.key?.id) {
+                            throw new Error("WA-AKG não confirmou aceite de agendamento.");
+                        }
+                        // SENT = aceite pelo cliente WhatsApp; não prova
+                        // entrega no telefone destinatário.
+                        await prisma.scheduledMessage.updateMany({
+                            where: { id: msg.id, status: "PROCESSING" },
+                            data: { status: "SENT" },
+                        });
+                        logger.success("Scheduler", `Msg ${msg.id} accepted by WhatsApp client.`);
+                    } catch (sendError) {
+                        // Um timeout pode ocorrer depois de o WhatsApp aceitar
+                        // a mensagem. Não reprocessar automaticamente.
+                        await prisma.scheduledMessage.updateMany({
+                            where: { id: msg.id, status: "PROCESSING" },
+                            data: { status: "FAILED" },
+                        });
+                        throw sendError;
+                    }
 
                 } catch (err) {
-                    logger.error("Scheduler", `Failed to send scheduled msg ${msg.id}`, err);
-                    await prisma.scheduledMessage.update({
-                        where: { id: msg.id },
-                        data: { status: "FAILED" }
-                    });
+                    logger.error("Scheduler", `Falha ou estado incerto no agendamento ${msg.id}; verifique antes de repetir.`, err);
                 }
             } else {
                 logger.warn("Scheduler", `Session ${waSessionId} not connected for scheduled msg ${msg.id}; pendente para retry`);
