@@ -4,7 +4,7 @@
 
 No layout `Notas e Faltas` usado pela escola, **a coluna H é a primeira coluna de faltas e contém o total do aluno no período**. As demais colunas de faltas são decomposições ou detalhamentos da primeira, portanto **não devem ser somadas, nem usadas como substitutas do total**.
 
-O importador `site_publico/boletim_importacao.py` utiliza o índice 7 (coluna H) como `faltas_totais`. Se o arquivo antigo possuir menos de oito colunas, as notas são preservadas e o total fica vazio para revisão manual, sem inferência.
+O importador `site_publico/boletim_importacao.py` utiliza o índice 7 (coluna H) como `faltas_totais`. **Quando a linha tem nome válido de aluno na coluna C, H vazia ou com `-` representa zero faltas**, conforme orientação da Secretaria. Uma linha sem aluno na coluna C não gera boletim, nota ou falta. Outros textos não numéricos em H continuam pendentes de revisão. Se o arquivo antigo possuir menos de oito colunas, as notas são preservadas e o total fica vazio para revisão manual, sem inferência.
 
 O importador armazena `BoletimAluno.faltas_totais` e mantém `NotaBoletim.faltas` em branco. O PDF, o site público e o envio por WhatsApp usam o mesmo total do Boletim.
 
