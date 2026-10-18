@@ -1,0 +1,48 @@
+name: QA Navegador EMECA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/qa-navegador.yml"
+      - "usuarioSec/test_qa_browser.py"
+      - "usuarioSec/templates/whatsapp_mensagens.html"
+      - "usuarioSec/static/css/whatsapp*.css"
+      - "App/settings.py"
+  workflow_dispatch:
+
+jobs:
+  usabilidade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      DJANGO_DEBUG: "1"
+      DJANGO_SECRET_KEY: "qa-browser-secret-key-0123456789-abcdefghijklmnopqrstuvwxyz"
+      DOCUMENT_SIGNING_KEY: "qa-browser-signature-0123456789-abcdefghijklmnopqrstuvwxyz"
+      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1,testserver"
+      DJANGO_RBAC_STRICT: "0"
+      DJANGO_RATE_LIMIT_ENABLED: "0"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - name: Instalar Django e Playwright
+        run: |
+          pip install -r requirements.txt
+          pip install playwright
+          python -m playwright install --with-deps chromium
+      - name: Testar navegação real em desktop e celular
+        run: |
+          python manage.py check
+          python manage.py test usuarioSec.test_qa_browser --noinput -v 2
+      - name: Guardar capturas com dados fictícios
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-telas-whatsapp-sinteticas
+          path: qa_screens/
+          if-no-files-found: ignore
+          retention-days: 7
