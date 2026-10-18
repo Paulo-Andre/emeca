@@ -52,7 +52,7 @@ class RespostaNegativaDoGatewayTests(TestCase):
     )
     def test_resposta_negativa_em_anexo(self, enviar):
         arquivo = SimpleUploadedFile(
-            "arquivo-qa.pdf", b"%PDF-1.4 sintético", content_type="application/pdf",
+            "arquivo-qa.pdf", b"%PDF-1.4 qa-test", content_type="application/pdf",
         )
         resposta = self.client.post(
             reverse("whatsapp_enviar_midia_api"),
@@ -68,7 +68,7 @@ class RespostaNegativaDoGatewayTests(TestCase):
     )
     def test_resposta_negativa_em_nova_conversa_com_documento(self, enviar):
         arquivo = SimpleUploadedFile(
-            "arquivo-qa.pdf", b"%PDF-1.4 sintético", content_type="application/pdf",
+            "arquivo-qa.pdf", b"%PDF-1.4 qa-test", content_type="application/pdf",
         )
         resposta = self.client.post(
             reverse("whatsapp_nova_conversa_api"),
