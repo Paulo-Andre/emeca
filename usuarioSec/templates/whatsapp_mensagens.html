@@ -370,7 +370,15 @@
       if (moreMenu.open && !moreMenu.contains(event.target)) moreMenu.open = false;
     });
     document.addEventListener("keydown", event => {
-      if (event.key === "Escape" && !document.querySelector("dialog[open]") && inboxShell.classList.contains("is-chat-open")) showChatsOnMobile();
+      if (event.key !== "Escape" || document.querySelector("dialog[open]")) return;
+      if (moreMenu.open) {
+        moreMenu.open = false;
+        return;
+      }
+      if (window.matchMedia("(max-width: 900px)").matches &&
+          inboxShell.classList.contains("is-chat-open")) {
+        showChatsOnMobile();
+      }
     });
     const chatSearch = document.getElementById("chatSearch");
     const filterAllChats = document.getElementById("filterAllChats");
@@ -1392,6 +1400,7 @@
         });
         const totalNaoLidas = chats.reduce((total, item) => total + Math.max(0, Number(item.naoLidas || 0)), 0);
         chatCount.textContent = chats.length + " conversa(s)" + (totalNaoLidas ? " · " + totalNaoLidas + " nova(s)" : "");
+        if (unreadFilterEnabled) renderChats();
         if (!quiet) {
           replyStatus.textContent = "";
           replyStatus.className = "wa-reply-status";
