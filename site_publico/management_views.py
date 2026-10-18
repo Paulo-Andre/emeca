@@ -277,13 +277,15 @@ def gestao_boletim_periodo(request, pk):
     linhas = []
     for boletim_obj in boletins:
         aluno = boletim_obj.aluno
+        registro = aluno.declaracao if aluno.declaracao_id else None
         acesso_pronto = bool(
-            aluno.data_nascimento
-            and ((aluno.cpf_mae or "").strip() or (aluno.cpf_responsavel or "").strip())
+            registro and registro.dataNascimentoAluno
+            and ((registro.cpfMae or "").strip() or (registro.cpfResponsavel or "").strip())
         )
         linhas.append({
             "boletim": boletim_obj,
             "acesso_pronto": acesso_pronto,
+            "vinculado": bool(aluno.declaracao_id),
         })
 
     return render(request, "site_publico/gestao/boletim_periodo.html", {
@@ -297,6 +299,15 @@ def gestao_boletim_periodo(request, pk):
 @login_required
 def gestao_boletim_publicar(request, pk):
     periodo = get_object_or_404(PeriodoBoletim, pk=pk)
+    if not periodo.publicado:
+        pendentes = periodo.boletins.filter(aluno__declaracao__isnull=True).count()
+        if pendentes:
+            messages.error(
+                request,
+                f"Publicação bloqueada: {pendentes} aluno(s) sem vínculo "
+                "com Declarações. Abra cada aluno e selecione o cadastro correto.",
+            )
+            return redirect("site_publico:gestao_boletim_periodo", pk=periodo.pk)
     periodo.publicado = not periodo.publicado
     periodo.save(update_fields=["publicado", "atualizado_em"])
     messages.success(
@@ -378,67 +389,76 @@ def gestao_boletim_aluno(request, periodo_pk, boletim_pk=None):
     )
 
     if request.method == "POST" and form.is_valid():
-        status_declaracao = None
         try:
             with transaction.atomic():
                 nome = form.cleaned_data["nome_aluno"]
+                registro = form.cleaned_data.get("declaracao_aluno")
 
+                # A escolha explícita prevalece quando há homônimos ou nomes
+                # divergentes. Sem escolha, só aceitamos correspondência única.
+                if registro is None and perfil_fixo and perfil_fixo.declaracao_id:
+                    registro = perfil_fixo.declaracao
+                if registro is None:
+                    from .boletim_importacao import normalizar_nome
+                    from .boletim_services import _mapa_declaracoes_por_nome
+                    candidatos = _mapa_declaracoes_por_nome().get(
+                        normalizar_nome(nome), [],
+                    )
+                    if len(candidatos) == 1:
+                        registro = candidatos[0]
+                if registro is None:
+                    raise ValueError(
+                        "Selecione o aluno correspondente em Declarações. "
+                        "Não é permitido criar notas sem esse cadastro."
+                    )
+
+                if perfil_fixo and perfil_fixo.declaracao_id and perfil_fixo.declaracao_id != registro.pk:
+                    raise ValueError(
+                        "Este boletim já está vinculado a outra Declaração. "
+                        "A troca exige revisão administrativa para evitar misturar notas."
+                    )
+
+                perfil_existente = AlunoBoletim.objects.filter(
+                    declaracao=registro,
+                ).first()
                 if boletim_obj is not None:
                     perfil = boletim_obj.aluno
+                    if perfil_existente and perfil_existente.pk != perfil.pk:
+                        raise ValueError(
+                            "Esta declaração está vinculada a outro perfil. "
+                            "Não é seguro fundir notas automaticamente."
+                        )
+                elif perfil_existente:
+                    perfil = perfil_existente
                 else:
-                    # Reutiliza um perfil inequívoco do mesmo aluno quando já
-                    # houver boletins de outros períodos; em caso de duplicidade,
-                    # cria um perfil novo e não escolhe silenciosamente.
-                    candidatos_perfil = list(
-                        AlunoBoletim.objects.filter(nome__iexact=nome).order_by("pk")[:2]
-                    )
+                    from .boletim_importacao import normalizar_nome
+                    chave_nome = normalizar_nome(nome)
+                    livres = [
+                        p for p in AlunoBoletim.objects.filter(
+                            declaracao__isnull=True
+                        )
+                        if normalizar_nome(p.nome) == chave_nome
+                    ]
                     perfil = (
-                        candidatos_perfil[0]
-                        if len(candidatos_perfil) == 1
+                        livres[0] if len(livres) == 1
                         else AlunoBoletim.objects.create(nome=nome)
                     )
 
+                from .boletim_services import sincronizar_perfil_declaracao
+                perfil = sincronizar_perfil_declaracao(perfil, registro)
                 if perfil.nome != nome:
                     perfil.nome = nome
                     perfil.save(update_fields=["nome", "atualizado_em"])
 
-                # CPF e data de nascimento não são editados no boletim.
-                # A identidade é sincronizada automaticamente com Declarações,
-                # usando o mesmo nome da criança.
-                perfil, status_declaracao = sincronizar_perfil_por_nome_declaracao(
-                    perfil,
-                    nome,
-                )
-
                 if boletim_obj is None:
-                    boletim_obj, criado = BoletimAluno.objects.get_or_create(
-                        periodo=periodo,
-                        aluno=perfil,
-                        defaults={
-                            "numero_chamada": form.cleaned_data["numero_chamada"],
-                            "faltas_totais": form.cleaned_data.get("faltas_totais"),
-                        },
+                    boletim_obj, _ = BoletimAluno.objects.get_or_create(
+                        periodo=periodo, aluno=perfil,
                     )
-                    if not criado:
-                        boletim_obj.numero_chamada = form.cleaned_data["numero_chamada"]
-                        boletim_obj.faltas_totais = form.cleaned_data.get("faltas_totais")
-                        boletim_obj.save(
-                            update_fields=[
-                                "numero_chamada",
-                                "faltas_totais",
-                                "atualizado_em",
-                            ]
-                        )
-                else:
-                    boletim_obj.numero_chamada = form.cleaned_data["numero_chamada"]
-                    boletim_obj.faltas_totais = form.cleaned_data.get("faltas_totais")
-                    boletim_obj.save(
-                        update_fields=[
-                            "numero_chamada",
-                            "faltas_totais",
-                            "atualizado_em",
-                        ]
-                    )
+                boletim_obj.numero_chamada = form.cleaned_data["numero_chamada"]
+                boletim_obj.faltas_totais = form.cleaned_data.get("faltas_totais")
+                boletim_obj.save(
+                    update_fields=["numero_chamada", "faltas_totais", "atualizado_em"]
+                )
 
                 for disciplina in periodo.disciplinas.all():
                     nota = _decimal_post(request.POST.get(f"nota_{disciplina.pk}"))
@@ -452,20 +472,8 @@ def gestao_boletim_aluno(request, periodo_pk, boletim_pk=None):
         else:
             messages.success(
                 request,
-                "Nome do aluno, notas e faltas totais foram salvos.",
+                "Vínculo com Declarações, notas e faltas totais salvos.",
             )
-            if status_declaracao == "nao_encontrado":
-                messages.warning(
-                    request,
-                    "Não foi encontrada uma declaração com esse mesmo nome. "
-                    "CPF e data de nascimento não foram vinculados ao boletim.",
-                )
-            elif status_declaracao == "ambiguo":
-                messages.warning(
-                    request,
-                    "Há mais de uma declaração com esse mesmo nome. "
-                    "CPF e data de nascimento não foram vinculados para evitar associação incorreta.",
-                )
             return redirect("site_publico:gestao_boletim_periodo", pk=periodo.pk)
 
     linhas_notas = []
