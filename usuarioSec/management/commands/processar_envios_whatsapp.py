@@ -10,9 +10,10 @@ from django.utils.text import slugify
 from site_publico.boletim_services import gerar_pdf_boletim
 from site_publico.models import ConfiguracaoSite
 
-from usuarioSec.models import EnvioBoletimWhatsApp, ItemEnvioBoletimWhatsApp
+from usuarioSec.models import EnvioBoletimWhatsApp, ItemEnvioBoletimWhatsApp, TelefoneDeclaracao
 from usuarioSec.sessao_whatsapp import sessao_atual_id
-from usuarioSec.whatsapp_gateway import WhatsAppGatewayError, enviar_documento
+from usuarioSec.whatsapp_gateway import WhatsAppGatewayError, enviar_documento, confirmar_operacao_wa
+from usuarioSec.whatsapp_views import _normalizar_jid
 
 
 def _legenda(envio, item, escola):
@@ -35,6 +36,39 @@ def _legenda(envio, item, escola):
     for chave, valor in substituicoes.items():
         modelo = modelo.replace(chave, valor)
     return modelo
+
+
+def validar_destinatario_do_boletim(item):
+    """Barreira de privacidade antes de transmitir documentos escolares.
+
+    O lote pode ter sido criado antes da alteração de telefone, de Declaração
+    ou da retirada da publicação do período. Nunca enviar com esses dados
+    desatualizados: exige uma nova seleção pela Secretaria.
+    """
+    boletim = item.boletim
+    if not boletim.periodo.publicado:
+        raise WhatsAppGatewayError(
+            "Boletim deixou de estar publicado. Revise e selecione novamente."
+        )
+    declaracao_id = boletim.aluno.declaracao_id
+    if not declaracao_id:
+        raise WhatsAppGatewayError(
+            "Boletim está sem vínculo confirmado com Declarações."
+        )
+    telefones = TelefoneDeclaracao.objects.filter(declaracao_id=declaracao_id)
+    if not any(
+        _normalizar_jid(telefone.telefone) == item.jid
+        for telefone in telefones
+    ):
+        raise WhatsAppGatewayError(
+            "Contato não pertence mais ao cadastro atual da Declaração. "
+            "Revise os destinatários antes de criar outro envio."
+        )
+
+
+def confirmar_aceite_documento(resposta):
+    """Aceite da API não é comprovante de entrega no aparelho destinatário."""
+    return confirmar_operacao_wa(resposta, "envio do PDF do boletim")
 
 
 def recuperar_lotes_obsoletos():
@@ -123,6 +157,9 @@ class Command(BaseCommand):
                     item.save(update_fields=["status", "erro"])
 
                     try:
+                        # O usuário pode ter alterado a Declaração ou o contato
+                        # enquanto o lote aguardava na fila.
+                        validar_destinatario_do_boletim(item)
                         arquivo = gerar_pdf_boletim(item.boletim, config)
                         conteudo = arquivo.getvalue()
                         arquivo.close()
@@ -138,13 +175,16 @@ class Command(BaseCommand):
                             raise WhatsAppGatewayError(
                                 "Conta WhatsApp alterada: envio da sessão anterior cancelado."
                             )
-                        enviar_documento(
+                        resposta_gateway = enviar_documento(
                             item.jid,
                             conteudo,
                             nome_arquivo,
                             _legenda(envio, item, escola),
                             sessao_id=envio.sessao,
                         )
+                        # HTTP 200 com status:false ou resposta vazia nunca
+                        # deve gerar um falso "ENVIADO".
+                        confirmar_aceite_documento(resposta_gateway)
 
                         item.status = "ENVIADO"
                         item.enviado_em = timezone.now()
