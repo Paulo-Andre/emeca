@@ -31,6 +31,14 @@ test -r "$WA_COMPOSE" || falhar "Compose WA-AKG não encontrado."
 test -r "$WA_ENV" || falhar "Arquivo .env do WA-AKG não encontrado em deploy/wa-akg/.env."
 test -r "$PATCHER" || falhar "Aplicador WA-AKG não encontrado."
 test -d /srv/projetos/wa-akg || falhar "WA-AKG não está em /srv/projetos/wa-akg."
+# O volume /backups é montado do host; usuário SSH deve criar o diretório
+# do lote sem usar root e sem mudar permissões dos backups já existentes.
+if ! test -d "$DEST_BASE" || ! test -w "$DEST_BASE"; then
+  log "ATENÇÃO: usuário atual não consegue criar backups em $DEST_BASE."
+  if test "$MODO" = "--aplicar"; then
+    falhar "Corrija a permissão da pasta de backups ANTES de implantar; não execute o script com sudo."
+  fi
+fi
 docker compose config --quiet
 docker compose "${WA_ARGS[@]}" config --quiet
 docker compose ps
@@ -189,6 +197,36 @@ docker compose build web whatsapp-worker
 # a aplicação atual. O entrypoint deve ser desabilitado explicitamente.
 docker compose run --rm --no-deps -T -e SKIP_DJANGO_INIT=1 web \
   python manage.py check
+
+# O container web em execução tem o código ANTIGO e seu migrate --plan
+# não enxerga 0013_alunoboletim_declaracao. Testar primeiro toda migração
+# em uma cópia do snapshot, montada em /backups, sob a imagem NOVA.
+ENSAIO="$DEST/ensaio-migracao.sqlite3"
+cp -- "$DEST/emeca.sqlite3" "$ENSAIO"
+chmod 600 "$ENSAIO"
+log "Homologando migrações sobre cópia do banco, sem alterar /data"
+if ! docker compose run --rm --no-deps -T \
+  -e SKIP_DJANGO_INIT=1 \
+  -e DJANGO_DB_PATH="/backups/implantacao-$STAMP/ensaio-migracao.sqlite3" \
+  web python manage.py migrate --noinput; then
+  falhar "Falha na migração de ensaio. Produção NÃO foi migrada; verifique o backup."
+fi
+python3 - "$ENSAIO" <<'PY'
+import sqlite3
+import sys
+
+with sqlite3.connect(sys.argv[1]) as con:
+    if con.execute("PRAGMA integrity_check").fetchone() != ("ok",):
+        raise SystemExit("Migração de ensaio corrompeu o SQLite.")
+    atualizada = con.execute(
+        "SELECT COUNT(*) FROM django_migrations WHERE app = ? AND name = ?",
+        ("site_publico", "0013_alunoboletim_declaracao"),
+    ).fetchone()[0]
+    if atualizada != 1:
+        raise SystemExit("Migração 0013 não foi aplicada no banco de ensaio.")
+print("Migração 0013 e integridade do ensaio confirmadas.")
+PY
+rm -f -- "$ENSAIO"
 
 log "Pausando worker ANTES de reiniciar WhatsApp e migrar EMECA"
 docker compose stop whatsapp-worker
