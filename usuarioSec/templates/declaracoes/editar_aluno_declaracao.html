@@ -1,0 +1,135 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Editar aluno · Declarações · EMECA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+  <link rel="stylesheet" href="{% static 'css/school-ui.css' %}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .de-edit-main { min-width: 0; }
+    .de-edit-wrap { width: min(1060px, 100%); margin: 0 auto; padding-bottom: 45px; }
+    .de-edit-head { display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap; margin: 0 0 22px; }
+    .de-edit-head h1 { color: var(--school-text, #163846); font-size: clamp(20px, 3vw, 28px); margin: 0 0 5px; }
+    .de-edit-head p { color: var(--school-muted, #667d87); margin: 0; font-size: 13px; }
+    .de-edit-back { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; border: 1px solid #cddce1; border-radius: 10px; padding: 11px 15px; color: #285566; font-weight: 700; background: #fff; }
+    .de-edit-card { padding: 22px; background: #fff; border: 1px solid #dfe9ed; border-radius: 16px; margin-bottom: 18px; box-shadow: 0 4px 20px rgba(18,56,70,.045); }
+    .de-edit-section { display: flex; align-items: center; gap: 10px; padding-bottom: 13px; margin-bottom: 18px; border-bottom: 1px solid #e9f0f3; color: #175d77; }
+    .de-edit-section svg { width: 21px; height: 21px; }
+    .de-edit-section h2 { font-size: 16px; margin: 0; color: #214857; }
+    .de-edit-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; }
+    .de-edit-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .de-edit-field label, .de-edit-label { font-size: 12px; font-weight: 700; color: #435d69; }
+    .de-edit-field input, .de-edit-field select, .de-edit-phone input { box-sizing: border-box; width: 100%; min-height: 43px; border: 1px solid #cbdce2; border-radius: 10px; background: #fff; padding: 10px 12px; font: inherit; color: #183c4b; }
+    .de-edit-field input:focus, .de-edit-phone input:focus { border-color: #176585; outline: 3px solid #e2f1f7; }
+    .de-edit-full { grid-column: 1 / -1; }
+    .de-edit-error { color: #a52b34; font-size: 12px; margin: 0; list-style: none; padding-left: 0; }
+    .de-edit-info { font-size: 12px; color: #617884; margin: 0 0 16px; }
+    .de-edit-phones { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 15px; }
+    .de-edit-phone { background: #f8fbfc; border: 1px solid #dfe9ed; border-radius: 12px; padding: 15px; min-width: 0; }
+    .de-edit-phone h3 { margin: 0 0 12px; font-size: 13px; color: #234a5c; }
+    .de-edit-phone input { margin-bottom: 9px; background: #fff; }
+    .de-edit-add { background: #edf7f4; border: 1px solid #bcded1; border-radius: 9px; padding: 8px 10px; color: #21634e; font-weight: 700; cursor: pointer; font-size: 12px; }
+    .de-edit-actions { display: flex; justify-content: flex-end; gap: 12px; align-items: center; flex-wrap: wrap; position: sticky; bottom: 0; padding: 15px; border: 1px solid #dfe9ed; border-radius: 12px; background: rgba(255,255,255,.98); box-shadow: 0 -5px 20px rgba(18,56,70,.06); }
+    .de-edit-save { border: 0; background: var(--school-primary, #145c77); color: #fff; padding: 12px 18px; border-radius: 10px; font: 700 14px Inter, sans-serif; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; }
+    .de-edit-save:hover { filter: brightness(.92); }
+    .de-edit-alert { padding: 13px 17px; margin-bottom: 16px; border-radius: 11px; background: #edf8f3; border: 1px solid #bcdfd0; color: #215c46; }
+    .de-edit-alert.error { background: #fff1f1; border-color: #ffd2d2; color: #a12b36; }
+    @media(max-width:850px) { .de-edit-grid {grid-template-columns:repeat(2,minmax(0,1fr));} .de-edit-phones {grid-template-columns:1fr;} }
+    @media(max-width:550px) { .de-edit-card {padding:16px;} .de-edit-grid {grid-template-columns:1fr;} .de-edit-actions > * {flex:1; text-align:center; justify-content:center;} }
+  </style>
+</head>
+<body class="secretaria-dashboard">
+  {% include 'includes/sidebar.html' %}
+  <main class="main de-edit-main">
+    <div class="de-edit-wrap">
+      <header class="de-edit-head">
+        <div>
+          <h1>Editar dados do aluno</h1>
+          <p>Declarações · {{ aluno.nomeDoAluno }} · Registro nº {{ aluno.pk }}</p>
+        </div>
+        <a class="de-edit-back" href="{% url 'telaDeclaracao' %}"><i data-lucide="arrow-left"></i> Voltar às declarações</a>
+      </header>
+      {% for message in messages %}
+        <div class="de-edit-alert{% if message.tags == 'error' %} error{% endif %}" role="status">{{ message }}</div>
+      {% endfor %}
+      {% if form.errors %}
+        <div class="de-edit-alert error" role="alert">Confira os campos destacados. Nenhuma alteração foi salva.</div>
+      {% endif %}
+      <form method="post" id="editarAlunoDeclaracao" autocomplete="off">
+        {% csrf_token %}
+        <section class="de-edit-card">
+          <div class="de-edit-section"><i data-lucide="graduation-cap"></i><h2>Dados pessoais e escolares</h2></div>
+          <div class="de-edit-grid">
+            <div class="de-edit-field de-edit-full">
+              <label for="{{ form.nomeDoAluno.id_for_label }}">{{ form.nomeDoAluno.label }} *</label>{{ form.nomeDoAluno }}{{ form.nomeDoAluno.errors }}
+            </div>
+            <div class="de-edit-field"><label for="{{ form.dataNascimentoAluno.id_for_label }}">{{ form.dataNascimentoAluno.label }}</label>{{ form.dataNascimentoAluno }}{{ form.dataNascimentoAluno.errors }}</div>
+            <div class="de-edit-field"><label for="{{ form.cpfDoAluno.id_for_label }}">{{ form.cpfDoAluno.label }}</label>{{ form.cpfDoAluno }}{{ form.cpfDoAluno.errors }}</div>
+            <div class="de-edit-field"><label for="{{ form.cartaoSusDoAluno.id_for_label }}">{{ form.cartaoSusDoAluno.label }}</label>{{ form.cartaoSusDoAluno }}{{ form.cartaoSusDoAluno.errors }}</div>
+            <div class="de-edit-field"><label for="{{ form.nacionaliadeAluno.id_for_label }}">{{ form.nacionaliadeAluno.label }}</label>{{ form.nacionaliadeAluno }}{{ form.nacionaliadeAluno.errors }}</div>
+            <div class="de-edit-field"><label for="{{ form.natularidadeAluno.id_for_label }}">{{ form.natularidadeAluno.label }}</label>{{ form.natularidadeAluno }}{{ form.natularidadeAluno.errors }}</div>
+            <div class="de-edit-field"><label for="{{ form.ufAluno.id_for_label }}">{{ form.ufAluno.label }}</label>{{ form.ufAluno }}{{ form.ufAluno.errors }}</div>
+            <div class="de-edit-field"><label for="{{ form.sexoDoAluno.id_for_label }}">{{ form.sexoDoAluno.label }}</label>{{ form.sexoDoAluno }}{{ form.sexoDoAluno.errors }}</div>
+            <div class="de-edit-field"><label for="{{ form.turmaDoAluno.id_for_label }}">{{ form.turmaDoAluno.label }}</label>{{ form.turmaDoAluno }}{{ form.turmaDoAluno.errors }}</div>
+          </div>
+        </section>
+        <section class="de-edit-card">
+          <div class="de-edit-section"><i data-lucide="users"></i><h2>Filiação e responsável</h2></div>
+          <p class="de-edit-info">Você pode acrescentar ou corrigir os nomes e CPFs do pai, da mãe e do responsável.</p>
+          <div class="de-edit-grid">
+            <div class="de-edit-field"><label for="{{ form.nomePai.id_for_label }}">{{ form.nomePai.label }}</label>{{ form.nomePai }}{{ form.nomePai.errors }}</div>
+            <div class="de-edit-field"><label for="{{ form.cpfPai.id_for_label }}">{{ form.cpfPai.label }}</label>{{ form.cpfPai }}{{ form.cpfPai.errors }}</div>
+            <div class="de-edit-field"><label for="{{ form.nomeMae.id_for_label }}">{{ form.nomeMae.label }}</label>{{ form.nomeMae }}{{ form.nomeMae.errors }}</div>
+            <div class="de-edit-field"><label for="{{ form.cpfMae.id_for_label }}">{{ form.cpfMae.label }}</label>{{ form.cpfMae }}{{ form.cpfMae.errors }}</div>
+            <div class="de-edit-field"><label for="{{ form.nomeResponsavel.id_for_label }}">{{ form.nomeResponsavel.label }}</label>{{ form.nomeResponsavel }}{{ form.nomeResponsavel.errors }}</div>
+            <div class="de-edit-field"><label for="{{ form.cpfResponsavel.id_for_label }}">{{ form.cpfResponsavel.label }}</label>{{ form.cpfResponsavel }}{{ form.cpfResponsavel.errors }}</div>
+          </div>
+        </section>
+        <section class="de-edit-card">
+          <div class="de-edit-section"><i data-lucide="phone"></i><h2>Telefones dos responsáveis</h2></div>
+          <p class="de-edit-info">Altere, inclua ou apague números. Telefones repetidos do mesmo vínculo serão unificados automaticamente.</p>
+          <div class="de-edit-phones">
+            {% for grupo in grupos_telefone %}
+            <div class="de-edit-phone">
+              <h3>{{ grupo.titulo }}</h3>
+              <div class="de-edit-phone-inputs" id="grupoTelefone-{{ grupo.tipo }}">
+                {% for numero in grupo.numeros %}
+                <input type="tel" name="{{ grupo.campo }}" value="{{ numero }}" maxlength="30" aria-label="{{ grupo.titulo }} - telefone {{ forloop.counter }}" placeholder="Telefone com DDD">
+                {% endfor %}
+              </div>
+              <button type="button" class="de-edit-add" data-phone-target="grupoTelefone-{{ grupo.tipo }}" data-phone-name="{{ grupo.campo }}">+ Adicionar telefone</button>
+            </div>
+            {% endfor %}
+          </div>
+        </section>
+        <div class="de-edit-actions">
+          <a class="de-edit-back" href="{% url 'telaDeclaracao' %}">Cancelar</a>
+          <button class="de-edit-save" type="submit"><i data-lucide="save"></i> Salvar alterações</button>
+        </div>
+      </form>
+    </div>
+  </main>
+  <script>
+    if (window.lucide) lucide.createIcons();
+    document.querySelectorAll('[data-phone-target]').forEach(function(botao) {
+      botao.addEventListener('click', function() {
+        const destino = document.getElementById(botao.dataset.phoneTarget);
+        if (!destino) return;
+        const campo = document.createElement('input');
+        campo.type = 'tel';
+        campo.name = botao.dataset.phoneName;
+        campo.maxLength = 30;
+        campo.placeholder = 'Telefone com DDD';
+        campo.setAttribute('aria-label', 'Telefone adicional');
+        destino.appendChild(campo);
+        campo.focus();
+      });
+    });
+  </script>
+</body>
+</html>
