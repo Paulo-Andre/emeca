@@ -239,6 +239,17 @@ def _disciplinas(df, cabecalho_idx, nome_col):
 COLUNA_FALTAS_TOTAIS_EXCEL = 7  # coluna H (A=0)
 
 
+def _faltas_totais_coluna_h(valor):
+    """Interpreta vazio e traço como zero, conforme regra da Secretaria.
+
+    Só é chamada para uma linha com aluno identificado. Textos inesperados
+    continuam pendentes (None), para não fabricar um número de faltas.
+    """
+    if texto(valor) in {"", "-"}:
+        return 0
+    return _numero_inteiro(valor)
+
+
 def _coluna_faltas_totais(df, cabecalho_idx, nome_col, componentes):
     """Seleciona somente H como o total de faltas do aluno no período.
 
@@ -457,7 +468,7 @@ def ler_planilha_boletim(arquivo):
             )
 
         faltas_totais = (
-            _numero_inteiro(row.iloc[faltas_totais_col])
+            _faltas_totais_coluna_h(row.iloc[faltas_totais_col])
             if faltas_totais_col is not None and faltas_totais_col < len(row)
             else None
         )
