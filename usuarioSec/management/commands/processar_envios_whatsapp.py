@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from site_publico.boletim_services import gerar_pdf_boletim
-from site_publico.models import ConfiguracaoSite
+from site_publico.models import BoletimAluno, ConfiguracaoSite
 
 from usuarioSec.models import EnvioBoletimWhatsApp, ItemEnvioBoletimWhatsApp, TelefoneDeclaracao
 from usuarioSec.sessao_whatsapp import sessao_atual_id
@@ -45,7 +45,12 @@ def validar_destinatario_do_boletim(item):
     ou da retirada da publicação do período. Nunca enviar com esses dados
     desatualizados: exige uma nova seleção pela Secretaria.
     """
-    boletim = item.boletim
+    # Buscar novamente o boletim: os objetos carregados quando o lote
+    # começou podem estar desatualizados em disparos para muitas famílias.
+    boletim = BoletimAluno.objects.select_related(
+        "aluno", "aluno__declaracao", "periodo",
+    ).get(pk=item.boletim_id)
+    item.boletim = boletim
     if not boletim.periodo.publicado:
         raise WhatsAppGatewayError(
             "Boletim deixou de estar publicado. Revise e selecione novamente."
@@ -69,6 +74,56 @@ def validar_destinatario_do_boletim(item):
 def confirmar_aceite_documento(resposta):
     """Aceite da API não é comprovante de entrega no aparelho destinatário."""
     return confirmar_operacao_wa(resposta, "envio do PDF do boletim")
+
+
+def processar_item(envio, item, config, escola):
+    """Processa um único PDF; sucesso significa aceite pela API, não entrega.
+
+    Em timeout a mensagem pode ter sido aceita pelo WhatsApp; o item vira
+    ERRO e NÃO é retransmitido automaticamente, evitando duplicidade.
+    """
+    item.status = "PROCESSANDO"
+    item.erro = ""
+    item.save(update_fields=["status", "erro"])
+    try:
+        validar_destinatario_do_boletim(item)
+        if envio.sessao != sessao_atual_id():
+            raise WhatsAppGatewayError(
+                "Conta WhatsApp alterada: envio da sessão anterior cancelado."
+            )
+        arquivo = gerar_pdf_boletim(item.boletim, config)
+        try:
+            conteudo = arquivo.getvalue()
+        finally:
+            arquivo.close()
+
+        aluno_slug = slugify(item.boletim.aluno.nome_oficial) or "aluno"
+        periodo_slug = slugify(item.boletim.periodo.nome_periodo) or "periodo"
+        nome_arquivo = (
+            f"boletim-{aluno_slug}-{periodo_slug}-"
+            f"{item.boletim.periodo.ano}.pdf"
+        )
+        resposta = enviar_documento(
+            item.jid, conteudo, nome_arquivo,
+            _legenda(envio, item, escola),
+            sessao_id=envio.sessao,
+        )
+        confirmar_aceite_documento(resposta)
+
+        item.status = "ENVIADO"
+        item.enviado_em = timezone.now()
+        item.save(update_fields=["status", "enviado_em"])
+    except WhatsAppGatewayError as exc:
+        item.status = "ERRO"
+        item.erro = str(exc)[:500]
+        item.save(update_fields=["status", "erro"])
+    except Exception:
+        # Não armazenar exceções contendo caminhos, payloads, tokens ou
+        # documentos. Logs detalhados ficam restritos à observabilidade.
+        item.status = "ERRO"
+        item.erro = "Falha técnica ao gerar ou enviar o PDF. Conferir logs."
+        item.save(update_fields=["status", "erro"])
+    return item.status
 
 
 def recuperar_lotes_obsoletos():
@@ -152,52 +207,7 @@ class Command(BaseCommand):
                 )
 
                 for indice, item in enumerate(itens):
-                    item.status = "PROCESSANDO"
-                    item.erro = ""
-                    item.save(update_fields=["status", "erro"])
-
-                    try:
-                        # O usuário pode ter alterado a Declaração ou o contato
-                        # enquanto o lote aguardava na fila.
-                        validar_destinatario_do_boletim(item)
-                        arquivo = gerar_pdf_boletim(item.boletim, config)
-                        conteudo = arquivo.getvalue()
-                        arquivo.close()
-
-                        aluno_slug = slugify(item.boletim.aluno.nome_oficial) or "aluno"
-                        periodo_slug = slugify(item.boletim.periodo.nome_periodo) or "periodo"
-                        nome_arquivo = (
-                            f"boletim-{aluno_slug}-{periodo_slug}-"
-                            f"{item.boletim.periodo.ano}.pdf"
-                        )
-
-                        if envio.sessao != sessao_atual_id():
-                            raise WhatsAppGatewayError(
-                                "Conta WhatsApp alterada: envio da sessão anterior cancelado."
-                            )
-                        resposta_gateway = enviar_documento(
-                            item.jid,
-                            conteudo,
-                            nome_arquivo,
-                            _legenda(envio, item, escola),
-                            sessao_id=envio.sessao,
-                        )
-                        # HTTP 200 com status:false ou resposta vazia nunca
-                        # deve gerar um falso "ENVIADO".
-                        confirmar_aceite_documento(resposta_gateway)
-
-                        item.status = "ENVIADO"
-                        item.enviado_em = timezone.now()
-                        item.save(update_fields=["status", "enviado_em"])
-                    except WhatsAppGatewayError as exc:
-                        item.status = "ERRO"
-                        item.erro = str(exc)[:500]
-                        item.save(update_fields=["status", "erro"])
-                    except Exception as exc:
-                        item.status = "ERRO"
-                        item.erro = f"Falha ao gerar ou enviar o PDF: {exc}"[:500]
-                        item.save(update_fields=["status", "erro"])
-
+                    processar_item(envio, item, config, escola)
                     if indice < len(itens) - 1:
                         time.sleep(settings.WA_AKG_BROADCAST_DELAY_MS / 1000)
 
