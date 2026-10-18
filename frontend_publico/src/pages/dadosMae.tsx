@@ -11,7 +11,7 @@ type Props = {
   setDados: React.Dispatch<React.SetStateAction<SetDados>>;
 };
 
-export default function DadosMae({ dado, setDados }: Props) {
+export default function DadosMae({ setDados }: Props) {
   const navigate = useNavigate();
 
   // 🔹 MÁSCARAS
