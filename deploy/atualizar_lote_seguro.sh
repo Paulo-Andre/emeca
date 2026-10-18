@@ -62,6 +62,19 @@ log "Lotes de PDF em fila/processamento: $FILA"
 if test "$MODO" = "--aplicar" && test "$FILA" != "0"; then
   falhar "Há boletins aguardando envio. Aguarde/revise os lotes antes de reiniciar o worker."
 fi
+# Agendamentos WA-AKG interrompidos não podem ser repetidos às cegas.
+# Antes da atualização, exigir revisão manual dos PROCESSING, sem ler
+# nem exibir telefone, mensagem ou qualquer dado do destinatário.
+WA_INCERTOS="$(docker compose "${WA_ARGS[@]}" exec -T db sh -c \
+  'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot -Nse "SELECT COUNT(*) FROM ScheduledMessage WHERE status = \\"PROCESSING\\";" "$MYSQL_DATABASE"' \
+  | tail -1 | tr -d '\r')" || falhar "Não foi possível conferir agendamentos WA-AKG."
+case "$WA_INCERTOS" in
+  ''|*[!0-9]*) falhar "A contagem de agendamentos WA-AKG é inválida." ;;
+esac
+log "Agendamentos WA-AKG em estado incerto (PROCESSING): $WA_INCERTOS"
+if test "$MODO" = "--aplicar" && test "$WA_INCERTOS" != "0"; then
+  falhar "Existem agendamentos WA-AKG com envio incerto; revise antes da implantação."
+fi
 
 if test "$MODO" = "--preflight"; then
   log "Pré-verificação concluída. Nenhuma imagem ou banco foi modificado."
