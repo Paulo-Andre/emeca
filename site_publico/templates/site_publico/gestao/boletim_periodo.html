@@ -93,11 +93,11 @@
           <div>
             <strong>{{ linha.boletim.aluno.nome }}</strong>
             <small>
-              {% if linha.boletim.aluno.data_nascimento %}{{ linha.boletim.aluno.data_nascimento|date:"d/m/Y" }}{% else %}Sem data de nascimento{% endif %}
+              {% if linha.boletim.aluno.declaracao and linha.boletim.aluno.declaracao.dataNascimentoAluno %}{{ linha.boletim.aluno.declaracao.dataNascimentoAluno|date:"d/m/Y" }}{% else %}Sem data de nascimento em Declarações{% endif %}
             </small>
           </div>
           <span class="manager-badge {% if linha.acesso_pronto %}is-on{% else %}is-off{% endif %}">
-            {% if linha.acesso_pronto %}Acesso pronto{% else %}Falta CPF/data{% endif %}
+            {% if linha.acesso_pronto %}Acesso pronto{% elif not linha.vinculado %}Vincular Declaração{% else %}Falta CPF/data na Declaração{% endif %}
           </span>
           <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_boletim_aluno_editar' periodo.pk linha.boletim.pk %}">
             <i data-lucide="pencil"></i> Editar aluno e notas
