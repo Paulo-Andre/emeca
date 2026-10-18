@@ -150,6 +150,9 @@ with sqlite3.connect(f"file:{arquivo}?mode=ro", uri=True) as banco:
 print("Integridade do backup SQLite conferida.")
 PY
 chmod 600 "$DEST"/*
+# Simular restauração de banco SQLite em um diretório descartável e
+# conferir leitura das mídias e conclusão do dump MySQL.
+python3 scripts/validar_backups_lote.py "$DEST"
 printf '%s\n' "$(git rev-parse HEAD)" > "$DEST/commit-emeca.txt"
 docker inspect --format '{{.Image}}' wa-akg-app > "$DEST/imagem-wa-anterior.txt" || true
 docker inspect --format '{{.Image}}' emeca-web-1 > "$DEST/imagem-emeca-anterior.txt" || true
