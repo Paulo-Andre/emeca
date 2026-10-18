@@ -9,6 +9,8 @@ umask 077
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 WA_COMPOSE="$ROOT/deploy/wa-akg/compose.secure.yaml"
+WA_ENV="$ROOT/deploy/wa-akg/.env"
+WA_ARGS=(--env-file "$WA_ENV" -f "$WA_COMPOSE")
 PATCHER="$ROOT/deploy/wa-akg/aplicar_correcoes.py"
 DEST_BASE="/srv/backups/emeca"
 MODO="${1:---preflight}"
@@ -26,12 +28,13 @@ log "Conferindo ferramentas e código local"
 for ferramenta in docker git python3; do exigir "$ferramenta"; done
 test -r "$ROOT/.env" || falhar "Arquivo .env do EMECA não encontrado."
 test -r "$WA_COMPOSE" || falhar "Compose WA-AKG não encontrado."
+test -r "$WA_ENV" || falhar "Arquivo .env do WA-AKG não encontrado em deploy/wa-akg/.env."
 test -r "$PATCHER" || falhar "Aplicador WA-AKG não encontrado."
 test -d /srv/projetos/wa-akg || falhar "WA-AKG não está em /srv/projetos/wa-akg."
 docker compose config --quiet
-docker compose -f "$WA_COMPOSE" config --quiet
+docker compose "${WA_ARGS[@]}" config --quiet
 docker compose ps
-docker compose -f "$WA_COMPOSE" ps
+docker compose "${WA_ARGS[@]}" ps
 git rev-parse --short HEAD
 if test -n "$(git status --porcelain)"; then
   log "Há arquivos EMECA alterados localmente:"
@@ -102,12 +105,12 @@ docker compose exec -T web sh -c 'tar -czf - -C /data media' > "$DEST/emeca-medi
 test -s "$DEST/emeca-media.tar.gz" || falhar "Arquivo de mídias EMECA vazio."
 
 # Salvar dados do WhatsApp preserva anexos e arquivos de sessão no volume.
-docker compose -f "$WA_COMPOSE" exec -T app sh -c \
+docker compose "${WA_ARGS[@]}" exec -T app sh -c \
   'tar -czf - -C /app data uploads' > "$DEST/wa-akg-volumes.tar.gz"
 test -s "$DEST/wa-akg-volumes.tar.gz" || falhar "Arquivo de volumes WA-AKG vazio."
 
 DUMP="$DEST/wa-akg.sql"
-if ! docker compose -f "$WA_COMPOSE" exec -T db sh -c \
+if ! docker compose "${WA_ARGS[@]}" exec -T db sh -c \
   'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers "$MYSQL_DATABASE"' \
   > "$DUMP"; then
   rm -f "$DUMP"
@@ -123,11 +126,13 @@ log "Backups concluídos. Arquivos e snapshots permanecem privados em $DEST"
 log "Aplicando sobreposição WA-AKG com backup dos fontes pelo patcher"
 python3 "$PATCHER"
 log "Compilando imagens antes de substituir containers ativos"
-docker compose -f "$WA_COMPOSE" build app
+docker compose "${WA_ARGS[@]}" build app
 docker compose build web whatsapp-worker
 
 log "Substituindo somente a aplicação WA-AKG, preservando banco/volumes"
-docker compose -f "$WA_COMPOSE" up -d --no-deps app
+docker compose "${WA_ARGS[@]}" up -d --no-deps app
+log "Pausando worker antes de migrar os dados EMECA (evita mensagens durante atualização)"
+docker compose stop whatsapp-worker
 log "Substituindo EMECA web (entrypoint aplicará migrações automaticamente)"
 docker compose up -d --no-deps web
 docker compose exec -T web python manage.py check
@@ -137,7 +142,7 @@ docker compose up -d --no-deps whatsapp-worker
 
 log "Verificando estado dos serviços e integridade sem enviar mensagens"
 docker compose ps
-docker compose -f "$WA_COMPOSE" ps
+docker compose "${WA_ARGS[@]}" ps
 docker compose exec -T web python manage.py showmigrations site_publico
 echo "IMPLANTAÇÃO CONCLUÍDA. Os testes com WhatsApp real continuam manuais."
 echo "Backups localizados em: $DEST"
