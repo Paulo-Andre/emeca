@@ -27,7 +27,40 @@ def substitute(text: str, before: str, after: str, context: str) -> str:
     return text.replace(before, after, 1)
 
 
+def desativar_agendador_duplicado(manager_content: str) -> str:
+    """WA-AKG: uma só instância de scheduler, sem reinicialização paralela.
+
+    O servidor pode conter a alteração manual já feita: nesse caso respeita
+    o arquivo como está. Mudanças desconhecidas são rejeitadas, nunca
+    sobrescritas às cegas.
+    """
+    import_antigo = 'import { initScheduler } from "@/lib/cron";'
+    chamada_antiga = '        initScheduler();'
+    comentario = "        // Agendamento centralizado em src/modules/whatsapp/scheduler.ts"
+    identificador = "Agendamento centralizado em src/modules/whatsapp/scheduler.ts"
+
+    if "initScheduler" not in manager_content:
+        if identificador not in manager_content:
+            raise RuntimeError(
+                "manager.ts sem marcador conhecido do agendador. "
+                "Revise o diff; código não será sobrescrito."
+            )
+        return manager_content
+
+    if manager_content.count(import_antigo) != 1 or manager_content.count(chamada_antiga) != 1:
+        raise RuntimeError(
+            "manager.ts usa uma forma desconhecida do agendador antigo. "
+            "É necessário revisar o código antes da implantação."
+        )
+    resultado = manager_content.replace(import_antigo, "", 1)
+    resultado = resultado.replace(chamada_antiga, comentario, 1)
+    if "initScheduler" in resultado:
+        raise RuntimeError("Há outras referências a initScheduler em manager.ts.")
+    return resultado
+
+
 def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
+    manager = source / "src/modules/whatsapp/manager.ts"
     instance = source / "src/modules/whatsapp/instance.ts"
     index = source / "src/modules/whatsapp/store/index.ts"
     contact_store = source / "src/modules/whatsapp/store/contacts.ts"
@@ -46,7 +79,7 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
     scheduler_overlay = patch_dir / "overrides/src/modules/whatsapp/scheduler.ts"
     scheduler_target = source / "src/modules/whatsapp/scheduler.ts"
 
-    required = [instance, index, contact_store, chat_service, chat_route, messages_route, contacts_route, overlay_file, profile_route_overlay, purge_route_overlay, group_route_overlay, scheduler_overlay, group_route_target, scheduler_target]
+    required = [manager, instance, index, contact_store, chat_service, chat_route, messages_route, contacts_route, overlay_file, profile_route_overlay, purge_route_overlay, group_route_overlay, scheduler_overlay, group_route_target, scheduler_target]
     missing = [str(p) for p in required if not p.is_file()]
     if missing:
         raise RuntimeError("Arquivos não encontrados: " + ", ".join(missing))
@@ -69,6 +102,7 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
             )
 
     edits: dict[pathlib.Path, str] = {}
+    edits[manager] = desativar_agendador_duplicado(manager.read_text(encoding="utf-8"))
 
     value = instance.read_text(encoding="utf-8")
     value = substitute(
