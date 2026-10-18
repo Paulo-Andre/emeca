@@ -60,6 +60,9 @@ jobs:
         working-directory: frontend_publico
         run: |
           npm ci
+          # Verifica sintaxe TypeScript do overlay WA-AKG sem precisar usar
+          # credenciais/sessões reais e sem executar o agendador.
+          ./node_modules/.bin/esbuild ../deploy/wa-akg/overrides/src/modules/whatsapp/scheduler.ts --outfile=/tmp/wa-akg-scheduler-qa.js --platform=node --format=esm
           npm audit --audit-level=high
           npm run lint
           npm run build
