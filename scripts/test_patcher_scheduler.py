@@ -50,6 +50,23 @@ class SchedulerUnicoTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             MOD.desativar_agendador_duplicado(codigo)
 
+    def test_scheduler_usa_claim_atomico_antes_de_send_message(self):
+        fonte = (
+            ROOT / "deploy" / "wa-akg" / "overrides" / "src"
+            / "modules" / "whatsapp" / "scheduler.ts"
+        ).read_text(encoding="utf-8")
+        self.assertIn('status: "PENDING"', fonte)
+        self.assertIn('status: "PROCESSING"', fonte)
+        self.assertIn('claim.count !== 1', fonte)
+        self.assertIn('status: "FAILED"', fonte)
+        self.assertLess(
+            fonte.index("claim.count !== 1"),
+            fonte.index("instance.socket.sendMessage(msg.jid, content)"),
+        )
+        self.assertIn('status: "PROCESSING" },', fonte)
+
+
+
 
 if __name__ == "__main__":
     unittest.main()
