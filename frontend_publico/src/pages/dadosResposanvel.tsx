@@ -11,7 +11,7 @@ type Props = {
   setDados: React.Dispatch<React.SetStateAction<SetDados>>;
 };
 
-export default function DadosResponsavelLegal({ dado, setDados }: Props) {
+export default function DadosResponsavelLegal({ setDados }: Props) {
   const navigate = useNavigate();
 
   const [tipoResponsavel, setTipoResponsavel] = useState("");
