@@ -401,7 +401,7 @@
   </dialog>
 
   <script>
-    lucide.createIcons();
+    if (window.lucide) window.lucide.createIcons();
 
     const form = document.getElementById("formEnvio");
     const modos = [...document.querySelectorAll('input[name="modo"]')];
