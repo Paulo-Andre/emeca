@@ -194,7 +194,7 @@ class GerenciamentoWhatsAppTests(TestCase):
         ))
         sair_grupo(self.grupo_jid)
         self.assertEqual(chamada.call_args.args[:2], (
-            "POST", "groups/sessao-escola-teste/" + self.grupo_jid + "/leave"
+            "POST", "groups/sessao-escola-teste/" + self.grupo_jid.replace("@", "%40") + "/leave"
         ))
 
     @patch("usuarioSec.whatsapp_views.listar_grupos")
