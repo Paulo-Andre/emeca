@@ -151,7 +151,7 @@ class WhatsAppBoletimTests(TestCase):
             regente="Professora Ana",
             publicado=True,
         )
-        self.aluna_a = AlunoBoletim.objects.create(nome="ALUNA A")
+        self.aluna_a = AlunoBoletim.objects.create(nome="ALUNA A", declaracao=self.declaracao_a)
         self.boletim_a = BoletimAluno.objects.create(
             periodo=self.periodo_a,
             aluno=self.aluna_a,
@@ -190,7 +190,7 @@ class WhatsAppBoletimTests(TestCase):
             turma="2º B",
             publicado=True,
         )
-        aluno_b = AlunoBoletim.objects.create(nome="ALUNO B")
+        aluno_b = AlunoBoletim.objects.create(nome="ALUNO B", declaracao=declaracao_b)
         boletim_b = BoletimAluno.objects.create(
             periodo=periodo_b,
             aluno=aluno_b,
@@ -213,6 +213,20 @@ class WhatsAppBoletimTests(TestCase):
             {item["boletim"].pk for item in itens_numero_compartilhado},
             {self.boletim_a.pk, boletim_b.pk},
         )
+
+    def test_homonimo_nao_recebe_notas_de_outra_declaracao(self):
+        outro = declaracao.objects.create(
+            nomeDoAluno="ALUNA A", turmaDoAluno="1º A",
+        )
+        telefone = TelefoneDeclaracao.objects.create(
+            declaracao=outro, tipo="RESPONSAVEL",
+            telefone="(38) 97777-3333",
+        )
+        dados = _resolver_boletins_destinatarios(
+            "individual", "TRIMESTRE", 2, 2026, contato_id=telefone.pk,
+        )
+        self.assertEqual(dados["itens"], [])
+        self.assertEqual(dados["sem_boletim"], 1)
 
     def test_boletim_nao_publicado_nao_entra_no_envio(self):
         self.periodo_a.publicado = False
