@@ -46,7 +46,7 @@ def vincular_perfis_inequivocos(apps, schema_editor):
 class Migration(migrations.Migration):
     dependencies = [
         ("site_publico", "0012_validadores_upload_seguros"),
-        ("usuarioSec", "0001_initial"),
+        ("usuarioSec", "0018_sessao_whatsapp_limpeza_pendente"),
     ]
     operations = [
         migrations.AddField(
