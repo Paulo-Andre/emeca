@@ -51,7 +51,7 @@
 
     <div class="bulletin-import-warning">
       <i data-lucide="shield-check"></i>
-      <span>Depois da importação o período fica como <strong>rascunho</strong>. Revise os dados na Gestão do Boletim e publique somente quando estiver correto.</span>
+      <span>Depois da importação o período fica em <strong>rascunho</strong>. Todos os alunos devem estar ligados a Declarações antes de publicar. Matrículas e Histórico permanecem independentes.</span>
     </div>
 
     <div class="manager-form-actions">
@@ -109,21 +109,21 @@
 
   <div class="bulletin-import-result__stats">
     <div><strong>{{ resultado_importacao.importados }}</strong><span>Importados</span></div>
-    <div><strong>{{ resultado_importacao.sem_cadastro|length }}</strong><span>Importados sem vínculo</span></div>
-    <div><strong>{{ resultado_importacao.ambiguos|length }}</strong><span>Importados para revisão</span></div>
+    <div><strong>{{ resultado_importacao.sem_cadastro|length }}</strong><span>Sem cadastro em Declarações</span></div>
+    <div><strong>{{ resultado_importacao.ambiguos|length }}</strong><span>Identidades ambíguas</span></div>
     <div><strong>{{ resultado_importacao.sem_acesso|length }}</strong><span>Sem CPF/data para acesso</span></div>
   </div>
 
   {% if resultado_importacao.sem_cadastro or resultado_importacao.ambiguos or resultado_importacao.sem_acesso %}
     <div class="bulletin-import-issues">
       {% if resultado_importacao.sem_cadastro %}
-        <article><h3>Importados sem vínculo com Matrículas</h3><p>As notas foram importadas normalmente. Se necessário, edite o aluno depois.</p>{% for nome in resultado_importacao.sem_cadastro %}<span>{{ nome }}</span>{% endfor %}</article>
+        <article><h3>Sem cadastro correspondente em Declarações</h3><p>As notas foram preservadas, mas o período não poderá ser publicado até o vínculo ser resolvido. Cadastre o aluno em Declarações e depois selecione-o no Boletim.</p>{% for nome in resultado_importacao.sem_cadastro %}<span>{{ nome }}</span>{% endfor %}</article>
       {% endif %}
       {% if resultado_importacao.ambiguos %}
-        <article><h3>Nome duplicado em Matrículas</h3><p>O aluno foi importado sem vínculo automático para evitar associação incorreta.</p>{% for nome in resultado_importacao.ambiguos %}<span>{{ nome }}</span>{% endfor %}</article>
+        <article><h3>Declarações ambíguas ou conflitantes</h3><p>Selecione o cadastro correto de cada aluno na tela de notas. Não são feitos vínculos por nomes repetidos.</p>{% for nome in resultado_importacao.ambiguos %}<span>{{ nome }}</span>{% endfor %}</article>
       {% endif %}
       {% if resultado_importacao.sem_acesso %}
-        <article><h3>Precisam de CPF/data no cadastro</h3>{% for nome in resultado_importacao.sem_acesso %}<span>{{ nome }}</span>{% endfor %}</article>
+        <article><h3>Acesso pendente de vínculo ou CPF/data na Declaração</h3>{% for nome in resultado_importacao.sem_acesso %}<span>{{ nome }}</span>{% endfor %}</article>
       {% endif %}
     </div>
   {% endif %}
