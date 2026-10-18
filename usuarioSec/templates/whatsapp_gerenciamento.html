@@ -263,10 +263,13 @@
     </section>
 
     <section class="wa-manager-card wa-manager-history">
-      <div class="wa-manager-card-head"><i data-lucide="history"></i><div><h3>Histórico de agendamentos</h3><p>Mensagens agendadas que já foram processadas.</p></div></div>
+      <div class="wa-manager-card-head"><i data-lucide="history"></i><div><h3>Histórico de agendamentos</h3><p>O status SENT indica aceite pelo cliente WhatsApp, não entrega ao aparelho. PROCESSING ou FAILED exigem conferência antes de repetir.</p></div></div>
       <div class="wa-manager-list">
         {% for item in historico_agendamentos %}
-          <div class="wa-manager-list-row"><strong>{{ item.status }}</strong><small>{{ item.jid }} · {{ item.content|truncatechars:100 }} · {{ item.sendAt }}</small></div>
+          <div class="wa-manager-list-row">
+            <strong>{% if item.status == "SENT" %}Aceito pelo WhatsApp{% elif item.status == "PROCESSING" %}Em processamento — envio incerto{% elif item.status == "FAILED" %}Falha — conferir antes de repetir{% else %}{{ item.status }}{% endif %}</strong>
+            <small>{{ item.jid }} · {{ item.content|truncatechars:100 }} · {{ item.sendAt }}</small>
+          </div>
         {% empty %}<p class="wa-manager-empty">Nenhum histórico disponível.</p>{% endfor %}
       </div>
     </section>
