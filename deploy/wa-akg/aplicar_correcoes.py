@@ -293,7 +293,7 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
         '                const aliases = [...new Set(candidates.map(jid =>\n'
         '                    jid.replace("@c.us", "@s.whatsapp.net")))];\n'
         '                const phoneJid = aliases.find(jid =>\n'
-        '                    /^[0-9]+@s\.whatsapp\.net$/.test(jid)) || "";\n'
+        '                    /^[0-9]+@s\\.whatsapp\\.net$/.test(jid)) || "";\n'
         '                return { ...contact, aliases, phoneJid,\n'
         '                    displayName: contact.name || contact.verifiedName ||\n'
         '                        contact.notify || (phoneJid ? phoneJid.split("@")[0] : null)\n'
