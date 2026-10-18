@@ -29,6 +29,7 @@ from django.http import JsonResponse
 import json
 from django.utils import timezone
 from django.db import transaction
+from django.db.models.deletion import ProtectedError
 from django.http import HttpResponseForbidden
 from functools import wraps
 from django.utils.decorators import method_decorator
@@ -523,16 +524,20 @@ def imprimirDeclaracao(request, id):
         return JsonResponse({"status": "erro", "mensagem": "Tipo de declaração inválido."}, status=400)
 
     return render(request, template, contexto)
+@require_POST
 def deletar_aluno_declaracao(request, id):
-
     aluno = get_object_or_404(declaracao, id=id)
-
-    if request.method == "POST":
+    try:
         aluno.delete()
+    except ProtectedError:
+        messages.error(
+            request,
+            "Não é possível excluir este cadastro de Declarações: existem "
+            "boletins vinculados a ele. Os lançamentos de notas foram preservados.",
+        )
+    else:
         messages.success(request, "Aluno removido do sistema com sucesso!")
-        return redirect('telaDeclaracao')
-
-    return redirect('telaDeclaracao')
+    return redirect("telaDeclaracao")
 def cadastrar_aluno(request):
     if request.method != "POST":
         return redirect("telaDeclaracao")
