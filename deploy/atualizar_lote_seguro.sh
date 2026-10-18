@@ -92,6 +92,19 @@ log "Agendamentos WA-AKG em estado incerto (PROCESSING): $WA_INCERTOS"
 if test "$MODO" = "--aplicar" && test "$WA_INCERTOS" != "0"; then
   falhar "Existem agendamentos WA-AKG com envio incerto; revise antes da implantação."
 fi
+# Atualizar o scheduler pode liberar agendamentos antigos que ficaram
+# vencidos enquanto o WA-AKG estava com o cron duplicado/desativado.
+# Não disparar silenciosamente mensagens antigas na reinicialização.
+WA_VENCIDOS="$(docker compose "${WA_ARGS[@]}" exec -T db sh -c \
+  'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot -Nse "SELECT COUNT(*) FROM ScheduledMessage WHERE status = 0x50454E44494E47 AND sendAt <= UTC_TIMESTAMP();" "$MYSQL_DATABASE"' \
+  | tail -1 | tr -d '\r')" || falhar "Não foi possível verificar agendamentos vencidos."
+case "$WA_VENCIDOS" in
+  ''|*[!0-9]*) falhar "Contagem de agendamentos vencidos inválida." ;;
+esac
+log "Agendamentos PENDING já vencidos (podem disparar após restart): $WA_VENCIDOS"
+if test "$MODO" = "--aplicar" && test "$WA_VENCIDOS" != "0"; then
+  falhar "Há agendamentos antigos prontos para disparar. Revisar/decidir destino antes de atualizar."
+fi
 
 if test "$MODO" = "--preflight"; then
   log "Pré-verificação concluída. Nenhuma imagem ou banco foi modificado."
@@ -224,7 +237,22 @@ with sqlite3.connect(sys.argv[1]) as con:
     ).fetchone()[0]
     if atualizada != 1:
         raise SystemExit("Migração 0013 não foi aplicada no banco de ensaio.")
-print("Migração 0013 e integridade do ensaio confirmadas.")
+    # Bloqueia regressão crítica: responsáveis perderiam acesso aos
+    # boletins publicados de perfis sem vínculo inequívoco à Declaração.
+    pendentes = con.execute("""
+        SELECT COUNT(*)
+          FROM site_publico_boletimaluno AS b
+          JOIN site_publico_alunoboletim AS a ON a.id = b.aluno_id
+          JOIN site_publico_periodoboletim AS p ON p.id = b.periodo_id
+         WHERE p.publicado = 1 AND a.declaracao_id IS NULL
+    """).fetchone()[0]
+    print("Boletins publicados com vínculo pendente:", pendentes)
+    if pendentes:
+        raise SystemExit(
+            "Há boletins publicados sem vínculo à Declaração. "
+            "Nenhuma versão foi implantada. Resolver os vínculos antes de prosseguir."
+        )
+print("Migração 0013, vínculos publicados e integridade do ensaio confirmados.")
 PY
 rm -f -- "$ENSAIO"
 
