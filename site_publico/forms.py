@@ -1,5 +1,6 @@
 from django import forms
 from django.forms import modelform_factory
+from usuarioSec.models import declaracao
 from urllib.parse import urlparse
 
 
@@ -405,6 +406,17 @@ class BoletimImportacaoForm(forms.Form):
 
 
 class BoletimAlunoManualForm(forms.Form):
+    declaracao_aluno = forms.ModelChoiceField(
+        queryset=declaracao.objects.all().order_by("nomeDoAluno", "id"),
+        required=False,
+        label="Cadastro do aluno em Declarações",
+        empty_label="Selecione uma declaração existente...",
+        widget=forms.Select(attrs={"class": "site-manager-input"}),
+        help_text=(
+            "Vínculo obrigatório antes da publicação. Em homônimos, selecione "
+            "o registro correto; CPFs e nascimento serão lidos de Declarações."
+        ),
+    )
     nome_aluno = forms.CharField(
         max_length=255,
         label="Nome do aluno",
@@ -416,8 +428,7 @@ class BoletimAlunoManualForm(forms.Form):
             }
         ),
         help_text=(
-            "Os dados de identificação necessários à consulta são vinculados "
-            "automaticamente pelo nome usando a base de Declarações."
+            "Nome apresentado nas notas; não altera o cadastro de Declarações."
         ),
     )
     numero_chamada = forms.IntegerField(
@@ -445,6 +456,8 @@ class BoletimAlunoManualForm(forms.Form):
 
         if perfil_fixo is not None and not self.is_bound:
             self.fields["nome_aluno"].initial = perfil_fixo.nome
+            if perfil_fixo.declaracao_id:
+                self.fields["declaracao_aluno"].initial = perfil_fixo.declaracao_id
 
     def clean_nome_aluno(self):
         nome = " ".join((self.cleaned_data.get("nome_aluno") or "").split()).strip()
