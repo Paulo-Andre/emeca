@@ -3,6 +3,7 @@ from django.urls import path, include
 from .views import AccountCreateView
 from .import views 
 from . import whatsapp_views
+from .declaracao_edicao import editar_aluno_declaracao
 from django.shortcuts import redirect
 
 
@@ -26,6 +27,7 @@ urlpatterns = [
     path('telaDeclaracao/', views.telaDeclaracao,name="telaDeclaracao"),
     path("importar/", views.importar_alunos, name="importar_alunos"),
     path('buscardeclaracao/', views.buscar_dados_declaracao, name="buscar_dados_declaracao"),
+    path('declaracoes/aluno/<int:id>/editar/', editar_aluno_declaracao, name='editar_aluno_declaracao'),
     path('salvar-declaracao/<int:id>/', views.salvar_declaracao, name='salvar_declaracao'),
     path('imprimirDeclaracao/<int:id>/', views.imprimirDeclaracao, name='imprimirDeclaracao'),
     path('deletar_aluno_declaracao/<int:id>/', views.deletar_aluno_declaracao, name='deletar_aluno_declaracao'),
