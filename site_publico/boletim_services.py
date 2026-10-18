@@ -39,31 +39,17 @@ def formatar_cpf(valor):
 
 
 def sincronizar_perfil_matricula(aluno_matricula):
+    """Compatibilidade com perfis antigos sem utilizar CPF da Matrícula.
+
+    Os cadastros históricos de Matrículas e Declarações são independentes.
+    Apenas uma Declaração inequivocamente correspondente fornece CPF e data
+    de nascimento ao boletim; em conflito, o perfil permanece pendente.
+    """
     perfil, _ = AlunoBoletim.objects.get_or_create(
         matricula=aluno_matricula,
-        defaults={
-            "nome": aluno_matricula.nomeDoAluno,
-            "data_nascimento": aluno_matricula.dataNascimentoAluno,
-            "cpf_mae": aluno_matricula.cpfMae or "",
-            "cpf_responsavel": aluno_matricula.cpfResponsavel or "",
-        },
+        defaults={"nome": aluno_matricula.nomeDoAluno},
     )
-
-    alterados = []
-    # O nome do boletim pode ser corrigido manualmente sem alterar a
-    # matrícula. Por isso, depois que o perfil existe, sincronizamos apenas
-    # os dados usados para acesso público, preservando o nome editado.
-    dados = {
-        "data_nascimento": aluno_matricula.dataNascimentoAluno,
-        "cpf_mae": aluno_matricula.cpfMae or "",
-        "cpf_responsavel": aluno_matricula.cpfResponsavel or "",
-    }
-    for campo, valor in dados.items():
-        if getattr(perfil, campo) != valor:
-            setattr(perfil, campo, valor)
-            alterados.append(campo)
-    if alterados:
-        perfil.save(update_fields=alterados + ["atualizado_em"])
+    perfil, _ = sincronizar_perfil_por_nome_declaracao(perfil)
     return perfil
 
 
