@@ -233,18 +233,24 @@ def _disciplinas(df, cabecalho_idx, nome_col):
     )
 
 
-COLUNA_FALTAS_TOTAIS_EXCEL = 5  # coluna F (A=0)
+# No modelo de Notas e Faltas do EMECA, a primeira coluna de faltas
+# informada pela Secretaria é H. As seguintes são apenas decomposições
+# desse total e NUNCA devem ser somadas.
+COLUNA_FALTAS_TOTAIS_EXCEL = 7  # coluna H (A=0)
 
 
 def _coluna_faltas_totais(df, cabecalho_idx, nome_col, componentes):
-    """Usa exclusivamente a coluna F da planilha como faltas totais.
+    """Seleciona somente H como o total de faltas do aluno no período.
 
-    A planilha oficial da escola registra na coluna F o total de faltas da
-    criança no período. Faltas presentes nos pares de cada disciplina não
-    devem ser somadas nem usadas como total do boletim.
+    O XLS escolar tem outras colunas de faltas à direita, mas elas representam
+    detalhamentos do total lançado em H. Não inferimos faltas pela soma nem
+    substituímos o total por uma nota ou pelo valor de outra coluna.
     """
     if len(df.columns) <= COLUNA_FALTAS_TOTAIS_EXCEL:
-        return None
+        raise ImportacaoBoletimErro(
+            "A planilha de Notas e Faltas não possui a coluna H, que contém "
+            "o total de faltas. Confira se foi enviado o modelo correto."
+        )
     return COLUNA_FALTAS_TOTAIS_EXCEL
 
 def _metadados(df):
