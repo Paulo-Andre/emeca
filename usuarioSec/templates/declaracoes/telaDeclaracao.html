@@ -192,6 +192,17 @@
         color: var(--school-primary);
       }
 
+      .student-row-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px; }
+      .btn-edit-student {
+        display: inline-flex; align-items: center; gap: 6px;
+        min-height: 38px; padding: 0 12px; border: 1px solid #bcd8cd;
+        border-radius: 10px; background: #eef8f3; color: #25634f;
+        font: 700 12px Inter, sans-serif; text-decoration: none;
+        white-space: nowrap;
+      }
+      .btn-edit-student:hover { background: #dff1e8; }
+      .btn-edit-student svg { width: 16px; height: 16px; }
+
       .btn-del {
         width: 38px;
         height: 38px;
@@ -838,9 +849,14 @@
                 </div>
               </td>
               <td align="right">
+                <div class="student-row-actions">
+                  <a class="btn-edit-student" href="{% url 'editar_aluno_declaracao' aluno.id %}" aria-label="Editar dados completos de {{ aluno.nomeDoAluno }}" title="Editar aluno, responsáveis, CPFs e telefones">
+                    <i data-lucide="pencil"></i> Editar dados
+                  </a>
                 <form method="POST" action="{% url 'deletar_aluno_declaracao' aluno.id %}" onsubmit="return confirmarExclusao()">
   {% csrf_token %}
-                <button class="btn-del" type="submit" ><i data-lucide="trash-2" size="18"></i></button></form>
+                <button class="btn-del" type="submit" aria-label="Excluir aluno {{ aluno.nomeDoAluno }}"><i data-lucide="trash-2" size="18"></i></button></form>
+                </div>
               </td>
             </tr>
 
