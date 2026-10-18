@@ -127,9 +127,14 @@ mkdir -p "$DEST"
 chmod 700 "$DEST"
 log "Backups em $DEST; NÃO continuar caso qualquer arquivo falhe"
 
-# O snapshot SQLite usa sqlite3.backup, seguro com WAL e usuários conectados.
-SQLITE_SNAPSHOT="implantacao-$STAMP.sqlite3"
-docker compose exec -T web python - "$SQLITE_SNAPSHOT" <<'PY'
+# O snapshot SQLite usa sqlite3.backup (consistente mesmo com WAL).
+# IMPORTANTE: criar o arquivo de destino pelo usuário SSH, ANTES de rodar o
+# processo no container (root). O inode mantém o proprietário do host;
+# arquivos root:root (0600) impediam a validação/ensaio e paravam o lote.
+SQLITE_SNAPSHOT_REL="implantacao-$STAMP/emeca.sqlite3"
+install -m 600 /dev/null "$DEST/emeca.sqlite3"
+test -r "$DEST/emeca.sqlite3" || falhar "Backup SQLite não acessível pelo usuário SSH."
+docker compose exec -T web python - "$SQLITE_SNAPSHOT_REL" <<'PY'
 import os
 import sqlite3
 import sys
@@ -137,8 +142,11 @@ from pathlib import Path
 
 origem = Path(os.environ.get("DJANGO_DB_PATH", "/data/emeca.sqlite3"))
 destino = Path("/backups") / sys.argv[1]
-if not origem.is_file() or destino.exists():
-    raise SystemExit("Banco ausente ou arquivo de backup já existente.")
+if (
+    not origem.is_file() or not destino.is_file()
+    or destino.is_symlink() or destino.stat().st_size != 0
+):
+    raise SystemExit("Banco ausente ou snapshot não está vazio/seguro.")
 fonte = sqlite3.connect(f"file:{origem}?mode=ro", uri=True)
 alvo = sqlite3.connect(str(destino))
 try:
@@ -152,9 +160,11 @@ finally:
 destino.chmod(0o600)
 print("Backup SQLite consistente verificado.")
 PY
-test -s "$DEST_BASE/$SQLITE_SNAPSHOT" || falhar "Snapshot SQLite vazio."
-# O /backups do container web é bind mount para /srv/backups/emeca.
-mv "$DEST_BASE/$SQLITE_SNAPSHOT" "$DEST/emeca.sqlite3"
+test -s "$DEST/emeca.sqlite3" || falhar "Snapshot SQLite vazio."
+test -r "$DEST/emeca.sqlite3" || falhar \
+  "Snapshot SQLite pertence a outro usuário; pare antes de prosseguir."
+test "$(stat -c %u "$DEST/emeca.sqlite3")" = "$(id -u)" || falhar \
+  "Snapshot SQLite não pertence ao usuário de implantação."
 
 # As mídias institucionais são importantes para os PDFs com logo oficial.
 docker compose exec -T web sh -c 'tar -czf - -C /data media' > "$DEST/emeca-media.tar.gz"
