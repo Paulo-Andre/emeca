@@ -86,7 +86,7 @@ class PDFBoletimSimboloTests(TestCase):
             "O símbolo institucional padrão precisa estar incluído no projeto.",
         )
         dados, largura, altura = resultado
-        self.assertTrue(dados.startswith(b"\\x89PNG\\r\\n\\x1a\\n"))
+        self.assertTrue(dados.startswith(b"\x89PNG\r\n\x1a\n"))
         self.assertGreater(largura, 0)
         self.assertGreater(altura, 0)
 
