@@ -405,8 +405,19 @@ class BoletimImportacaoForm(forms.Form):
     )
 
 
+class DeclaracaoAlunoChoiceField(forms.ModelChoiceField):
+    """Distingue homônimos sem revelar CPF na listagem."""
+    def label_from_instance(self, obj):
+        nascimento = (
+            obj.dataNascimentoAluno.strftime("%d/%m/%Y")
+            if obj.dataNascimentoAluno else "nascimento não informado"
+        )
+        turma = obj.turmaDoAluno or "sem turma"
+        return f"{obj.nomeDoAluno} · {turma} · {nascimento} · cadastro #{obj.pk}"
+
+
 class BoletimAlunoManualForm(forms.Form):
-    declaracao_aluno = forms.ModelChoiceField(
+    declaracao_aluno = DeclaracaoAlunoChoiceField(
         queryset=declaracao.objects.all().order_by("nomeDoAluno", "id"),
         required=False,
         label="Cadastro do aluno em Declarações",
