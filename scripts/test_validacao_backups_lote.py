@@ -65,6 +65,37 @@ class ValidacaoBackupsTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "conclusão"):
             validar_pacote(self.raiz)
 
+    def test_instalador_precria_snapshot_no_host_e_exige_proprietario(self):
+        # Regressão de produção: se sqlite3.backup cria o arquivo como root
+        # dentro do container, o usuário SSH não lê a cópia 0600 e o
+        # instalador falha depois de gerar os backups.
+        script = (Path(__file__).resolve().parents[1]
+                  / "deploy" / "atualizar_lote_seguro.sh").read_text(
+                      encoding="utf-8",
+                  )
+        criar = 'install -m 600 /dev/null "$DEST/emeca.sqlite3"'
+        executar = 'docker compose exec -T web python - "$SQLITE_SNAPSHOT_REL"'
+        conferir = 'test -r "$DEST/emeca.sqlite3" || falhar'
+        self.assertIn(criar, script)
+        self.assertIn(executar, script)
+        self.assertIn(conferir, script)
+        self.assertLess(script.index(criar), script.index(executar))
+        self.assertIn('stat -c %u "$DEST/emeca.sqlite3"', script)
+
+    def test_sqlite_backup_para_arquivo_precriado_nao_troca_inode(self):
+        origem = self.criar_sqlite()
+        destino = self.raiz / "snapshot-precriado.sqlite3"
+        destino.touch(mode=0o600)
+        inode_original = destino.stat().st_ino
+        with sqlite3.connect(origem) as banco, sqlite3.connect(destino) as copia:
+            banco.backup(copia)
+        self.assertEqual(inode_original, destino.stat().st_ino)
+        with sqlite3.connect(destino) as banco:
+            self.assertEqual(
+                banco.execute("PRAGMA quick_check").fetchone(),
+                ("ok",),
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
