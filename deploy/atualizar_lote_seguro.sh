@@ -66,7 +66,7 @@ fi
 # Antes da atualização, exigir revisão manual dos PROCESSING, sem ler
 # nem exibir telefone, mensagem ou qualquer dado do destinatário.
 WA_INCERTOS="$(docker compose "${WA_ARGS[@]}" exec -T db sh -c \
-  'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot -Nse "SELECT COUNT(*) FROM ScheduledMessage WHERE status = \\"PROCESSING\\";" "$MYSQL_DATABASE"' \
+  'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot -Nse "SELECT COUNT(*) FROM ScheduledMessage WHERE status = 0x50524F43455353494E47;" "$MYSQL_DATABASE"' \
   | tail -1 | tr -d '\r')" || falhar "Não foi possível conferir agendamentos WA-AKG."
 case "$WA_INCERTOS" in
   ''|*[!0-9]*) falhar "A contagem de agendamentos WA-AKG é inválida." ;;
