@@ -16,7 +16,7 @@ from cadastro.models import matricula
 from usuarioSec.models import declaracao
 
 from .boletim_importacao import ler_planilha_boletim
-from .boletim_services import importar_dados_boletim, localizar_alunos_por_credenciais, sincronizar_perfil_matricula
+from .boletim_services import importar_dados_boletim, localizar_alunos_por_credenciais, sincronizar_perfil_matricula, sincronizar_perfil_declaracao
 from .forms import (
     BoletimImportacaoForm,
     FotoGaleriaLoteForm,
@@ -613,7 +613,7 @@ class SitePublicoTests(TestCase):
 
     @staticmethod
     def _matricula_para_boletim(nome="Estudante Sintética Alfa", cpf_mae="111.111.111-11", cpf_responsavel=""):
-        return matricula.objects.create(
+        registro = matricula.objects.create(
             nomeDoAluno=nome,
             dataNascimentoAluno=date(2017, 8, 13),
             cpfMae=cpf_mae,
@@ -633,6 +633,13 @@ class SitePublicoTests(TestCase):
             atendimentoDomiciliar="NAO",
             trasporteEscolar="NAO",
         )
+        declaracao.objects.create(
+            nomeDoAluno=nome,
+            dataNascimentoAluno=date(2017, 8, 13),
+            cpfMae=cpf_mae,
+            cpfResponsavel=cpf_responsavel,
+        )
+        return registro
 
     @staticmethod
     def _periodo_publicado(tipo="TRIMESTRE", numero=2, ano=2026, turma="1º Teste"):
