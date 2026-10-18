@@ -1,13 +1,14 @@
 """Testes de edição dos dados completos das Declarações (sem gerar impressão)."""
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
-from django.test import TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from .access_control import GRUPO_SECRETARIA
 from .models import TelefoneDeclaracao, declaracao
 
 
+@override_settings(EMECA_RBAC_STRICT=True)
 class EdicaoDadosDeclaracaoTests(TestCase):
     def setUp(self):
         self.usuario = get_user_model().objects.create_user(
@@ -92,4 +93,35 @@ class EdicaoDadosDeclaracaoTests(TestCase):
         self.assertEqual(self.aluno.cpfPai, "111.111.111-11")
         self.assertEqual(
             TelefoneDeclaracao.objects.filter(declaracao=self.aluno).count(), 1,
+        )
+
+    def test_post_exige_csrf(self):
+        cliente = Client(enforce_csrf_checks=True)
+        cliente.force_login(self.usuario)
+        resposta = cliente.post(self.url, {"nomeDoAluno": "SEM CSRF"})
+        self.assertEqual(resposta.status_code, 403)
+        self.aluno.refresh_from_db()
+        self.assertEqual(self.aluno.nomeDoAluno, "ALUNO DE TESTE")
+
+    def test_mantem_telefones_extras_ao_editar(self):
+        for numero in ["(38) 98888-1001", "(38) 98888-1002", "(38) 98888-1003", "(38) 98888-1004"]:
+            TelefoneDeclaracao.objects.create(
+                declaracao=self.aluno, tipo="RESPONSAVEL", telefone=numero,
+            )
+        self.client.force_login(self.usuario)
+        pagina = self.client.get(self.url)
+        self.assertContains(pagina, "98888-1004")
+        resposta = self.client.post(self.url, {
+            "nomeDoAluno": "ALUNO DE TESTE",
+            "telefoneMae": ["(38) 98888-7777"],
+            "telefoneResponsavel": [
+                "(38) 98888-1001", "(38) 98888-1002",
+                "(38) 98888-1003", "(38) 98888-1004",
+            ],
+        })
+        self.assertEqual(resposta.status_code, 302)
+        self.assertEqual(
+            TelefoneDeclaracao.objects.filter(
+                declaracao=self.aluno, tipo="RESPONSAVEL",
+            ).count(), 4,
         )
