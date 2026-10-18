@@ -456,7 +456,7 @@ class BoletimAlunoManualForm(forms.Form):
             attrs={"class": "site-manager-input", "min": 0, "inputmode": "numeric"}
         ),
         help_text=(
-            "Na importação, este valor vem exclusivamente da coluna F da planilha. "
+            "Na importação, este valor vem da coluna H da planilha; vazio ou traço significa zero para aluno identificado. "
             "Não é feita soma de faltas por disciplina."
         ),
     )
