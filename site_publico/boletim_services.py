@@ -253,10 +253,16 @@ def importar_dados_boletim(dados_planilha, dados_periodo=None):
                 perfis_por_nome[chave].append(perfil)
 
         if perfil.pk in perfis_no_periodo:
-            raise ValueError(
-                f"Aluno '{nome}' aparece mais de uma vez na mesma planilha. "
-                "Verifique as duplicatas antes da importação."
-            )
+            if len(declaracoes_mesmo_nome) > 1:
+                # Há homônimos: mantém ambos os lançamentos, mas exige que
+                # a Secretaria escolha a Declaração certa para cada um.
+                perfil = AlunoBoletim.objects.create(nome=nome)
+                perfis_por_nome[chave].append(perfil)
+            else:
+                raise ValueError(
+                    f"Aluno '{nome}' aparece mais de uma vez na planilha e "
+                    "não há dois cadastros distintos em Declarações. Revise as linhas."
+                )
         perfis_no_periodo.add(perfil.pk)
 
         if perfil.nome != nome:
