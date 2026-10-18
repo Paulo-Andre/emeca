@@ -39,6 +39,9 @@ jobs:
           python -m pip install pip-audit
           pip-audit -r requirements.txt
 
+      - name: Instalar ferramenta de cobertura
+        run: python -m pip install coverage
+
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -50,6 +53,7 @@ jobs:
         run: |
           npm ci
           npm audit --audit-level=high
+          npm run lint
           npm run build
 
       - name: Verificar Django
@@ -58,7 +62,18 @@ jobs:
           python manage.py makemigrations --check --dry-run
           python manage.py migrate --noinput
           python manage.py collectstatic --noinput
-          python manage.py test
+          coverage run --source=cadastro,secretaria,usuarioSec,historico,site_publico --omit='*/migrations/*,*/test*.py,*/tests.py' manage.py test
+          coverage report -m
+          coverage xml -o coverage.xml
+
+      - name: Publicar relatório de cobertura de testes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura-emeca
+          path: coverage.xml
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Smoke de carga com dados sintéticos
         run: |
