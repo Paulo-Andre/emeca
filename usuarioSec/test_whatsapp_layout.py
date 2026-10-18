@@ -42,7 +42,8 @@ class WhatsAppInboxDesignTests(TestCase):
 
     def test_sem_ids_html_duplicados(self):
         resposta = self.client.get(reverse("whatsapp_mensagens"))
-        ids = re.findall(r'\\bid="([^"]+)"', resposta.content.decode("utf-8"))
+        ids = re.findall(r'\bid="([^"]+)"', resposta.content.decode("utf-8"))
+        self.assertGreater(len(ids), 40)
         self.assertEqual(len(ids), len(set(ids)))
 
     def test_css_contem_layout_movel_e_menu_gerencial(self):
