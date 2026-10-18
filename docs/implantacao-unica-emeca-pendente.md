@@ -14,6 +14,7 @@
 - Timeouts/falhas de envio **não reencaminham automaticamente** documentos: um timeout pode ocorrer depois de a mensagem ter sido aceita. A Secretaria deve revisar individualmente.
 - O número de documentos `ENVIADO` no EMECA significa **aceite pela API**, não comprovante de entrega no WhatsApp da família.
 - Persistência da desativação do agendador antigo `initScheduler()` do WA-AKG, mesmo após reinstalar o overlay do EMECA. O patcher não substitui alterações locais desconhecidas.
+- Novo scheduler reserva agendamentos com atualização atômica `PENDING → PROCESSING` antes de chamar o WhatsApp. Uma interrupção pode deixar `PROCESSING` pendente de revisão; **nunca reativar manualmente como PENDING sem conferir no aparelho e nos registros, pois poderia duplicar o envio**.
 - Auditoria QA com Django, cobertura, lint, verificação de segurança, testes sintéticos de concorrência e testes Chromium desktop/celular.
 
 ## Como funciona a implantação única segura
@@ -66,6 +67,7 @@ O pacote **não** envia mensagens automaticamente para testar entrega. Homologar
 - mensagem de teste e anexo, verificação no celular destinatário, leitura e retorno;
 - um PDF fictício pela fila, com entrega recebida e checagem do arquivo;
 - agendamento controlado, disparo uma única vez e comportamento após reiniciar.
+- conferir também agendamentos no estado `PROCESSING`/`FAILED` após queda ou reinicialização; somente reenviar mediante decisão humana, nunca por rotina de recuperação automática.
 
 **Não disparar para todas as famílias antes de concluir a homologação.** Status aceito no gateway não demonstra entrega física. Não reprocessar lotes antigos automaticamente.
 
