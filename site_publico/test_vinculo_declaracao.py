@@ -186,3 +186,66 @@ class BoletimVinculoDeclaracaoTests(TestCase):
         self.assertEqual(resposta.status_code, 200)
         boletim.aluno.refresh_from_db()
         self.assertEqual(boletim.aluno.declaracao_id, a.pk)
+
+    def test_planilha_com_dois_homonimos_preserva_ambos_sem_vinculo(self):
+        self.declaracao(cpf="111.111.111-11")
+        self.declaracao(cpf="222.222.222-22")
+        dados = self.grade()
+        segundo = {
+            **dados["alunos"][0],
+            "numero_chamada": 2,
+            "resultados": [{
+                "disciplina": "Matemática",
+                "nota": Decimal("19.00"), "faltas": 1,
+            }],
+        }
+        dados["alunos"].append(segundo)
+        resultado = importar_dados_boletim(dados)
+        self.assertEqual(resultado["importados"], 2)
+        self.assertEqual(len(resultado["pendentes_vinculo"]), 2)
+        self.assertEqual(BoletimAluno.objects.count(), 2)
+        self.assertEqual(
+            sorted(BoletimAluno.objects.values_list(
+                "resultados__nota", flat=True,
+            )),
+            [Decimal("19.00"), Decimal("23.50")],
+        )
+        self.assertEqual(
+            AlunoBoletim.objects.filter(declaracao__isnull=True).count(), 2,
+        )
+
+    def test_liga_notas_antigas_ao_perfil_existente_de_outro_periodo(self):
+        fonte = self.declaracao()
+        perfil = AlunoBoletim.objects.create(
+            nome=fonte.nomeDoAluno, declaracao=fonte,
+        )
+        outro_periodo = PeriodoBoletim.objects.create(
+            tipo="TRIMESTRE", numero=1, ano=2026, turma="1º TURMA TESTE",
+            publicado=False,
+        )
+        BoletimAluno.objects.create(periodo=outro_periodo, aluno=perfil)
+        periodo = self.periodo()
+        solto = AlunoBoletim.objects.create(nome=fonte.nomeDoAluno)
+        boletim = BoletimAluno.objects.create(
+            periodo=periodo, aluno=solto, faltas_totais=3,
+        )
+        disciplina = DisciplinaBoletim.objects.create(
+            periodo=periodo, nome="Matemática", ordem=0,
+        )
+        from .models import NotaBoletim
+        NotaBoletim.objects.create(
+            boletim=boletim, disciplina=disciplina, nota=Decimal("24.50"),
+        )
+        url = reverse(
+            "site_publico:gestao_boletim_aluno_editar",
+            args=[periodo.pk, boletim.pk],
+        )
+        resposta = self.client.post(url, {
+            "declaracao_aluno": fonte.pk, "nome_aluno": fonte.nomeDoAluno,
+            "faltas_totais": "3", "nota_" + str(disciplina.pk): "24.50",
+        })
+        self.assertEqual(resposta.status_code, 302)
+        boletim.refresh_from_db()
+        self.assertEqual(boletim.aluno_id, perfil.pk)
+        self.assertEqual(boletim.faltas_totais, 3)
+        self.assertEqual(boletim.resultados.get().nota, Decimal("24.50"))
