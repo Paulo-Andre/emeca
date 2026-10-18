@@ -1,0 +1,55 @@
+"""QA do patcher WA-AKG sem acessar o servidor ou mensagens reais."""
+import importlib.util
+import pathlib
+import unittest
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+ARQUIVO = ROOT / "deploy" / "wa-akg" / "aplicar_correcoes.py"
+SPEC = importlib.util.spec_from_file_location("aplicar_correcoes", ARQUIVO)
+MOD = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(MOD)
+
+
+class SchedulerUnicoTests(unittest.TestCase):
+    def test_desativa_importacao_e_inicializacao_antigas(self):
+        antigo = (
+            'import { initScheduler } from "@/lib/cron";\n'
+            "export class Manager {\n"
+            "  constructor() {\n"
+            "        initScheduler();\n"
+            "  }\n}\n"
+        )
+        novo = MOD.desativar_agendador_duplicado(antigo)
+        self.assertNotIn("initScheduler", novo)
+        self.assertIn("Agendamento centralizado em", novo)
+        self.assertEqual(MOD.desativar_agendador_duplicado(novo), novo)
+
+    def test_reconhece_correcao_manual_ja_existente(self):
+        atual = (
+            "        // Agendamento centralizado em "
+            "src/modules/whatsapp/scheduler.ts\n"
+            "const socket = true;\n"
+        )
+        self.assertEqual(MOD.desativar_agendador_duplicado(atual), atual)
+
+    def test_bloqueia_alteracoes_desconhecidas_do_manager(self):
+        with self.assertRaises(RuntimeError):
+            MOD.desativar_agendador_duplicado("export class Manager {}\n")
+        with self.assertRaises(RuntimeError):
+            MOD.desativar_agendador_duplicado(
+                'import { initScheduler } from "@/lib/cron";\n'
+                "  this.initScheduler();\n"
+            )
+
+    def test_recusa_outras_referencias_ao_antigo_agendador(self):
+        codigo = (
+            'import { initScheduler } from "@/lib/cron";\n'
+            "        initScheduler();\n"
+            "        initScheduler();\n"
+        )
+        with self.assertRaises(RuntimeError):
+            MOD.desativar_agendador_duplicado(codigo)
+
+
+if __name__ == "__main__":
+    unittest.main()
