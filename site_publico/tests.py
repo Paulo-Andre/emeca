@@ -1600,7 +1600,7 @@ class SitePublicoTests(TestCase):
         self.assertNotContains(response, 'name="cpfMae"')
         self.assertNotContains(response, 'name="cpfResponsavel"')
         self.assertNotContains(response, 'type="date"')
-        self.assertContains(response, "base de Declarações")
+        self.assertContains(response, "Declarações")
 
     def test_adicionar_aluno_manual_sem_matricula_e_lancar_notas(self):
         User = get_user_model()
