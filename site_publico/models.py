@@ -617,6 +617,14 @@ class AlunoBoletim(models.Model):
         verbose_name = "Aluno de boletim"
         verbose_name_plural = "Alunos de boletim"
 
+    @property
+    def nome_oficial(self):
+        """Identificação atual da Declaração sem reescrever nomes das planilhas."""
+        return (
+            self.declaracao.nomeDoAluno if self.declaracao_id
+            else self.nome
+        )
+
     def __str__(self):
         return self.nome
 
