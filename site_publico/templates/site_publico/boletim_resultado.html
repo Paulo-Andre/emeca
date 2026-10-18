@@ -19,7 +19,7 @@
       <article class="bulletin-student-card">
         <span><i data-lucide="user-round"></i></span>
         <div>
-          <strong>{{ item.aluno.nome }}</strong>
+          <strong>{{ item.aluno.nome_oficial }}</strong>
           <small>
             {% if item.aluno.data_nascimento %}Nascimento: {{ item.aluno.data_nascimento|date:"d/m/Y" }}{% endif %}
           </small>
@@ -38,7 +38,7 @@
 
       {% for item in alunos_contexto %}
         {% if alunos_contexto|length > 1 %}
-          <div class="bulletin-period-student-name">{{ item.aluno.nome }}</div>
+          <div class="bulletin-period-student-name">{{ item.aluno.nome_oficial }}</div>
         {% endif %}
         {% for boletim in item.boletins %}
           <a class="bulletin-period-link{% if boletim_selecionado.pk == boletim.pk %} is-active{% endif %}" href="?boletim={{ boletim.pk }}">
@@ -66,7 +66,7 @@
           </header>
 
           <div class="bulletin-paper__student">
-            <div><span>Aluno(a)</span><strong>{{ boletim_selecionado.aluno.nome }}</strong></div>
+            <div><span>Aluno(a)</span><strong>{{ boletim_selecionado.aluno.nome_oficial }}</strong></div>
             <div><span>Turma</span><strong>{{ boletim_selecionado.periodo.turma }}</strong></div>
             <div><span>Nascimento</span><strong>{% if boletim_selecionado.aluno.data_nascimento %}{{ boletim_selecionado.aluno.data_nascimento|date:"d/m/Y" }}{% else %}—{% endif %}</strong></div>
             <div><span>Nº</span><strong>{{ boletim_selecionado.numero_chamada|default:"—" }}</strong></div>
