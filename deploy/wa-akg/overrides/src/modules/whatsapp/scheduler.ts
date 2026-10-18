@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { waManager } from "./manager";
 import { logger } from "@/lib/logger";
+import { CronExpressionParser } from "cron-parser";
 
 const checkScheduledMessages = async () => {
     try {
@@ -70,11 +71,30 @@ const checkScheduledMessages = async () => {
                         }
                         // SENT = aceite pelo cliente WhatsApp; não prova
                         // entrega no telefone destinatário.
-                        await prisma.scheduledMessage.updateMany({
-                            where: { id: msg.id, status: "PROCESSING" },
-                            data: { status: "SENT" },
-                        });
-                        logger.success("Scheduler", `Msg ${msg.id} accepted by WhatsApp client.`);
+                        if (msg.cronExpression) {
+                            // Em recorrências, somente calcular a próxima data
+                            // APÓS o aceite da ocorrência anterior. Nunca usar
+                            // a hora fixa Asia/Jakarta do cron legado.
+                            const zona = process.env.TZ || "America/Sao_Paulo";
+                            const proxima = CronExpressionParser.parse(
+                                msg.cronExpression,
+                                { tz: zona, currentDate: new Date() },
+                            ).next().toDate();
+                            if (proxima.getTime() <= Date.now()) {
+                                throw new Error("Recorrência calculou uma data inválida.");
+                            }
+                            await prisma.scheduledMessage.updateMany({
+                                where: { id: msg.id, status: "PROCESSING" },
+                                data: { status: "PENDING", sendAt: proxima },
+                            });
+                            logger.success("Scheduler", `Msg ${msg.id} accepted; next recurrence scheduled.`);
+                        } else {
+                            await prisma.scheduledMessage.updateMany({
+                                where: { id: msg.id, status: "PROCESSING" },
+                                data: { status: "SENT" },
+                            });
+                            logger.success("Scheduler", `Msg ${msg.id} accepted by WhatsApp client.`);
+                        }
                     } catch (sendError) {
                         // Um timeout pode ocorrer depois de o WhatsApp aceitar
                         // a mensagem. Não reprocessar automaticamente.
