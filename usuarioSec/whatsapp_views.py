@@ -57,6 +57,7 @@ from .whatsapp_gateway import (
     bloquear_contato,
     buscar_mensagens,
     configurado as gateway_configurado,
+    confirmar_operacao_wa,
     criar_agendamento,
     criar_etiqueta,
     criar_grupo,
@@ -916,11 +917,15 @@ def whatsapp_enviar(request):
                 )
                 return redirect("whatsapp")
             jid_real = valido.get("jid") or jid
-            resposta = enviar_mensagem_chat(jid_real, mensagem)
+            resposta = confirmar_operacao_wa(
+                enviar_mensagem_chat(jid_real, mensagem), "envio individual",
+            )
             broadcast_id = None
         else:
-            resposta = enviar_broadcast(destinatarios, mensagem)
-            broadcast_id = resposta.get("data", {}).get("broadcastId")
+            resposta = confirmar_operacao_wa(
+                enviar_broadcast(destinatarios, mensagem), "envio coletivo",
+            )
+            broadcast_id = (resposta.get("data") or {}).get("broadcastId")
     except WhatsAppGatewayError as exc:
         messages.error(request, f"Falha ao enviar a mensagem: {exc}")
         return redirect("whatsapp")
@@ -2083,9 +2088,14 @@ def whatsapp_nova_conversa_api(request):
 
     try:
         if arquivo:
-            resposta = enviar_midia(jid, arquivo.read(), nome, content_type, tipo, mensagem)
+            resposta = confirmar_operacao_wa(
+                enviar_midia(jid, arquivo.read(), nome, content_type, tipo, mensagem),
+                "envio de anexo",
+            )
         else:
-            resposta = enviar_mensagem_chat(jid, mensagem)
+            resposta = confirmar_operacao_wa(
+                enviar_mensagem_chat(jid, mensagem), "nova conversa",
+            )
         return JsonResponse({"ok": True, "jid": jid, "resposta": resposta})
     except WhatsAppGatewayError as exc:
         return JsonResponse({"ok": False, "erro": str(exc)}, status=exc.status_code or 502)
@@ -2230,13 +2240,9 @@ def whatsapp_enviar_midia_api(request):
         tipo = "document"
 
     try:
-        resposta = enviar_midia(
-            jid,
-            arquivo.read(),
-            nome,
-            content_type,
-            tipo,
-            legenda,
+        resposta = confirmar_operacao_wa(
+            enviar_midia(jid, arquivo.read(), nome, content_type, tipo, legenda),
+            "envio de arquivo na conversa",
         )
         return JsonResponse({"ok": True, "tipo": tipo, "resposta": resposta})
     except WhatsAppGatewayError as exc:
@@ -2263,7 +2269,9 @@ def whatsapp_responder_api(request):
         if len(texto) > 4000:
             raise ValueError("A mensagem deve ter no máximo 4.000 caracteres.")
 
-        resposta = enviar_mensagem_chat(jid, texto)
+        resposta = confirmar_operacao_wa(
+            enviar_mensagem_chat(jid, texto), "mensagem de conversa",
+        )
         return JsonResponse({"ok": True, "resposta": resposta})
     except ValueError as exc:
         return JsonResponse({"ok": False, "erro": str(exc)}, status=400)
