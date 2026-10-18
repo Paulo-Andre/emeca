@@ -74,7 +74,7 @@ const checkScheduledMessages = async () => {
                         if (msg.cronExpression) {
                             // Em recorrências, somente calcular a próxima data
                             // APÓS o aceite da ocorrência anterior. Nunca usar
-                            // a hora fixa Asia/Jakarta do cron legado.
+                            // o fuso fixo incorreto do cron legado.
                             const zona = process.env.TZ || "America/Sao_Paulo";
                             const proxima = CronExpressionParser.parse(
                                 msg.cronExpression,
