@@ -434,10 +434,27 @@ def gestao_boletim_aluno(request, periodo_pk, boletim_pk=None):
                 if boletim_obj is not None:
                     perfil = boletim_obj.aluno
                     if perfil_existente and perfil_existente.pk != perfil.pk:
-                        raise ValueError(
-                            "Esta declaração está vinculada a outro perfil. "
-                            "Não é seguro fundir notas automaticamente."
-                        )
+                        if perfil.declaracao_id:
+                            raise ValueError(
+                                "Este boletim pertence a outro aluno vinculado. "
+                                "Não é permitido trocar identidades confirmadas."
+                            )
+                        if BoletimAluno.objects.filter(
+                            periodo=periodo, aluno=perfil_existente,
+                        ).exclude(pk=boletim_obj.pk).exists():
+                            raise ValueError(
+                                "O aluno escolhido já possui um boletim neste período. "
+                                "Revise as notas antes de qualquer fusão."
+                            )
+                        # Usuário escolheu explicitamente uma declaração já
+                        # ligada a outro período. Move apenas ESTE boletim,
+                        # mantendo a mesma nota, faltas e histórico de lançamento.
+                        anterior = perfil
+                        boletim_obj.aluno = perfil_existente
+                        boletim_obj.save(update_fields=["aluno", "atualizado_em"])
+                        perfil = perfil_existente
+                        if not anterior.boletins.exists():
+                            anterior.delete()
                 elif perfil_existente:
                     perfil = perfil_existente
                 else:
