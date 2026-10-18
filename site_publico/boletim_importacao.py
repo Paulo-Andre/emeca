@@ -247,10 +247,9 @@ def _coluna_faltas_totais(df, cabecalho_idx, nome_col, componentes):
     substituímos o total por uma nota ou pelo valor de outra coluna.
     """
     if len(df.columns) <= COLUNA_FALTAS_TOTAIS_EXCEL:
-        raise ImportacaoBoletimErro(
-            "A planilha de Notas e Faltas não possui a coluna H, que contém "
-            "o total de faltas. Confira se foi enviado o modelo correto."
-        )
+        # Planilhas legadas curtas ainda podem ter notas válidas. Nesse caso
+        # não inventar faltas: deixar o total em branco para revisão manual.
+        return None
     return COLUNA_FALTAS_TOTAIS_EXCEL
 
 def _metadados(df):
