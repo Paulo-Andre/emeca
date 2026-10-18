@@ -590,6 +590,15 @@ class PeriodoBoletim(models.Model):
 
 
 class AlunoBoletim(models.Model):
+    # A identidade atual usada para consultar o boletim vem exclusivamente
+    # de Declarações. Matrícula mantém-se como registro histórico independente.
+    declaracao = models.OneToOneField(
+        "usuarioSec.declaracao",
+        on_delete=models.PROTECT,
+        related_name="perfil_boletim",
+        blank=True,
+        null=True,
+    )
     matricula = models.OneToOneField(
         "cadastro.matricula",
         on_delete=models.SET_NULL,
