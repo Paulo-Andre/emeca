@@ -177,6 +177,16 @@ def gestao_boletim_periodo_editar(request, pk):
     )
     form = PeriodoBoletimForm(request.POST or None, instance=periodo)
     if request.method == "POST" and form.is_valid():
+        if form.cleaned_data.get("publicado") and periodo.boletins.filter(
+            aluno__declaracao__isnull=True,
+        ).exists():
+            messages.error(
+                request,
+                "Vincule todos os alunos a Declarações antes de publicar este período.",
+            )
+            return redirect(
+                "site_publico:gestao_boletim_periodo", pk=periodo.pk,
+            )
         form.save()
         messages.success(request, "Dados gerais do boletim atualizados.")
         return redirect("site_publico:gestao_boletim_periodo_editar", pk=periodo.pk)
