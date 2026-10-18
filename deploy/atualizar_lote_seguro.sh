@@ -49,6 +49,19 @@ python3 -m py_compile "$PATCHER"
 python3 "$PATCHER" --dry-run
 docker compose exec -T web python manage.py check
 docker compose exec -T web python manage.py migrate --plan
+# Evitar liberação inesperada de PDFs pendentes após reinício do worker.
+FILA="$(docker compose exec -T web python manage.py shell -c '
+from usuarioSec.models import EnvioBoletimWhatsApp
+print(EnvioBoletimWhatsApp.objects.filter(
+    status__in=["PENDENTE", "PROCESSANDO"]
+).count())' | tail -1 | tr -d '\r')"
+case "$FILA" in
+  ''|*[!0-9]*) falhar "Não foi possível verificar a fila de boletins." ;;
+esac
+log "Lotes de PDF em fila/processamento: $FILA"
+if test "$MODO" = "--aplicar" && test "$FILA" != "0"; then
+  falhar "Há boletins aguardando envio. Aguarde/revise os lotes antes de reiniciar o worker."
+fi
 
 if test "$MODO" = "--preflight"; then
   log "Pré-verificação concluída. Nenhuma imagem ou banco foi modificado."
