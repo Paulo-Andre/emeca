@@ -9,7 +9,7 @@ type Props = {
   setDados: React.Dispatch<React.SetStateAction<SetDados>>;
 };
 
-export default function EstadoCivil({ dado, setDados }: Props) {
+export default function EstadoCivil({ setDados }: Props) {
   const navigate = useNavigate();
 
   // 🔹 MÁSCARA TELEFONE
