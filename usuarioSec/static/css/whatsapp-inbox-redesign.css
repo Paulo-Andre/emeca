@@ -531,6 +531,16 @@
   outline: 2px solid #277fa1;
   outline-offset: 2px;
 }
+/* QA real em Chromium: o menu lateral expansível ocupa até 282px e
+   interceptava cliques nos filtros de conversas. Reservamos essa largura
+   somente na central de mensagens para evitar sobreposição de controles,
+   sem modificar as demais telas da Secretaria. */
+@media (min-width: 1101px) and (hover: hover) and (pointer: fine) {
+  body:has(> .sidebar):has(> main.whatsapp-inbox-main) {
+    padding-left: 282px;
+  }
+}
+
 /* O restante da secretaria mantém seu visual próprio. Estas regras se
    aplicam aos diálogos porque estão fora do elemento main. */
 .wa-new-chat-dialog .wa-new-chat-card,
