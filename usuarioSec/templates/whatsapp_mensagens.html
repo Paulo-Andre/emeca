@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
   <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-hover-overlay-06">
   <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-groups-21">
+  <link rel="stylesheet" href="{% static 'css/whatsapp-inbox-redesign.css' %}?v=20261018-chat-focus-01">
 </head>
 <body>
   {% include 'includes/sidebar.html' %}
@@ -50,10 +51,11 @@
     {% endif %}
 
     <section class="wa-inbox-shell{% if gateway_status != 'CONNECTED' %} is-disabled{% endif %}">
-      <aside class="wa-chat-list-panel">
+      <aside class="wa-chat-list-panel" aria-label="Lista de conversas">
         <div class="wa-chat-list-head">
           <div>
-            <strong>Conversas</strong>
+            <span class="wa-inbox-eyebrow"><i data-lucide="headset"></i> Atendimento escolar</span>
+            <strong>Mensagens</strong>
             <small id="chatCount">Carregando…</small>
           </div>
           <div class="wa-chat-list-tools">
@@ -68,10 +70,11 @@
 
         <div class="wa-chat-search">
           <i data-lucide="search"></i>
-          <input id="chatSearch" type="search" placeholder="Buscar conversa" autocomplete="off">
+          <input id="chatSearch" type="search" placeholder="Pesquisar conversas, números ou etiquetas" aria-label="Pesquisar conversas" autocomplete="off">
         </div>
         <div class="wa-chat-filter-row">
           <button type="button" class="wa-chat-filter active" id="filterAllChats" aria-pressed="true">Todas</button>
+          <button type="button" class="wa-chat-filter" id="filterUnreadChats" aria-pressed="false"><i data-lucide="circle-dot"></i> Não lidas <span id="unreadChatsCount"></span></button>
           <button type="button" class="wa-chat-filter" id="filterGroupChats" aria-pressed="false">
             <i data-lucide="users"></i> Grupos <span id="groupChatsCount"></span>
           </button>
@@ -82,15 +85,18 @@
         </div>
       </aside>
 
-      <section class="wa-conversation-panel">
+      <section class="wa-conversation-panel" aria-label="Mensagens da conversa selecionada">
         <div class="wa-conversation-empty" id="conversationEmpty">
-          <div class="wa-empty-icon"><i data-lucide="message-circle"></i></div>
-          <h3>Selecione uma conversa</h3>
-          <p>As mensagens recebidas e enviadas aparecerão aqui.</p>
+          <div class="wa-empty-icon"><i data-lucide="messages-square"></i></div>
+          <span class="wa-empty-eyebrow">CENTRAL DE MENSAGENS</span>
+          <h3>Seu atendimento começa aqui</h3>
+          <p>Selecione uma conversa à esquerda para ler e responder mensagens dos responsáveis.</p>
+          <span class="wa-empty-tip"><i data-lucide="shield-check"></i> Atendimento integrado à Secretaria</span>
         </div>
 
         <div class="wa-conversation" id="conversation" hidden>
           <header class="wa-conversation-head">
+            <button type="button" class="wa-mobile-back" id="backToChats" aria-label="Voltar à lista de conversas" title="Voltar às conversas"><i data-lucide="arrow-left"></i></button>
             <button class="wa-contact-avatar wa-avatar-interactive" id="contactAvatar" type="button" title="Ampliar foto do contato" aria-label="Ampliar foto do contato">?</button>
             <div>
               <strong id="contactName">Contato</strong>
@@ -98,15 +104,21 @@
             </div>
             <div class="wa-chat-actions">
               <button type="button" class="wa-icon-button wa-profile-header-btn" id="viewContactProfile" title="Ver perfil do contato" aria-label="Ver perfil do contato"><i data-lucide="user-round"></i><span>Perfil</span></button>
-              <button type="button" class="wa-icon-button wa-identify-button" id="identifyContactButton" title="Identificar contato ou unir conversas" aria-label="Identificar contato ou unir conversas"><i data-lucide="contact-round-pen"></i><span>Identificar</span></button>
-              <button type="button" class="wa-icon-button" id="messageSearchButton" title="Buscar mensagens"><i data-lucide="search"></i></button>
-              <button type="button" class="wa-icon-button" id="labelsButton" title="Etiquetas"><i data-lucide="tags"></i></button>
-              <button type="button" class="wa-icon-button" data-chat-action="read" title="Marcar como lida" aria-label="Marcar conversa como lida"><i data-lucide="check-check"></i></button>
-              <button type="button" class="wa-icon-button" data-chat-action="pin" title="Fixar conversa" aria-label="Fixar conversa"><i data-lucide="pin"></i></button>
-              <button type="button" class="wa-icon-button" data-chat-action="mute" title="Silenciar conversa" aria-label="Silenciar conversa"><i data-lucide="bell-off"></i></button>
-              <button type="button" class="wa-icon-button" data-chat-action="archive" title="Arquivar conversa" aria-label="Arquivar conversa"><i data-lucide="archive"></i></button>
-              <button type="button" class="wa-icon-button wa-delete-chat-button" id="deleteChatButton" title="Excluir conversa" aria-label="Excluir conversa"><i data-lucide="trash-2"></i></button>
-              <button type="button" class="wa-icon-button" id="blockContactButton" title="Bloquear/desbloquear contato" aria-label="Bloquear ou desbloquear contato"><i data-lucide="shield-ban"></i></button>
+              <button type="button" class="wa-icon-button" id="messageSearchButton" title="Pesquisar nesta conversa" aria-label="Pesquisar nesta conversa"><i data-lucide="search"></i></button>
+              <button type="button" class="wa-icon-button" id="labelsButton" title="Etiquetas da conversa" aria-label="Etiquetas da conversa"><i data-lucide="tags"></i></button>
+              <details class="wa-chat-more-menu" id="chatMoreMenu">
+                <summary class="wa-icon-button" title="Mais ações da conversa" aria-label="Mais ações da conversa"><i data-lucide="ellipsis-vertical"></i></summary>
+                <div class="wa-chat-more-panel" role="group" aria-label="Gerenciar conversa">
+                  <span class="wa-chat-more-title">Gerenciar conversa</span>
+                  <button type="button" class="wa-icon-button wa-identify-button" id="identifyContactButton" title="Identificar contato ou unir conversas" aria-label="Identificar contato ou unir conversas"><i data-lucide="contact-round-pen"></i><span>Identificar contato</span></button>
+                  <button type="button" class="wa-icon-button" data-chat-action="read" title="Marcar como lida" aria-label="Marcar conversa como lida"><i data-lucide="check-check"></i><span>Marcar como lida</span></button>
+                  <button type="button" class="wa-icon-button" data-chat-action="pin" title="Fixar conversa" aria-label="Fixar conversa"><i data-lucide="pin"></i><span>Fixar / desafixar</span></button>
+                  <button type="button" class="wa-icon-button" data-chat-action="mute" title="Silenciar conversa" aria-label="Silenciar conversa"><i data-lucide="bell-off"></i><span>Silenciar / ativar</span></button>
+                  <button type="button" class="wa-icon-button" data-chat-action="archive" title="Arquivar conversa" aria-label="Arquivar conversa"><i data-lucide="archive"></i><span>Arquivar / restaurar</span></button>
+                  <button type="button" class="wa-icon-button" id="blockContactButton" title="Bloquear/desbloquear contato" aria-label="Bloquear ou desbloquear contato"><i data-lucide="shield-ban"></i><span>Bloquear / desbloquear</span></button>
+                  <button type="button" class="wa-icon-button wa-delete-chat-button" id="deleteChatButton" title="Excluir conversa" aria-label="Excluir conversa"><i data-lucide="trash-2"></i><span>Excluir conversa</span></button>
+                </div>
+              </details>
             </div>
             <span class="wa-live-badge"><span></span> Atualização automática</span>
           </header>
@@ -137,7 +149,7 @@
             <button type="button" class="wa-attach-button" id="attachButton" aria-label="Anexar arquivo" title="Anexar imagem, vídeo, áudio ou documento">
               <i data-lucide="paperclip"></i>
             </button>
-            <textarea id="replyMessage" name="mensagem" rows="1" maxlength="4000" placeholder="Digite uma mensagem…" aria-label="Mensagem"></textarea>
+            <textarea id="replyMessage" name="mensagem" rows="1" maxlength="4000" placeholder="Escreva sua mensagem…" aria-label="Escreva sua mensagem"></textarea>
             <button type="submit" class="wa-send-reply" id="sendReply" aria-label="Enviar mensagem">
               <i data-lucide="send"></i>
             </button>
@@ -341,14 +353,38 @@
       });
     }
     const initialChats = JSON.parse(document.getElementById("wa-chats-iniciais").textContent || "[]");
+    const inboxShell = document.querySelector(".wa-inbox-shell");
+    const moreMenu = document.getElementById("chatMoreMenu");
+    const mobileBackButton = document.getElementById("backToChats");
     const chatList = document.getElementById("chatList");
+    function showChatsOnMobile() {
+      inboxShell.classList.remove("is-chat-open");
+      moreMenu.open = false;
+      document.getElementById("chatSearch").focus({preventScroll:true});
+    }
+    mobileBackButton.addEventListener("click", showChatsOnMobile);
+    moreMenu.addEventListener("click", event => {
+      if (event.target.closest(".wa-chat-more-panel button")) moreMenu.open = false;
+    });
+    document.addEventListener("click", event => {
+      if (moreMenu.open && !moreMenu.contains(event.target)) moreMenu.open = false;
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && !document.querySelector("dialog[open]") && inboxShell.classList.contains("is-chat-open")) showChatsOnMobile();
+    });
     const chatSearch = document.getElementById("chatSearch");
     const filterAllChats = document.getElementById("filterAllChats");
     const filterGroupChats = document.getElementById("filterGroupChats");
     const groupChatsCount = document.getElementById("groupChatsCount");
+    const filterUnreadChats = document.getElementById("filterUnreadChats");
+    const unreadChatsCount = document.getElementById("unreadChatsCount");
+    let unreadFilterEnabled = false;
     let groupFilterEnabled = false;
     function setGroupFilter(enabled) {
       groupFilterEnabled = Boolean(enabled);
+      unreadFilterEnabled = false;
+      filterUnreadChats.classList.remove("active");
+      filterUnreadChats.setAttribute("aria-pressed", "false");
       filterAllChats.classList.toggle("active", !groupFilterEnabled);
       filterGroupChats.classList.toggle("active", groupFilterEnabled);
       filterAllChats.setAttribute("aria-pressed", String(!groupFilterEnabled));
@@ -357,6 +393,17 @@
     }
     filterAllChats.addEventListener("click", () => setGroupFilter(false));
     filterGroupChats.addEventListener("click", () => setGroupFilter(true));
+    filterUnreadChats.addEventListener("click", () => {
+      unreadFilterEnabled = true;
+      groupFilterEnabled = false;
+      filterUnreadChats.classList.add("active");
+      filterUnreadChats.setAttribute("aria-pressed", "true");
+      filterGroupChats.classList.remove("active");
+      filterGroupChats.setAttribute("aria-pressed", "false");
+      filterAllChats.classList.remove("active");
+      filterAllChats.setAttribute("aria-pressed", "false");
+      renderChats();
+    });
     const chatCount = document.getElementById("chatCount");
     const conversation = document.getElementById("conversation");
     const conversationEmpty = document.getElementById("conversationEmpty");
@@ -846,8 +893,10 @@
       groupChatsCount.textContent = String(chats.filter(chat =>
         String(chat.jid || "").endsWith("@g.us")
       ).length);
+      unreadChatsCount.textContent = String(chats.filter(chat => Number(chat.naoLidas || 0) > 0).length);
       const filtered = chats.filter(chat =>
         (!groupFilterEnabled || String(chat.jid || "").endsWith("@g.us")) &&
+        (!unreadFilterEnabled || Number(chat.naoLidas || 0) > 0) &&
         (!q || [
           chatDisplayName(chat), chat.phoneJid, realPhone(chat), previewText(chat),
           ...(chat.etiquetas || []).map(label => label.name || "")
@@ -871,7 +920,9 @@
           empty.className = "wa-empty-list";
           chatList.appendChild(empty);
         }
-        empty.textContent = q ? "Nenhuma conversa encontrada." : "Nenhuma conversa recebida ainda.";
+        empty.textContent = q ? "Nenhuma conversa encontrada." :
+          unreadFilterEnabled ? "Tudo em dia! Nenhuma conversa não lida." :
+          groupFilterEnabled ? "Nenhuma conversa em grupo." : "Nenhuma conversa recebida ainda.";
       } else {
         chatList.querySelector(".wa-empty-list")?.remove();
         let next = null;
@@ -1303,6 +1354,7 @@
       updateChatActionButtons(chat);
 
       if (switched || !quiet) {
+        if (!quiet) { inboxShell.classList.add("is-chat-open"); moreMenu.open = false; }
         contactName.textContent = chatDisplayName(chat);
         contactNumber.textContent = realPhone(chat) || "Telefone não fornecido pelo WhatsApp";
         loadLivePhoto(chat, contactAvatar);
