@@ -1,4 +1,4 @@
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
+type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
 interface DadosSelect {
   placeholder: string;
   nomeResposta: string;
