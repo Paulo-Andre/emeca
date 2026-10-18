@@ -13,6 +13,11 @@
 - Respostas com `success:false`, `status:false` ou sem confirmação não podem gerar status `ENVIADO`.
 - Timeouts/falhas de envio **não reencaminham automaticamente** documentos: um timeout pode ocorrer depois de a mensagem ter sido aceita. A Secretaria deve revisar individualmente.
 - O número de documentos `ENVIADO` no EMECA significa **aceite pela API**, não comprovante de entrega no WhatsApp da família.
+- Agendamento WA-AKG agora usa uma reserva atômica por mensagem (`PENDING → PROCESSING`) e mantém as **recorrências** por expressão cron, no fuso `TZ` do serviço (padrão America/Sao_Paulo); falhas e timeouts exigem revisão antes de repetir.
+- O painel de Gerenciamento diferencia aceite do cliente WhatsApp de entrega efetiva e avisa sobre estados incertos.
+- Testes com **620 contatos fictícios**, duplicações, números inválidos e filtros por turma, sem enviar mensagens.
+- Novo ensaio isolado de **restauração SQLite**, inspeção dos arquivos de mídia/sessão e validação superficial do dump MySQL. **Ainda é obrigatório ensaiar restauração MySQL completa numa instância descartável quando houver acesso ao servidor.**
+- Pré-verificação inclui estado dos agendamentos `PROCESSING`, fila de PDFs, sinalização HTTPS, migrações e integridade do backup; agendamentos incertos bloqueiam atualização automática.
 - Persistência da desativação do agendador antigo `initScheduler()` do WA-AKG, mesmo após reinstalar o overlay do EMECA. O patcher não substitui alterações locais desconhecidas.
 - Novo scheduler reserva agendamentos com atualização atômica `PENDING → PROCESSING` antes de chamar o WhatsApp. Uma interrupção pode deixar `PROCESSING` pendente de revisão; **nunca reativar manualmente como PENDING sem conferir no aparelho e nos registros, pois poderia duplicar o envio**.
 - Auditoria QA com Django, cobertura, lint, verificação de segurança, testes sintéticos de concorrência e testes Chromium desktop/celular.
