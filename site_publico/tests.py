@@ -1414,14 +1414,14 @@ class SitePublicoTests(TestCase):
         self.assertEqual(dados["alunos"][0]["resultados"][0]["faltas"], 1)
 
     @patch("site_publico.boletim_importacao.pd.read_excel")
-    def test_leitor_usa_exclusivamente_coluna_f_como_faltas_totais(self, read_excel):
+    def test_leitor_usa_exclusivamente_coluna_h_como_faltas_totais(self, read_excel):
         read_excel.return_value = pd.DataFrame([
             ["E.M EGIDIO CORDEIRO AQUINO"] + [None] * 9,
             ["Notas e Faltas do 2º Trimestre - Turma 1º Teste - 2026"] + [None] * 9,
             [None, None, None, None, "Regente", None, "LÍNG. PORT.", None, "MATEMÁTICA", None],
             ["Num.", None, "Nome", None, None, None, None, None, None, None],
             [None, None, None, None, None, "F.", None, None, None, None],
-            [1, None, "Estudante Sintética Alfa", None, None, "3", "21,00", "9", "30,00", "8"],
+            [1, None, "Estudante Sintética Alfa", None, None, "9", "21,00", "3", "30,00", "8"],
         ])
         arquivo = SimpleUploadedFile(
             "NotaseFaltasdo2TrimestreTurma1Teste2026.xls",
@@ -1434,7 +1434,7 @@ class SitePublicoTests(TestCase):
         self.assertEqual(dados["alunos"][0]["faltas_totais"], 3)
         # Valores das colunas de falta por disciplina podem existir no arquivo,
         # mas nunca são usados como o total do aluno.
-        self.assertEqual(dados["alunos"][0]["resultados"][0]["faltas"], 9)
+        self.assertEqual(dados["alunos"][0]["resultados"][0]["faltas"], 3)
         self.assertEqual(dados["alunos"][0]["resultados"][1]["faltas"], 8)
 
     def test_consulta_combina_cpf_do_perfil_com_nascimento_de_declaracoes(self):
@@ -1473,9 +1473,9 @@ class SitePublicoTests(TestCase):
         self.assertContains(response, "Não foi possível localizar um boletim")
 
     @patch("site_publico.boletim_importacao.pd.read_excel")
-    def test_layout_real_usa_falta_total_da_coluna_f(self, read_excel):
-        # A regra oficial é fixa: coluna F (índice 5) contém as faltas totais.
-        # Valores de falta das disciplinas, à direita, não alteram esse total.
+    def test_layout_real_usa_falta_total_da_coluna_h(self, read_excel):
+        # A regra oficial desta planilha: coluna H (índice 7) é o total.
+        # Coluna F e as demais faltas não entram no total do boletim.
         read_excel.return_value = pd.DataFrame([
             [None] * 34,
             [None, None, None, None, None, "E.M EGIDIO CORDEIRO AQUINO"] + [None] * 28,
@@ -1491,7 +1491,7 @@ class SitePublicoTests(TestCase):
              "N.", "F.", "N.", "F.", "N.", "F.", "N.", "F.", "N.", "F.",
              "N.", "F.", "N.", "F.", "N.", "F.", "N.", "F.", "N.", "F."] + [None] * 6,
             [None] * 34,
-            [1, None, "Estudante Sintética Alfa", None, None, "3", None, None,
+            [1, None, "Estudante Sintética Alfa", None, None, "99", None, "3",
              "21,00", "7", None, None, "30,00", "5", "29,00", "4",
              "28,00", "3", "23,00", None, "25,00", None, "28,00", None,
              "26,00", None, "30,00", "2"] + [None] * 6,
