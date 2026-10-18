@@ -16,6 +16,8 @@
   <div class="bulletin-grade-editor__student bulletin-grade-editor__student--details">
     <div class="manager-field manager-field--full">
       <label for="{{ form.declaracao_aluno.id_for_label }}">{{ form.declaracao_aluno.label }}</label>
+      <input type="search" class="site-manager-input" id="buscarDeclaracaoBoletim"
+             placeholder="Filtrar por nome, turma ou cadastro" aria-label="Filtrar alunos das Declarações">
       {{ form.declaracao_aluno }}
       {% if form.declaracao_aluno.help_text %}<small>{{ form.declaracao_aluno.help_text }}</small>{% endif %}
       {% for error in form.declaracao_aluno.errors %}<span class="manager-field-error">{{ error }}</span>{% endfor %}
@@ -76,4 +78,21 @@
     <button class="manager-btn manager-btn--primary" type="submit"><i data-lucide="save"></i> Salvar aluno, notas e faltas totais</button>
   </div>
 </form>
+<script>
+  (function() {
+    const filtro = document.getElementById('buscarDeclaracaoBoletim');
+    const lista = document.getElementById('id_declaracao_aluno');
+    if (!filtro || !lista) return;
+    const opcoes = Array.from(lista.options);
+    const normalizar = texto => texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    filtro.addEventListener('input', () => {
+      const termo = normalizar(filtro.value.trim());
+      opcoes.forEach(opcao => {
+        const texto = normalizar(opcao.text);
+        opcao.hidden = Boolean(termo) && !texto.includes(termo) &&
+          opcao.value !== lista.value;
+      });
+    });
+  })();
+</script>
 {% endblock %}
