@@ -67,6 +67,37 @@ class ImportacaoFaltasColunaHTests(TestCase):
         leitura = self._ler(0)
         self.assertEqual(leitura["alunos"][0]["faltas_totais"], 0)
 
+    def test_h_vazia_e_traco_sao_zero_para_aluno_existente(self):
+        for valor in ("", "-", None):
+            with self.subTest(valor=valor):
+                leitura = self._ler(valor)
+                self.assertEqual(len(leitura["alunos"]), 1)
+                self.assertEqual(leitura["alunos"][0]["faltas_totais"], 0)
+
+    def test_h_com_texto_inesperado_permanece_para_revisao(self):
+        leitura = self._ler("pendente")
+        self.assertIsNone(leitura["alunos"][0]["faltas_totais"])
+
+    def test_linha_sem_aluno_na_coluna_c_nao_gera_nota_nem_falta(self):
+        planilha = planilha_turma(3)
+        planilha.iat[3, 1] = ""
+        planilha.iat[3, 2] = "Nome"
+        planilha.iat[4, 1] = ""
+        planilha.iat[4, 2] = "ALUNA FICTICIA"
+        planilha.iat[5, 0] = 2
+        planilha.iat[5, 2] = ""  # Sem aluno na coluna C.
+        planilha.iat[5, 6] = 30  # Não pode gerar nota.
+        planilha.iat[5, 7] = 9   # Não pode gerar faltas.
+        arquivo = SimpleUploadedFile("notas.xls", b"planilha-de-teste")
+        with patch(
+            "site_publico.boletim_importacao.pd.read_excel",
+            return_value=planilha,
+        ):
+            leitura = ler_planilha_boletim(arquivo)
+        self.assertEqual(len(leitura["alunos"]), 1)
+        self.assertEqual(leitura["alunos"][0]["nome"], "ALUNA FICTICIA")
+        self.assertEqual(leitura["alunos"][0]["faltas_totais"], 3)
+
     def test_arquivo_sem_coluna_h_mantem_notas_sem_inventar_total(self):
         arquivo = SimpleUploadedFile("notas.xls", b"planilha-de-teste")
         sem_h = planilha_turma().iloc[:, :7].copy()
