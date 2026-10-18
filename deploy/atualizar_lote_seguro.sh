@@ -130,6 +130,25 @@ if ! docker compose "${WA_ARGS[@]}" exec -T db sh -c \
   falhar "Backup MySQL WA-AKG falhou: implantação interrompida."
 fi
 test -s "$DUMP" || falhar "Dump MySQL WA-AKG vazio."
+# Evitar a falsa sensação de backup: conferir assinatura de dump completo,
+# legibilidade das mídias e restauração de SQLite em processo separado.
+if ! grep -q '^-- Dump completed on ' "$DUMP"; then
+  falhar "O dump WA-AKG não terminou normalmente. Nada será implantado."
+fi
+gzip -t "$DEST/emeca-media.tar.gz" || falhar "Backup de mídias EMECA corrompido."
+gzip -t "$DEST/wa-akg-volumes.tar.gz" || falhar "Backup de volumes WA-AKG corrompido."
+python3 - "$DEST/emeca.sqlite3" <<'PY'
+import sqlite3
+import sys
+from pathlib import Path
+
+arquivo = Path(sys.argv[1])
+with sqlite3.connect(f"file:{arquivo}?mode=ro", uri=True) as banco:
+    resultado = banco.execute("PRAGMA integrity_check").fetchone()
+    if resultado != ("ok",):
+        raise SystemExit("Backup SQLite não passou na verificação de integridade.")
+print("Integridade do backup SQLite conferida.")
+PY
 chmod 600 "$DEST"/*
 printf '%s\n' "$(git rev-parse HEAD)" > "$DEST/commit-emeca.txt"
 docker inspect --format '{{.Image}}' wa-akg-app > "$DEST/imagem-wa-anterior.txt" || true
@@ -141,11 +160,15 @@ python3 "$PATCHER"
 log "Compilando imagens antes de substituir containers ativos"
 docker compose "${WA_ARGS[@]}" build app
 docker compose build web whatsapp-worker
+# A nova imagem precisa passar pelo Django check ANTES de interromper
+# a aplicação atual. O entrypoint deve ser desabilitado explicitamente.
+docker compose run --rm --no-deps -T -e SKIP_DJANGO_INIT=1 web \
+  python manage.py check
 
+log "Pausando worker ANTES de reiniciar WhatsApp e migrar EMECA"
+docker compose stop whatsapp-worker
 log "Substituindo somente a aplicação WA-AKG, preservando banco/volumes"
 docker compose "${WA_ARGS[@]}" up -d --no-deps app
-log "Pausando worker antes de migrar os dados EMECA (evita mensagens durante atualização)"
-docker compose stop whatsapp-worker
 log "Substituindo EMECA web (entrypoint aplicará migrações automaticamente)"
 docker compose up -d --no-deps web
 docker compose exec -T web python manage.py check
