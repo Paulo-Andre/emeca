@@ -329,7 +329,11 @@ def boletim_acesso(request):
 
     alunos = list(
         AlunoBoletim.objects
-        .filter(pk__in=ids, boletins__periodo__publicado=True)
+        .filter(
+            pk__in=ids,
+            declaracao__isnull=False,
+            boletins__periodo__publicado=True,
+        )
         .distinct()
         .order_by("nome")
     )
@@ -339,7 +343,11 @@ def boletim_acesso(request):
 
     boletins = list(
         BoletimAluno.objects
-        .filter(aluno_id__in=ids, periodo__publicado=True)
+        .filter(
+            aluno_id__in=ids,
+            aluno__declaracao__isnull=False,
+            periodo__publicado=True,
+        )
         .select_related("aluno", "periodo")
         .prefetch_related("resultados__disciplina")
         .order_by("-periodo__ano", "-periodo__numero", "aluno__nome")
@@ -389,6 +397,7 @@ def boletim_pdf(request, pk):
         .prefetch_related("resultados__disciplina"),
         pk=pk,
         aluno_id__in=ids,
+        aluno__declaracao__isnull=False,
         periodo__publicado=True,
     )
     arquivo = gerar_pdf_boletim(boletim_obj, _config())
