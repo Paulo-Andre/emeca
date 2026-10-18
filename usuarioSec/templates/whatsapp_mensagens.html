@@ -334,7 +334,7 @@
 
   {{ chats_iniciais|json_script:"wa-chats-iniciais" }}
   <script>
-    lucide.createIcons();
+    if (window.lucide) window.lucide.createIcons();
 
     const connected = {% if gateway_status == "CONNECTED" %}true{% else %}false{% endif %};
     // Each browser tab is bound to the precise WhatsApp account/session it opened.
