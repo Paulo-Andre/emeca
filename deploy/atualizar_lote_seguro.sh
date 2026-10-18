@@ -49,6 +49,15 @@ python3 -m py_compile "$PATCHER"
 python3 "$PATCHER" --dry-run
 docker compose exec -T web python manage.py check
 docker compose exec -T web python manage.py migrate --plan
+# Diagnóstico de segurança não destrutivo: o acesso local pode estar em HTTP.
+# HTTPS deve ser configurado em proxy/túnel antes da exposição externa.
+log "Diagnóstico de TLS e cookies (sem exibir segredos)"
+docker compose exec -T web python manage.py shell -c '
+from django.conf import settings
+for chave in ("DEBUG", "SECURE_SSL_REDIRECT", "SESSION_COOKIE_SECURE",
+              "CSRF_COOKIE_SECURE", "SECURE_HSTS_SECONDS"):
+    print("{}: {}".format(chave, getattr(settings, chave, None)))
+'
 # Evitar liberação inesperada de PDFs pendentes após reinício do worker.
 FILA="$(docker compose exec -T web python manage.py shell -c '
 from usuarioSec.models import EnvioBoletimWhatsApp
