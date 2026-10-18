@@ -95,13 +95,20 @@ def _mapa_declaracoes_por_nome(queryset=None):
 
 
 def sincronizar_perfil_declaracao(perfil, aluno_declaracao):
-    """Sincroniza a identidade interna do boletim com Declarações.
+    """Associa a identidade do boletim ao cadastro explícito em Declarações.
 
-    Data de nascimento e CPFs não são dados editáveis no módulo de boletim.
-    Quando existe uma declaração única para o mesmo nome, ela é a fonte
-    autoritativa desses campos, inclusive quando algum deles está vazio.
+    Matrícula e Histórico continuam representando períodos independentes.
+    Um perfil já vinculado a outra Declaração nunca é relocado pelo nome.
     """
+    if perfil.declaracao_id and perfil.declaracao_id != aluno_declaracao.pk:
+        raise ValueError("O boletim já está vinculado a outro aluno de Declarações.")
+    if AlunoBoletim.objects.filter(
+        declaracao=aluno_declaracao
+    ).exclude(pk=perfil.pk).exists():
+        raise ValueError("Essa declaração já possui um perfil de boletim. Selecione-o.")
+
     dados = {
+        "declaracao_id": aluno_declaracao.pk,
         "data_nascimento": aluno_declaracao.dataNascimentoAluno,
         "cpf_mae": aluno_declaracao.cpfMae or "",
         "cpf_responsavel": aluno_declaracao.cpfResponsavel or "",
@@ -110,42 +117,41 @@ def sincronizar_perfil_declaracao(perfil, aluno_declaracao):
     for campo, valor in dados.items():
         if getattr(perfil, campo) != valor:
             setattr(perfil, campo, valor)
-            alterados.append(campo)
-
+            alterados.append("declaracao" if campo == "declaracao_id" else campo)
     if alterados:
         perfil.save(update_fields=alterados + ["atualizado_em"])
     return perfil
 
 
 def sincronizar_perfil_com_declaracoes(perfil, registros):
-    """Vincula identidade por nome sem escolher silenciosamente homônimos."""
+    """Só resolve automaticamente uma correspondência única e não conflitante."""
+    if perfil.declaracao_id:
+        registro = declaracao.objects.filter(pk=perfil.declaracao_id).first()
+        if registro:
+            return sincronizar_perfil_declaracao(perfil, registro), "vinculado"
+
     registros = list(registros)
     if len(registros) == 1:
-        return sincronizar_perfil_declaracao(perfil, registros[0]), "vinculado"
+        registro = registros[0]
+        # Identidades incompatíveis não são mescladas por semelhança de nome.
+        if (perfil.data_nascimento and registro.dataNascimentoAluno
+                and perfil.data_nascimento != registro.dataNascimentoAluno):
+            return perfil, "conflito"
+        try:
+            return sincronizar_perfil_declaracao(perfil, registro), "vinculado"
+        except ValueError:
+            return perfil, "ambiguo"
 
-    # Sem correspondência única, remove dados de acesso antigos para evitar que
-    # CPF/data de outra criança permaneçam associados após mudança de nome.
-    dados_vazios = {
-        "data_nascimento": None,
-        "cpf_mae": "",
-        "cpf_responsavel": "",
-    }
-    alterados = []
-    for campo, valor in dados_vazios.items():
-        if getattr(perfil, campo) != valor:
-            setattr(perfil, campo, valor)
-            alterados.append(campo)
-    if alterados:
-        perfil.save(update_fields=alterados + ["atualizado_em"])
-
+    # Não publicar nem autenticar boletim que não tenha vínculo explícito.
     return perfil, "ambiguo" if len(registros) > 1 else "nao_encontrado"
 
 
 def sincronizar_perfil_por_nome_declaracao(perfil, nome=None):
+    if perfil.declaracao_id:
+        return sincronizar_perfil_com_declaracoes(perfil, [])
     chave = normalizar_nome(nome or perfil.nome)
     registros = _mapa_declaracoes_por_nome().get(chave, [])
     return sincronizar_perfil_com_declaracoes(perfil, registros)
-
 
 @transaction.atomic
 def importar_dados_boletim(dados_planilha, dados_periodo=None):
@@ -221,57 +227,67 @@ def importar_dados_boletim(dados_planilha, dados_periodo=None):
     if not disciplinas:
         raise ValueError("Nenhuma disciplina foi identificada na planilha.")
 
-    mapa_alunos = _mapa_matriculas_por_nome()
+    # Importar notas não modifica Matrículas nem Histórico. A declaração
+    # existente é a única fonte da identidade e do acesso ao boletim.
     mapa_declaracoes = _mapa_declaracoes_por_nome()
-
-    # Perfis sem vínculo com Matrículas são válidos no módulo de Boletins.
-    # Eles permitem importar todos os nomes do arquivo e revisar depois.
-    perfis_avulsos = defaultdict(list)
-    for perfil_existente in AlunoBoletim.objects.filter(matricula__isnull=True):
-        perfis_avulsos[normalizar_nome(perfil_existente.nome)].append(perfil_existente)
+    perfis_por_nome = defaultdict(list)
+    perfis_por_declaracao = {}
+    for existente in AlunoBoletim.objects.all():
+        perfis_por_nome[normalizar_nome(existente.nome)].append(existente)
+        if existente.declaracao_id:
+            perfis_por_declaracao[existente.declaracao_id] = existente
 
     importados = 0
     sem_cadastro = []
     ambiguos = []
     sem_acesso = []
+    pendentes_vinculo = []
+    perfis_no_periodo = set()
 
     for linha in dados_planilha["alunos"]:
-        candidatos = mapa_alunos.get(linha["nome_normalizado"], [])
-        cadastro = None
+        nome = linha["nome"]
+        chave = normalizar_nome(nome)
+        declaracoes_mesmo_nome = mapa_declaracoes.get(chave, [])
+        declaracao_unica = declaracoes_mesmo_nome[0] if len(declaracoes_mesmo_nome) == 1 else None
 
-        declaracoes_mesmo_nome = mapa_declaracoes.get(linha["nome_normalizado"], [])
-
-        if len(candidatos) == 1:
-            cadastro = candidatos[0]
-            perfil = sincronizar_perfil_matricula(cadastro)
-
-            # O boletim deve refletir o nome existente no arquivo importado.
-            # Isso não altera o cadastro mestre de Matrículas.
-            if perfil.nome != linha["nome"]:
-                perfil.nome = linha["nome"]
-                perfil.save(update_fields=["nome", "atualizado_em"])
-        else:
-            if not candidatos:
-                sem_cadastro.append(linha["nome"])
-            else:
-                ambiguos.append(linha["nome"])
-
-            existentes = perfis_avulsos.get(linha["nome_normalizado"], [])
-            if len(existentes) == 1:
-                perfil = existentes[0]
-                if perfil.nome != linha["nome"]:
-                    perfil.nome = linha["nome"]
-                    perfil.save(update_fields=["nome", "atualizado_em"])
-            else:
-                perfil = AlunoBoletim.objects.create(nome=linha["nome"])
-                perfis_avulsos[linha["nome_normalizado"]].append(perfil)
-
-        # A identidade usada para consulta pública vem sempre da base de
-        # Declarações, localizada pelo mesmo nome da criança.
-        perfil, _status_declaracao = sincronizar_perfil_com_declaracoes(
-            perfil,
-            declaracoes_mesmo_nome,
+        perfil = (
+            perfis_por_declaracao.get(declaracao_unica.pk)
+            if declaracao_unica else None
         )
+        if perfil is None:
+            # A coincidência por nome nunca substitui um vínculo explícito.
+            candidatos = [
+                p for p in perfis_por_nome.get(chave, [])
+                if p.declaracao_id is None
+            ]
+            if len(candidatos) == 1:
+                perfil = candidatos[0]
+            else:
+                perfil = AlunoBoletim.objects.create(nome=nome)
+                perfis_por_nome[chave].append(perfil)
+
+        if perfil.pk in perfis_no_periodo:
+            raise ValueError(
+                f"Aluno '{nome}' aparece mais de uma vez na mesma planilha. "
+                "Verifique as duplicatas antes da importação."
+            )
+        perfis_no_periodo.add(perfil.pk)
+
+        if perfil.nome != nome:
+            perfil.nome = nome
+            perfil.save(update_fields=["nome", "atualizado_em"])
+
+        perfil, status_declaracao = sincronizar_perfil_com_declaracoes(
+            perfil, declaracoes_mesmo_nome,
+        )
+        if status_declaracao == "vinculado":
+            perfis_por_declaracao[perfil.declaracao_id] = perfil
+        else:
+            pendentes_vinculo.append(nome)
+            if status_declaracao == "nao_encontrado":
+                sem_cadastro.append(nome)
+            else:
+                ambiguos.append(nome)
 
         faltas_totais = linha.get("faltas_totais")
 
@@ -300,7 +316,7 @@ def importar_dados_boletim(dados_planilha, dados_periodo=None):
         NotaBoletim.objects.bulk_create(resultados)
         importados += 1
 
-        if not perfil.data_nascimento or not (
+        if not perfil.declaracao_id or not perfil.data_nascimento or not (
             somente_digitos(perfil.cpf_mae)
             or somente_digitos(perfil.cpf_responsavel)
         ):
@@ -313,6 +329,7 @@ def importar_dados_boletim(dados_planilha, dados_periodo=None):
         "sem_cadastro": sem_cadastro,
         "ambiguos": ambiguos,
         "sem_acesso": sem_acesso,
+        "pendentes_vinculo": pendentes_vinculo,
         "detectado": metadados,
         "disciplinas_detectadas": nomes_disciplinas,
     }
@@ -363,163 +380,34 @@ def _adicionar_identidade(cpfs, datas, registro):
 
 
 def localizar_alunos_por_credenciais(
-    cpf,
-    data_nascimento,
-    somente_publicados=True,
+    cpf, data_nascimento, somente_publicados=True,
 ):
-    """Localiza boletins por dois fatores sem misturar estudantes homônimos.
+    """Consulta pública exige CPF e nascimento da MESMA Declaração vinculada.
 
-    Dados legados podem estar divididos entre Matrículas, Declarações e o
-    perfil de Boletim. A combinação por nome só é permitida quando o nome é
-    inequívoco. Se houver homônimos/duplicidades, apenas fontes diretamente
-    vinculadas ao perfil (ou fontes com CPF de ancoragem em comum) entram na
-    correlação.
+    Não combina CPFs de matrícula antiga, dados de boletim e datas de
+    declarações diferentes; nem associa homônimos por nome.
     """
     cpf_normalizado = somente_digitos(cpf)
-    if len(cpf_normalizado) != 11:
+    if len(cpf_normalizado) != 11 or not data_nascimento:
         return []
 
-    candidatos_qs = AlunoBoletim.objects.select_related("matricula").distinct()
+    candidatos = AlunoBoletim.objects.filter(
+        declaracao__isnull=False,
+        declaracao__dataNascimentoAluno=data_nascimento,
+    ).select_related("declaracao")
     if somente_publicados:
-        candidatos_qs = candidatos_qs.filter(boletins__periodo__publicado=True)
+        candidatos = candidatos.filter(boletins__periodo__publicado=True)
     else:
-        candidatos_qs = candidatos_qs.filter(boletins__isnull=False)
-    candidatos = list(candidatos_qs)
-
-    mapa_matriculas = _mapa_matriculas_por_nome()
-    mapa_declaracoes = _mapa_declaracoes_por_nome()
-
-    candidatos_por_nome = defaultdict(list)
-    for candidato in candidatos:
-        candidatos_por_nome[normalizar_nome(candidato.nome)].append(candidato)
+        candidatos = candidatos.filter(boletins__isnull=False)
 
     encontrados = []
-    vistos = set()
-
-    def fonte(data, cpf_mae="", cpf_responsavel="", origem=None):
-        return {
-            "data": data,
-            "cpf_mae": somente_digitos(cpf_mae),
-            "cpf_responsavel": somente_digitos(cpf_responsavel),
-            "origem": origem,
-        }
-
-    for aluno in candidatos:
-        if aluno.pk in vistos:
-            continue
-
-        chave_nome = normalizar_nome(aluno.nome)
-        registros = [
-            fonte(
-                aluno.data_nascimento,
-                aluno.cpf_mae,
-                aluno.cpf_responsavel,
-                "boletim",
-            )
-        ]
-
-        if aluno.matricula_id:
-            registros.append(
-                fonte(
-                    aluno.matricula.dataNascimentoAluno,
-                    aluno.matricula.cpfMae,
-                    aluno.matricula.cpfResponsavel,
-                    aluno.matricula,
-                )
-            )
-
-        cpfs_ancora = {
-            cpf_item
-            for item in registros
-            for cpf_item in (item["cpf_mae"], item["cpf_responsavel"])
-            if cpf_item
-        }
-
-        matriculas_nome = mapa_matriculas.get(chave_nome, [])
-        declaracoes_nome = mapa_declaracoes.get(chave_nome, [])
-        nome_ambiguo = (
-            len(candidatos_por_nome.get(chave_nome, [])) > 1
-            or len(matriculas_nome) > 1
-            or len(declaracoes_nome) > 1
-        )
-
-        fontes_externas = []
-        for registro in matriculas_nome:
-            if aluno.matricula_id and registro.pk == aluno.matricula_id:
-                continue
-            fontes_externas.append(
-                fonte(
-                    registro.dataNascimentoAluno,
-                    registro.cpfMae,
-                    registro.cpfResponsavel,
-                    registro,
-                )
-            )
-        for registro in declaracoes_nome:
-            fontes_externas.append(
-                fonte(
-                    registro.dataNascimentoAluno,
-                    registro.cpfMae,
-                    registro.cpfResponsavel,
-                    registro,
-                )
-            )
-
-        if nome_ambiguo:
-            # Para homônimos, o nome nunca é uma chave de identidade suficiente.
-            # Uma fonte externa só pode ser agregada se compartilhar CPF com uma
-            # fonte já diretamente vinculada ao perfil.
-            for item in fontes_externas:
-                cpfs_item = {item["cpf_mae"], item["cpf_responsavel"]} - {""}
-                if cpfs_ancora and cpfs_ancora.intersection(cpfs_item):
-                    registros.append(item)
-        else:
-            registros.extend(fontes_externas)
-
-        cpf_matches = [
-            item
-            for item in registros
-            if cpf_normalizado in {item["cpf_mae"], item["cpf_responsavel"]}
-        ]
-        data_matches = [
-            item for item in registros if item["data"] == data_nascimento
-        ]
-
-        mesmo_registro = any(
-            item["data"] == data_nascimento
-            and cpf_normalizado in {item["cpf_mae"], item["cpf_responsavel"]}
-            for item in registros
-        )
-
-        if not mesmo_registro and not (cpf_matches and data_matches):
-            continue
-
-        alterados = []
-        if aluno.data_nascimento != data_nascimento:
-            aluno.data_nascimento = data_nascimento
-            alterados.append("data_nascimento")
-
-        cpfs_perfil = {
-            somente_digitos(aluno.cpf_mae),
-            somente_digitos(aluno.cpf_responsavel),
-        }
-        if cpf_normalizado not in cpfs_perfil:
-            origem_mae = any(
-                item["cpf_mae"] == cpf_normalizado for item in cpf_matches
-            )
-            if origem_mae:
-                aluno.cpf_mae = formatar_cpf(cpf)
-                alterados.append("cpf_mae")
-            else:
-                aluno.cpf_responsavel = formatar_cpf(cpf)
-                alterados.append("cpf_responsavel")
-
-        if alterados:
-            aluno.save(update_fields=alterados + ["atualizado_em"])
-
-        encontrados.append(aluno)
-        vistos.add(aluno.pk)
-
+    for perfil in candidatos.distinct():
+        registro = perfil.declaracao
+        if cpf_normalizado in {
+            somente_digitos(registro.cpfMae),
+            somente_digitos(registro.cpfResponsavel),
+        } - {""}:
+            encontrados.append(perfil)
     return encontrados
 
 def conceder_acesso_boletim(request, alunos):
