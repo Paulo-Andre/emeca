@@ -740,6 +740,12 @@ class SitePublicoTests(TestCase):
         )
         perfil_a = sincronizar_perfil_matricula(cadastro_a)
         perfil_b = sincronizar_perfil_matricula(cadastro_b)
+        sincronizar_perfil_declaracao(
+            perfil_a, declaracao.objects.get(cpfMae="111.111.111-11"),
+        )
+        sincronizar_perfil_declaracao(
+            perfil_b, declaracao.objects.get(cpfMae="222.222.222-22"),
+        )
         periodo = self._periodo_publicado(
             tipo="TRIMESTRE",
             numero=1,
@@ -1107,8 +1113,9 @@ class SitePublicoTests(TestCase):
             },
         )
 
-        self.assertEqual(response.status_code, 302)
-        self.assertIn("/boletim/acesso/", response.url)
+        # Apenas Matrícula com dados antigos não autoriza consulta ao boletim.
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Não foi possível localizar um boletim")
 
     def test_importacao_soma_as_faltas_e_salva_somente_o_total(self):
         dados = {
@@ -1174,11 +1181,12 @@ class SitePublicoTests(TestCase):
             nota=Decimal("28.00"),
             faltas=1,
         )
-        declaracao.objects.create(
+        registro = declaracao.objects.create(
             nomeDoAluno="Criança Teste",
             dataNascimentoAluno=date(2019, 8, 18),
             cpfMae="444.444.444-44",
         )
+        sincronizar_perfil_declaracao(perfil, registro)
 
         response = self.client.post(
             reverse("site_publico:boletim"),
@@ -1209,11 +1217,12 @@ class SitePublicoTests(TestCase):
             aluno=perfil,
             numero_chamada=6,
         )
-        declaracao.objects.create(
+        registro = declaracao.objects.create(
             nomeDoAluno="Criança em Rascunho",
             dataNascimentoAluno=date(2019, 8, 18),
             cpfResponsavel="444.444.444-44",
         )
+        sincronizar_perfil_declaracao(perfil, registro)
 
         response = self.client.post(
             reverse("site_publico:boletim"),
@@ -1459,11 +1468,9 @@ class SitePublicoTests(TestCase):
             },
         )
 
-        self.assertEqual(response.status_code, 302)
-        self.assertIn("/boletim/acesso/", response.url)
-
-        perfil.refresh_from_db()
-        self.assertEqual(perfil.data_nascimento, date(2019, 8, 18))
+        # É proibido combinar CPF do perfil legada com nascimento da Declaração.
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Não foi possível localizar um boletim")
 
     @patch("site_publico.boletim_importacao.pd.read_excel")
     def test_layout_real_usa_falta_total_da_coluna_f(self, read_excel):
@@ -1553,12 +1560,10 @@ class SitePublicoTests(TestCase):
             },
         )
 
-        self.assertEqual(response.status_code, 302)
-        self.assertIn("/boletim/acesso/", response.url)
-
-        perfil.refresh_from_db()
-        self.assertEqual(perfil.data_nascimento, date(2019, 8, 18))
-        self.assertEqual(perfil.cpf_mae, "444.444.444-44")
+        # Dados incompletos distribuídos entre Matrícula e Declaração não
+        # podem ser agregados para autorizar boletins escolares.
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Não foi possível localizar um boletim")
 
     def test_menu_boletins_tem_apenas_importar_e_editar_dados(self):
         User = get_user_model()
@@ -1592,8 +1597,8 @@ class SitePublicoTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, "CPF da mãe")
-        self.assertNotContains(response, "CPF do responsável")
+        self.assertNotContains(response, 'name="cpfMae"')
+        self.assertNotContains(response, 'name="cpfResponsavel"')
         self.assertNotContains(response, 'type="date"')
         self.assertContains(response, "base de Declarações")
 
@@ -1681,8 +1686,10 @@ class SitePublicoTests(TestCase):
             boletim.aluno.nome,
             "Estudante Sintética Alfa Corrigido",
         )
-        self.assertEqual(boletim.aluno.data_nascimento, date(2018, 2, 3))
-        self.assertEqual(boletim.aluno.cpf_mae, "666.666.666-66")
+        # Corrigir o nome do lançamento não autoriza trocar a Declaração
+        # já vinculada por outra criança com nome semelhante.
+        self.assertEqual(boletim.aluno.data_nascimento, date(2017, 8, 13))
+        self.assertEqual(boletim.aluno.cpf_mae, "111.111.111-11")
         resultado = NotaBoletim.objects.get(
             boletim=boletim,
             disciplina=disciplina,
