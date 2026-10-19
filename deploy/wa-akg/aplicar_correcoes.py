@@ -77,6 +77,53 @@ def corrigir_resposta_envio_midia(value: str) -> str:
         '    }',
         "diagnóstico seguro de envio de mídia",
     )
+    value = substitute(
+        value,
+        '    try {\n        const user = await getAuthenticatedUser(request);',
+        '    let stage = "AUTH";\n    try {\n'
+        '        const user = await getAuthenticatedUser(request);',
+        "estágio da autenticação do endpoint de mídia",
+    )
+    value = substitute(
+        value,
+        '        const formData = await request.formData();',
+        '        stage = "MULTIPART";\n'
+        '        const formData = await request.formData();',
+        "estágio de leitura multipart",
+    )
+    value = substitute(
+        value,
+        '        const buffer = Buffer.from(await file.arrayBuffer());',
+        '        stage = "BUFFER";\n'
+        '        const buffer = Buffer.from(await file.arrayBuffer());',
+        "estágio de leitura binária do PDF",
+    )
+    value = substitute(
+        value,
+        '        const sent = await ChatService.sendMediaMessage(',
+        '        stage = "SEND";\n'
+        '        const sent = await ChatService.sendMediaMessage(',
+        "estágio de envio ao WhatsApp",
+    )
+    value = substitute(
+        value,
+        '        const messageId = typeof sent?.key?.id === "string" ? sent.key.id : null;',
+        '        stage = "ACK";\n'
+        '        const messageId = typeof sent?.key?.id === "string" ? sent.key.id : null;',
+        "estágio de confirmação do gateway",
+    )
+    value = substitute(
+        value,
+        '            code: publicCode, name: safeName, statusCode',
+        '            code: publicCode, name: safeName, statusCode, stage',
+        "estágio nos registros sanitizados",
+    )
+    value = substitute(
+        value,
+        '            message: "Falha no envio de mídia (" + publicCode + ").",',
+        '            message: "Falha no envio de mídia (" + publicCode + ", etapa " + stage + ").",',
+        "estágio no erro exibido ao administrador",
+    )
     return value
 
 
