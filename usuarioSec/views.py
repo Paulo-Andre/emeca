@@ -461,9 +461,14 @@ def salvar_declaracao(request, id):
 @require_POST
 def imprimirDeclaracao(request, id):
     try:
-        data = json.loads(request.body.decode("utf-8"))
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return JsonResponse({"status": "erro", "mensagem": "JSON inválido."}, status=400)
+        # Formulário POST permite abrir a impressão numa página HTTP real,
+        # sem document.write/about:blank (que perdia o estilo de impressão).
+        bruto = request.POST.get("dados") if request.POST else request.body.decode("utf-8")
+        data = json.loads(bruto)
+        if not isinstance(data, dict):
+            raise ValueError("Objeto JSON esperado")
+    except (ValueError, UnicodeDecodeError, TypeError):
+        return JsonResponse({"status": "erro", "mensagem": "Dados inválidos."}, status=400)
     tipo = data.get("tipo")
     nasc_str = data.get("nasc")
 
@@ -498,7 +503,7 @@ def imprimirDeclaracao(request, id):
         "nome": data.get("nome"),
         "nasc": nasc_formatado,
         "naturalidade": data.get("naturalidade"),
-        "serie": data.get("serie")[0],
+        "serie": (str(data.get("serie") or "").strip().split("º")[0].split(" ")[0]),
         "mae": data.get("mae"),
         "pai": data.get("pai"),
         "anoCursa": data.get("anoCursa"),
