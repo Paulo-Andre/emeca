@@ -50,7 +50,25 @@
       background: #eef7f9;
     }
     .importar-upload-area input[type="file"] {
-      display: none;
+      display: block;
+      width: min(100%, 470px);
+      margin: 16px auto 0;
+      padding: 12px;
+      background: #fff;
+      border: 1px solid #a9c6d2;
+      border-radius: 9px;
+      color: #153e50;
+      cursor: pointer;
+    }
+    .importar-upload-area input[type="file"]::file-selector-button {
+      padding: 9px 13px;
+      margin-right: 14px;
+      border: 0;
+      border-radius: 7px;
+      background: #155e75;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
     }
     .importar-upload-icon {
       width: 52px;
@@ -212,15 +230,15 @@
                 <span><strong>Importar novas declarações</strong><br><small>Cria registros a partir do Excel. Use apenas para alunos ainda não cadastrados; esta importação não verifica duplicidades existentes.</small></span>
               </label>
             </div>
-            <label class="importar-upload-area" id="uploadArea">
+            <div class="importar-upload-area" id="uploadArea">
               <div>
                 <div class="importar-upload-icon"><i data-lucide="file-spreadsheet"></i></div>
-                <div class="importar-upload-text">Clique para selecionar ou arraste o arquivo aqui</div>
+                <div class="importar-upload-text">Selecione a planilha Excel abaixo ou arraste o arquivo aqui</div>
                 <span class="importar-hint" id="fileHint">Formatos: .xls ou .xlsx (até 10 MB)</span>
                 <div class="importar-file-name" id="fileName"></div>
               </div>
-              <input type="file" name="arquivo" id="arquivo" accept=".xls,.xlsx" required>
-            </label>
+              <input type="file" name="arquivo" id="arquivo" accept=".xls,.xlsx" required aria-label="Selecionar planilha de Declarações">
+            </div>
             <input type="hidden" name="acao" id="acaoImportacao" value="previsualizar">
             <div class="importar-actions">
               <button type="submit" class="importar-btn" id="botaoImportacao">Validar e visualizar alterações</button>
@@ -268,15 +286,16 @@
         inputFile.accept = atualizacao ? ".xls,.xlsx" : ".xls,.xlsx,.csv";
         dica.textContent = atualizacao ? "Formatos: .xls ou .xlsx (até 10 MB)" : "Formatos: .xls, .xlsx ou .csv";
         botao.textContent = atualizacao ? "Validar e visualizar alterações" : "Importar novos registros";
-        inputFile.value = "";
-        fileName.textContent = "";
+        atualizarArquivoSelecionado();
       }
       formulario.querySelectorAll('input[name="modo_importacao"]').forEach(
         radio => radio.addEventListener("change", atualizarModo)
       );
-      inputFile.addEventListener("change", () => {
-        fileName.textContent = inputFile.files.length ? inputFile.files[0].name : "";
-      });
+      function atualizarArquivoSelecionado() {
+        const arquivo = inputFile.files && inputFile.files[0];
+        fileName.textContent = arquivo ? "Arquivo selecionado: " + arquivo.name : "Nenhum arquivo selecionado";
+      }
+      inputFile.addEventListener("change", atualizarArquivoSelecionado);
       uploadArea.addEventListener("dragover", event => {
         event.preventDefault();
         uploadArea.classList.add("dragover");
@@ -287,7 +306,7 @@
         uploadArea.classList.remove("dragover");
         if (event.dataTransfer.files.length) {
           inputFile.files = event.dataTransfer.files;
-          fileName.textContent = event.dataTransfer.files[0].name;
+          atualizarArquivoSelecionado();
         }
       });
       atualizarModo();
