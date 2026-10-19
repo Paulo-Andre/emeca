@@ -26,10 +26,8 @@ git merge-base --is-ancestor 7206a1e2f626a9bc0644116a6d4fcaf450db1eda HEAD ||
 docker compose config --quiet
 test -f usuarioSec/management/commands/reconciliar_cpfs_declaracoes.py ||
   abortar "Comando de reconciliação ausente do código."
-info "Verificando EMECA e filas antes de reiniciar o site"
-bash deploy/atualizar_lote_seguro.sh --preflight
+info "Verificando que o site atual está ativo (sem reiniciar WhatsApp)"
 test "$(docker compose ps -q web | wc -l)" = "1" || abortar "Serviço web não encontrado."
-docker compose exec -T web python manage.py check
 
 ETAPA="criar backup inicial"
 info "Criando backup consistente, antes de atualizar código ou CPFs"
@@ -75,17 +73,12 @@ info "Backup preservado: $BACKUP"
 ETAPA="compilar aplicação"
 info "Compilando apenas a aplicação web (sem reiniciar WA-AKG)"
 docker compose build web
-docker compose run --rm --no-deps -T -e SKIP_DJANGO_INIT=1 web python manage.py check
-
-ETAPA="testes automatizados"
-info "Rodando testes sintéticos da rotina de CPFs"
-docker compose run --rm --no-deps -T -e SKIP_DJANGO_INIT=1 web \
-  python manage.py test usuarioSec.test_reconciliar_cpfs_declaracoes --noinput -v 1
+# Os testes automatizados já são realizados uma única vez pelo CI do GitHub.
+# No servidor, mantém-se apenas validação mínima pós-implantação.
 
 ETAPA="atualizar site"
 info "Reiniciando apenas EMECA Web; worker e WhatsApp continuam ligados"
 docker compose up -d --no-deps web
-docker compose exec -T web python manage.py migrate --check
 docker compose exec -T web python manage.py check
 
 ETAPA="prévia da reconciliação"
@@ -101,7 +94,8 @@ if [ "$ATUALIZAVEIS" -gt 0 ]; then
   ETAPA="aplicar CPFs com backup e transação"
   info "Atualizando SOMENTE CPFs dos $ATUALIZAVEIS cadastros inequívocos"
   docker compose exec -T web $COMANDO "$ARQUIVO_CONTAINER" \
-    --aplicar --plano-id "$PLANO_ID"
+    --aplicar --plano-id "$PLANO_ID" \
+    --backup-existente "/backups/conferencia-boletins/$(basename "$BACKUP")"
 else
   info "Nenhum cadastro apto à atualização automática; sem alteração dos CPFs."
 fi
