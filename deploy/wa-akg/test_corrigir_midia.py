@@ -50,7 +50,8 @@ class TestCorrecaoMedia(unittest.TestCase):
         self.assertNotIn('data: sent', patched)
         self.assertNotIn('error: "Failed to send media"', patched)
         self.assertEqual(patched.count('ChatService.sendMediaMessage('), 1)
-        self.assertNotIn('retry', patched.lower().replace("do not repeat", ""))
+        self.assertIn('MEDIA_ACK_MISSING', patched)
+        self.assertIn('if (!messageId)', patched)
 
     def test_retorno_json_sanitizado_e_idempotente(self):
         patched = patcher.corrigir_resposta_envio_midia(UPSTREAM_SAMPLE)
