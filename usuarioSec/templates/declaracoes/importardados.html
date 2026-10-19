@@ -228,6 +228,26 @@
           </form>
         {% endif %}
       </section>
+      {% if request.user.is_superuser %}
+      <section class="importar-card" style="margin-top:22px;border-color:#fecaca" aria-labelledby="titulo-limpeza">
+        <h3 id="titulo-limpeza" style="color:#991b1b">Administração dos cadastros</h3>
+        <p>Estas ações apagam permanentemente os dados da categoria escolhida. Faça um backup antes de utilizá-las. A exclusão pode ser impedida quando existirem registros vinculados.</p>
+        <div style="display:grid;gap:14px">
+          <form method="post" action="{% url 'apagar_todos_alunos_matricula' %}" onsubmit="return confirmarLimpezaCadastros('MATRICULAS', 'Matrículas');">
+            {% csrf_token %}
+            <button class="importar-btn" style="background:#b91c1c;width:100%" type="submit">
+              <i data-lucide="trash-2" style="width:16px;vertical-align:middle"></i> Apagar todos os dados da Matrícula
+            </button>
+          </form>
+          <form method="post" action="{% url 'apagar_todos_alunos' %}" onsubmit="return confirmarLimpezaCadastros('DECLARACOES', 'Declarações');">
+            {% csrf_token %}
+            <button class="importar-btn" style="background:#991b1b;width:100%" type="submit">
+              <i data-lucide="trash-2" style="width:16px;vertical-align:middle"></i> Apagar todos os dados das Declarações
+            </button>
+          </form>
+        </div>
+      </section>
+      {% endif %}
     </div>
   </main>
 
@@ -271,6 +291,15 @@
         }
       });
       atualizarModo();
+    }
+
+    function confirmarLimpezaCadastros(palavra, categoria) {
+      const digitado = window.prompt(
+        'ATENÇÃO: a exclusão de ' + categoria +
+        ' é irreversível e pode afetar documentos vinculados. ' +
+        'Digite ' + palavra + ' para confirmar:'
+      );
+      return digitado === palavra;
     }
 
     lucide.createIcons();
