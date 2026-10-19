@@ -1,7 +1,8 @@
 from django.contrib import admin
 from django.urls import path, include
 from .views import AccountCreateView
-from .import views 
+from .import views
+from .importacao_cpfs_web import importar_cpfs 
 from . import whatsapp_views
 from .declaracao_edicao import editar_aluno_declaracao
 from django.shortcuts import redirect
@@ -26,6 +27,7 @@ urlpatterns = [
     path('comparecimento/', views.comparecimento,name="comparecimento"),
     path('telaDeclaracao/', views.telaDeclaracao,name="telaDeclaracao"),
     path("importar/", views.importar_alunos, name="importar_alunos"),
+    path("importar/cpfs/", importar_cpfs, name="importar_cpfs"),
     path('buscardeclaracao/', views.buscar_dados_declaracao, name="buscar_dados_declaracao"),
     path('declaracoes/aluno/<int:id>/editar/', editar_aluno_declaracao, name='editar_aluno_declaracao'),
     path('salvar-declaracao/<int:id>/', views.salvar_declaracao, name='salvar_declaracao'),
