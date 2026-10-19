@@ -16,6 +16,7 @@ urlpatterns = [
     path("boletins/<int:periodo_pk>/disciplinas/<int:disciplina_pk>/excluir/", management_views.gestao_boletim_disciplina_excluir, name="gestao_boletim_disciplina_excluir"),
     path("boletins/<int:pk>/publicar/", management_views.gestao_boletim_publicar, name="gestao_boletim_publicar"),
     path("boletins/<int:pk>/excluir/", management_views.gestao_boletim_periodo_excluir, name="gestao_boletim_periodo_excluir"),
+    path("boletins/<int:periodo_pk>/alunos/<int:boletim_pk>/excluir/", management_views.gestao_boletim_aluno_excluir, name="gestao_boletim_aluno_excluir"),
     path("boletins/<int:periodo_pk>/alunos/novo/", management_views.gestao_boletim_aluno, name="gestao_boletim_aluno_novo"),
     path("boletins/<int:periodo_pk>/alunos/<int:boletim_pk>/editar/", management_views.gestao_boletim_aluno, name="gestao_boletim_aluno_editar"),
     path("gestao-site/pagina-inicial/", management_views.gestao_inicio, name="gestao_inicio"),
