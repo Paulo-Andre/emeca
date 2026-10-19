@@ -28,6 +28,58 @@ def substitute(text: str, before: str, after: str, context: str) -> str:
 
 
 
+
+
+def corrigir_resposta_envio_midia(value: str) -> str:
+    """Não transformar envio de mídia confirmado em HTTP 500 por serialização.
+
+    O Baileys pode retornar protobufs, buffers e BigInts. O endpoint original
+    tenta serializar tudo após sendMessage; isso pode gerar falso erro mesmo
+    quando o documento já foi transmitido. Não introduz qualquer reenvio.
+    """
+    value = substitute(
+        value,
+        '        return NextResponse.json({ status: true, message: "Operation successful", data: sent });',
+        '        // EMECA: acknowledge with a JSON-safe identifier only. Baileys\n'
+        '        // may return buffers/BigInt/protobufs that cannot be serialized.\n'
+        '        // Do NOT repeat a send when the acknowledgement fails.\n'
+        '        const messageId = typeof sent?.key?.id === "string" ? sent.key.id : null;\n'
+        '        return NextResponse.json({ status: true, message: "Operation successful",\n'
+        '            data: { messageId } });',
+        "resposta JSON segura para mídia",
+    )
+    value = substitute(
+        value,
+        '    } catch (e) {\n'
+        '        console.error("Media send error", e);\n'
+        '        return NextResponse.json({ status: false, message: "Failed to send media", error: "Failed to send media" }, { status: 500 });\n'
+        '    }',
+        '    } catch (e: any) {\n'
+        '        // EMECA: the original route hid every cause behind one generic\n'
+        '        // error. Never log the PDF, caption, recipient, headers, or tokens.\n'
+        '        const rawCode = typeof e?.code === "string" ? e.code :\n'
+        '            (typeof e?.cause?.code === "string" ? e.cause.code : "");\n'
+        '        const safeCode = /^[A-Za-z][A-Za-z0-9_]{1,39}$/.test(rawCode)\n'
+        '            ? rawCode.toUpperCase() : "MEDIA_SEND_FAILED";\n'
+        '        const disconnected = typeof e?.message === "string" &&\n'
+        '            e.message.includes("WhatsApp session is disconnected");\n'
+        '        const publicCode = disconnected ? "MEDIA_SESSION_DISCONNECTED" : safeCode;\n'
+        '        const safeName = typeof e?.name === "string" &&\n'
+        '            /^[A-Za-z][A-Za-z0-9_]{1,39}$/.test(e.name) ? e.name : "Error";\n'
+        '        const statusCode = typeof e?.output?.statusCode === "number"\n'
+        '            ? e.output.statusCode : null;\n'
+        '        console.error("Media send error (sanitized)", {\n'
+        '            code: publicCode, name: safeName, statusCode\n'
+        '        });\n'
+        '        return NextResponse.json({ status: false,\n'
+        '            message: "Falha no envio de mídia (" + publicCode + ").",\n'
+        '            error: publicCode }, { status: disconnected ? 503 : 500 });\n'
+        '    }',
+        "diagnóstico seguro de envio de mídia",
+    )
+    return value
+
+
 def corrigir_reconexao_instancia(value: str) -> str:
     """Uma conexão Baileys por sessão; descartar eventos/timers de sockets antigos.
 
@@ -306,6 +358,7 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
     index = source / "src/modules/whatsapp/store/index.ts"
     contact_store = source / "src/modules/whatsapp/store/contacts.ts"
     chat_service = source / "src/modules/whatsapp/chat.service.ts"
+    media_route = source / "src/app/api/messages/[sessionId]/[jid]/media/route.ts"
     chat_route = source / "src/app/api/chat/[sessionId]/route.ts"
     messages_route = source / "src/app/api/chat/[sessionId]/[jid]/route.ts"
     contacts_route = source / "src/app/api/contacts/[sessionId]/route.ts"
@@ -320,7 +373,7 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
     scheduler_overlay = patch_dir / "overrides/src/modules/whatsapp/scheduler.ts"
     scheduler_target = source / "src/modules/whatsapp/scheduler.ts"
 
-    required = [manager, instance, index, contact_store, chat_service, chat_route, messages_route, contacts_route, overlay_file, profile_route_overlay, purge_route_overlay, group_route_overlay, scheduler_overlay, group_route_target, scheduler_target]
+    required = [manager, instance, index, contact_store, chat_service, media_route, chat_route, messages_route, contacts_route, overlay_file, profile_route_overlay, purge_route_overlay, group_route_overlay, scheduler_overlay, group_route_target, scheduler_target]
     missing = [str(p) for p in required if not p.is_file()]
     if missing:
         raise RuntimeError("Arquivos não encontrados: " + ", ".join(missing))
@@ -435,6 +488,9 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
             "identificação padronizada de chats",
         )
     edits[chat_service] = value
+
+    value = corrigir_resposta_envio_midia(media_route.read_text(encoding="utf-8"))
+    edits[media_route] = value
 
     value = chat_route.read_text(encoding="utf-8")
     value = substitute(
