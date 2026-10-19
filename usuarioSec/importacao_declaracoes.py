@@ -190,6 +190,34 @@ def mapear_colunas(headers):
         elif "ALUNO" in header or "ESTUDANTE" in header:
             mapa["cpf_aluno"] = indice
 
+    # Layout oficial legado da escola: AB=CPF da mãe, AC=CPF do
+    # responsável, AD=CPF do aluno e AE=CPF do pai. As colunas AC e AD
+    # podem trazer apenas o cabeçalho genérico "CPF". Essa regra só vale
+    # quando a assinatura completa do layout está presente, evitando
+    # atribuir documentos a pessoas erradas em outros modelos de Excel.
+    padrao_oficial = (
+        len(headers) >= 31
+        and headers[27] == "CPF DA MAE"
+        and headers[28] == "CPF"
+        and headers[29] == "CPF"
+        and headers[30] == "CPF DO PAI"
+    )
+    if padrao_oficial:
+        esperados = {
+            "cpf_mae": 27,
+            "cpf_responsavel": 28,
+            "cpf_aluno": 29,
+            "cpf_pai": 30,
+        }
+        for campo, indice in esperados.items():
+            outro = mapa[campo]
+            if outro is not None and outro != indice:
+                raise ImportacaoDeclaracaoErro(
+                    "Cabeçalhos de CPF conflitantes na planilha. "
+                    "Confira as colunas AB, AC, AD e AE."
+                )
+            mapa[campo] = indice
+
     if mapa["nome"] is None:
         raise ImportacaoDeclaracaoErro("A coluna NOME não foi encontrada.")
 
