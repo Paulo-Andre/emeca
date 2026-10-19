@@ -27,6 +27,162 @@ def substitute(text: str, before: str, after: str, context: str) -> str:
     return text.replace(before, after, 1)
 
 
+
+def corrigir_reconexao_instancia(value: str) -> str:
+    """Uma conexão Baileys por sessão; descartar eventos/timers de sockets antigos.
+
+    Não modifica o banco nem altera chaves de autenticação.
+    """
+    value = substitute(
+        value,
+        '    private reconnectCount: number = 0;',
+        '    private reconnectCount: number = 0;\n'
+        '    private initializingSocket: boolean = false;\n'
+        '    private socketGeneration: number = 0;\n'
+        '    private closeHandled: boolean = false;\n'
+        '    private reconnectTimer: ReturnType<typeof setTimeout> | null = null;',
+        "controle de instância e tentativas",
+    )
+    value = substitute(
+        value,
+        '    async init() {\n'
+        '        const sessionData = await prisma.session.findUnique({',
+        '    async init() {\n'
+        '        if (this.isStopped || this.initializingSocket || (this.socket && !this.closeHandled)) return;\n'
+        '        this.initializingSocket = true;\n'
+        '        this.closeHandled = false;\n'
+        '        const generation = ++this.socketGeneration;\n'
+        '        try {\n'
+        '            if (this.reconnectTimer) {\n'
+        '                clearTimeout(this.reconnectTimer);\n'
+        '                this.reconnectTimer = null;\n'
+        '            }\n'
+        '            const previousSocket = this.socket;\n'
+        '            this.socket = null;\n'
+        '            if (previousSocket) {\n'
+        '                try { previousSocket.end(undefined); } catch { /* already closed */ }\n'
+        '            }\n'
+        '            await this.initializeSocket(generation);\n'
+        '        } finally {\n'
+        '            this.initializingSocket = false;\n'
+        '        }\n'
+        '    }\n\n'
+        '    private async initializeSocket(generation: number) {\n'
+        '        const sessionData = await prisma.session.findUnique({',
+        "inicialização exclusiva do socket",
+    )
+    value = substitute(
+        value,
+        '        this.socket.ev.on("creds.update", saveCreds);\n\n'
+        '        this.socket.ev.on("connection.update", async (update) => {\n'
+        '            await this.handleConnectionUpdate(update);\n'
+        '        });',
+        '        this.socket.ev.on("creds.update", async () => {\n'
+        '            if (generation !== this.socketGeneration || this.isStopped) return;\n'
+        '            await saveCreds();\n'
+        '        });\n\n'
+        '        this.socket.ev.on("connection.update", async (update) => {\n'
+        '            if (generation !== this.socketGeneration || this.isStopped) return;\n'
+        '            await this.handleConnectionUpdate(update, generation);\n'
+        '        });',
+        "descartar eventos de sockets antigos",
+    )
+    value = substitute(
+        value,
+        '    async handleConnectionUpdate(update: Partial<ConnectionState>) {\n'
+        '        const { connection, lastDisconnect, qr } = update;',
+        '    async handleConnectionUpdate(update: Partial<ConnectionState>, generation: number) {\n'
+        '        if (generation !== this.socketGeneration || this.isStopped) return;\n'
+        '        const { connection, lastDisconnect, qr } = update;',
+        "estado somente da geração ativa",
+    )
+    value = substitute(
+        value,
+        '            if (connection === "close") {\n'
+        '                const code = (lastDisconnect?.error as any)?.output?.statusCode;',
+        '            if (connection === "close") {\n'
+        '                if (this.closeHandled) return;\n'
+        '                this.closeHandled = true;\n'
+        '                const code = (lastDisconnect?.error as any)?.output?.statusCode;',
+        "ignorar múltiplos closes do mesmo socket",
+    )
+    # Match the precise old reconnect block. Restrict replacement to one block.
+    old_start = '                    logger.warn("Instance",\n'
+    old_end = '                    }, 3000);'
+    marker = '                    this.reconnectTimer = setTimeout(() => {'
+    if marker not in value:
+        at = value.find(old_start, value.find('            if (connection === "close")'))
+        end = value.find(old_end, at)
+        if at < 0 or end < 0:
+            raise RuntimeError("Reconexão WA-AKG desconhecida; abortando patch.")
+        old = value[at:end + len(old_end)]
+        if "disconnected. Reconnecting" not in old or "if (!this.isStopped) this.init();" not in old:
+            raise RuntimeError("Reconexão personalizada; nenhum patch aplicado.")
+        new = (
+            '                    logger.warn("Instance",\n'
+            '                        "Session " + this.sessionId + " disconnected (code " +\n'
+            '                        String(code ?? "unknown") + "). Reconnecting (" +\n'
+            '                        this.reconnectCount + "/" + MAX_RECONNECT_ATTEMPTS + ")..."\n'
+            '                    );\n'
+            '                    this.reconnectTimer = setTimeout(() => {\n'
+            '                        this.reconnectTimer = null;\n'
+            '                        if (!this.isStopped && this.status !== "CONNECTED") {\n'
+            '                            void this.init().catch(error =>\n'
+            '                                logger.error("Instance", "Reconnect initialization failed", error)\n'
+            '                            );\n'
+            '                        }\n'
+            '                    }, 3000);'
+        )
+        value = value[:at] + new + value[end + len(old_end):]
+    value = substitute(
+        value,
+        '            if (connection === "open") {\n'
+        '                // Connected — reset reconnect count',
+        '            if (connection === "open") {\n'
+        '                if (this.reconnectTimer) {\n'
+        '                    clearTimeout(this.reconnectTimer);\n'
+        '                    this.reconnectTimer = null;\n'
+        '                }\n'
+        '                this.closeHandled = false;\n'
+        '                // Connected — reset reconnect count',
+        "cancelar reconexão pendente quando abriu",
+    )
+    value = substitute(
+        value,
+        '                bindAutoReply(this.socket as WASocket, this.sessionId);\n'
+        '                bindPpGuard(this.socket as WASocket, this.sessionId);',
+        '                // A previous socket must never overwrite a newer connection state.\n'
+        '                if (generation !== this.socketGeneration || this.closeHandled || this.isStopped) return;\n'
+        '                bindAutoReply(this.socket as WASocket, this.sessionId);\n'
+        '                bindPpGuard(this.socket as WASocket, this.sessionId);',
+        "não confirmar conexão obsoleta depois de syncGroups",
+    )
+    value = substitute(
+        value,
+        '    async shutdown() {\n'
+        '        this.isStopped = true;\n'
+        '        this.socket?.end(undefined);\n'
+        '        this.socket = null;\n'
+        '        this.reconnectCount = 0;\n'
+        '    }',
+        '    async shutdown() {\n'
+        '        this.isStopped = true;\n'
+        '        ++this.socketGeneration;\n'
+        '        if (this.reconnectTimer) {\n'
+        '            clearTimeout(this.reconnectTimer);\n'
+        '            this.reconnectTimer = null;\n'
+        '        }\n'
+        '        const socket = this.socket;\n'
+        '        this.socket = null;\n'
+        '        try { socket?.end(undefined); } catch { /* already closed */ }\n'
+        '        this.reconnectCount = 0;\n'
+        '        this.closeHandled = false;\n'
+        '    }',
+        "cancelar timers no desligamento protegido",
+    )
+    return value
+
+
 def corrigir_gravacao_mensagens_emeca(value: str) -> str:
     """Impede duplicidades ruidosas e escrita por sockets de sessões substituídas.
 
@@ -203,6 +359,7 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
         '        bindEmecaContactIdentity(this.socket, this.sessionId);',
         "ligação dos eventos Baileys",
     )
+    value = corrigir_reconexao_instancia(value)
     edits[instance] = value
 
     value = index.read_text(encoding="utf-8")
