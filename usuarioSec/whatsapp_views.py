@@ -557,10 +557,10 @@ def whatsapp_conectar(request):
     if limpeza_historico_pendente():
         messages.error(
             request,
-            "Não é permitido conectar outro número até concluir a exclusão "
-            "do histórico anterior em Gerenciamento."
+            "A sessão anterior está pendente de limpeza. Finalize a limpeza "
+            "em Gerenciamento para liberar uma nova conexão."
         )
-        return redirect("whatsapp")
+        return redirect("whatsapp_gerenciamento")
     if _validar_sessao_cliente(request) is not None:
         messages.error(request, "A conta WhatsApp foi alterada. Reabra a página.")
         return redirect("whatsapp")
@@ -1804,6 +1804,7 @@ def whatsapp_mensagens(request):
             "gateway_status": status,
             "gateway_status_detalhe": status_detalhe,
             "pode_desconectar": _pode_desconectar_whatsapp(request.user),
+            "limpeza_pendente": limpeza_historico_pendente(),
             "wa_sessao_id": sessao_atual_id(),
             "chats_iniciais": chats[:50],
         },
