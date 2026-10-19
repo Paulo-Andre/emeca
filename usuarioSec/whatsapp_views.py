@@ -373,6 +373,7 @@ def whatsapp(request):
             "gateway_status": status,
             "gateway_status_detalhe": status_detalhe,
             "pode_desconectar": _pode_desconectar_whatsapp(request.user),
+            "limpeza_pendente": limpeza_historico_pendente(),
             "wa_sessao_id": sessao_atual_id(),
             "delay_segundos": round(
                 settings.WA_AKG_BROADCAST_DELAY_MS / 1000,
