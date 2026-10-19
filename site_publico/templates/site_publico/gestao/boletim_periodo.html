@@ -5,6 +5,12 @@
 {% block header_subtitle %}{{ periodo.turma }} · {{ periodo.ano }}{% if periodo.regente %} · Regente: {{ periodo.regente }}{% endif %}{% endblock %}
 
 {% block content %}
+<style>
+.bulletin-student-manager-row.boletim-sem-vinculo {border:2px solid #dc2626 !important; background:#fff1f2 !important; border-radius:12px;}
+.boletim-sem-vinculo > div > strong {color:#991b1b !important;}
+.boletim-sem-vinculo .manager-badge {background:#fee2e2 !important; color:#991b1b !important; border:1px solid #fca5a5 !important;}
+.bulletin-student-manager-row form {margin:0;}
+</style>
 <div class="manager-toolbar">
   <a class="manager-back" href="{% url 'site_publico:gestao_boletins' %}"><i data-lucide="arrow-left"></i> Voltar</a>
   <div class="bulletin-manager-actions">
@@ -88,7 +94,7 @@
   {% if linhas %}
     <div class="bulletin-student-manager-list">
       {% for linha in linhas %}
-        <article class="bulletin-student-manager-row">
+        <article class="bulletin-student-manager-row{% if not linha.vinculado %} boletim-sem-vinculo{% endif %}">
           <span class="bulletin-student-manager-row__number">{{ linha.boletim.numero_chamada|default:"—" }}</span>
           <div>
             <strong>{{ linha.boletim.aluno.nome }}</strong>
@@ -102,6 +108,11 @@
           <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_boletim_aluno_editar' periodo.pk linha.boletim.pk %}">
             <i data-lucide="pencil"></i> Editar aluno e notas
           </a>
+          <form method="post" action="{% url 'site_publico:gestao_boletim_aluno_excluir' periodo.pk linha.boletim.pk %}" onsubmit="return confirm('Excluir APENAS o boletim deste aluno neste período, incluindo suas notas e faltas? O cadastro de Declarações não será alterado.');">
+            {% csrf_token %}
+            <input type="hidden" name="confirmar" value="EXCLUIR">
+            <button type="submit" class="manager-btn bulletin-danger-btn" title="Excluir apenas este boletim"><i data-lucide="trash-2"></i> Excluir boletim</button>
+          </form>
         </article>
       {% endfor %}
     </div>
