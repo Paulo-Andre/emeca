@@ -756,6 +756,8 @@ def whatsapp_desconectar(request):
 @login_required
 @require_GET
 def whatsapp_qr(request):
+    if limpeza_historico_pendente():
+        return JsonResponse({"ok": False, "erro": "Limpeza anterior pendente. Abra Gerenciamento e finalize a exclusão do histórico antes de gerar outro QR Code."}, status=409)
     try:
         dados = obter_qr()
         return JsonResponse({"ok": True, "base64": dados.get("base64")})
@@ -2819,6 +2821,7 @@ def whatsapp_gerenciamento(request):
     dados = {
         "gateway_configurado": gateway_configurado(),
         "gateway_status": "NAO_CONFIGURADO",
+        "limpeza_pendente": limpeza_historico_pendente(),
         "wa_sessao_id": sessao_atual_id(),
         "pode_desconectar": _pode_desconectar_whatsapp(request.user),
         "etiquetas": [],
