@@ -756,18 +756,43 @@ def whatsapp_desconectar(request):
 @login_required
 @require_GET
 def whatsapp_qr(request):
+    # Nunca recrie sessão ou gere QR enquanto a limpeza anterior está pendente.
     if limpeza_historico_pendente():
-        return JsonResponse({"ok": False, "erro": "Limpeza anterior pendente. Abra Gerenciamento e finalize a exclusão do histórico antes de gerar outro QR Code."}, status=409)
+        return JsonResponse({
+            "ok": False,
+            "erro": "A limpeza da conta anterior está pendente. Conclua-a em Gerenciamento antes de conectar outro número.",
+        }, status=409)
     try:
-        dados = obter_qr()
-        return JsonResponse({"ok": True, "base64": dados.get("base64")})
+        sessao = obter_sessao()
+        dados_sessao = (sessao.get("data") or {}) if isinstance(sessao, dict) else {}
+        estado = str(dados_sessao.get("status") or "").upper()
+        if estado == "CONNECTED":
+            return JsonResponse({"ok": True, "connected": True})
+        if estado in {"LOGGED_OUT"}:
+            return JsonResponse({
+                "ok": False,
+                "erro": "A sessão foi desvinculada. Finalize a limpeza do histórico em Gerenciamento.",
+            }, status=409)
+        if estado not in {"SCAN_QR", "STARTING", "CONNECTING", "DISCONNECTED"}:
+            return JsonResponse({
+                "ok": False,
+                "erro": "A sessão ainda não está pronta. Clique em Conectar WhatsApp e tente novamente.",
+            }, status=409)
+        resultado = obter_qr()
+        return JsonResponse({"ok": True, "base64": resultado.get("base64")})
     except WhatsAppGatewayError as exc:
         if exc.payload.get("connected"):
             return JsonResponse({"ok": True, "connected": True})
-        return JsonResponse(
-            {"ok": False, "erro": str(exc)},
-            status=exc.status_code or 502,
-        )
+        if exc.status_code == 404:
+            return JsonResponse({
+                "ok": False,
+                "erro": "Sessão não encontrada no WA-AKG. Recarregue a página e utilize Conectar WhatsApp. Nenhum histórico foi apagado.",
+            }, status=409)
+        return JsonResponse({
+            "ok": False,
+            "erro": "Serviço WhatsApp temporariamente indisponível. Tente novamente em instantes."
+            if exc.status_code is None or exc.status_code >= 500 else str(exc),
+        }, status=503 if exc.status_code is None or exc.status_code >= 500 else exc.status_code)
 
 
 def _enfileirar_boletins(request):
