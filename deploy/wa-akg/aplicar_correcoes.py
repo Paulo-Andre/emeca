@@ -27,6 +27,90 @@ def substitute(text: str, before: str, after: str, context: str) -> str:
     return text.replace(before, after, 1)
 
 
+def corrigir_gravacao_mensagens_emeca(value: str) -> str:
+    """Impede duplicidades ruidosas e escrita por sockets de sessões substituídas.
+
+    Nenhuma mensagem ou tabela é apagada. Usa os constraints já existentes
+    e evita reatribuir mensagens de uma sessão antiga a outra sessão.
+    """
+    original = (
+        '        // Ensure we have the database session ID\n'
+        '        if (!dbSessionId) {\n'
+        '            const session = await prisma.session.findUnique({ where: { sessionId }, select: { id: true } });\n'
+        '            if (!session) return;\n'
+        '            dbSessionId = session.id;\n'
+        '        }'
+    )
+    seguro = (
+        '        // EMECA: verify the internal Session record on each incoming batch.\n'
+        '        // An old socket must not write after its Session is replaced.\n'
+        '        const currentStoreSession = await prisma.session.findUnique({\n'
+        '            where: { sessionId }, select: { id: true }\n'
+        '        });\n'
+        '        if (!currentStoreSession || (dbSessionId && dbSessionId !== currentStoreSession.id)) {\n'
+        '            logger.warn("Store", "Ignoring events from removed/replaced session");\n'
+        '            return;\n'
+        '        }\n'
+        '        dbSessionId = currentStoreSession.id;'
+    )
+    # Exactly two message consumers: messages.upsert and messaging-history.set.
+    # The contacts listener must keep its existing behavior.
+    if seguro in value:
+        if value.count(seguro) != 2:
+            raise RuntimeError("Guarda de sessão parcial/inesperada em store/index.ts.")
+    elif value.count(original) >= 2:
+        value = value.replace(original, seguro, 2)
+    else:
+        raise RuntimeError("Handlers de mensagens WA-AKG não reconhecidos; não aplicar.")
+
+    value = substitute(
+        value,
+        '            } catch (error) {\n'
+        '                logger.error("Store", "Error saving message", error);\n'
+        '            }',
+        '            } catch (error: any) {\n'
+        '                // EMECA: stop the old batch if its Session was removed.\n'
+        '                if (error?.code === "P2003") {\n'
+        '                    logger.warn("Store", "Message batch stopped: Session FK no longer exists");\n'
+        '                    break;\n'
+        '                }\n'
+        '                logger.error("Store", "Error saving message", error);\n'
+        '            }',
+        "parada do lote de mensagens sem sessão",
+    )
+    value = substitute(
+        value,
+        '                } catch (error) {\n'
+        '                    logger.error("Store", "Error saving historical message", error);\n'
+        '                }',
+        '                } catch (error: any) {\n'
+        '                    // EMECA: do not iterate thousands of messages against a missing FK.\n'
+        '                    if (error?.code === "P2003") {\n'
+        '                        logger.warn("Store", "History batch stopped: Session FK no longer exists");\n'
+        '                        break;\n'
+        '                    }\n'
+        '                    logger.error("Store", "Error saving historical message", error);\n'
+        '                }',
+        "parada da sincronização antiga sem sessão",
+    )
+    value = substitute(
+        value,
+        '    } catch (e: any) {\n'
+        '        logger.error("Store", "Error saving message query", e);\n'
+        '        throw e;\n'
+        '    }',
+        '    } catch (e: any) {\n'
+        '        // The findUnique/create sequence races across history and live listeners.\n'
+        '        // P2002 means another listener already persisted this message.\n'
+        '        if (e?.code === "P2002") return null;\n'
+        '        logger.error("Store", "Error saving message query", e);\n'
+        '        throw e;\n'
+        '    }',
+        "duplicidades concorrentes do histórico",
+    )
+    return value
+
+
 def desativar_agendador_duplicado(manager_content: str) -> str:
     """WA-AKG: uma só instância de scheduler, sem reinicialização paralela.
 
@@ -143,6 +227,7 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
         'name: undefined, // do not overwrite a saved name with pushName',
         "nome criado a partir da mensagem",
     )
+    value = corrigir_gravacao_mensagens_emeca(value)
     edits[index] = value
 
     # The upstream contacts.ts originally treated pushName/notify as the
