@@ -44,6 +44,12 @@ def corrigir_resposta_envio_midia(value: str) -> str:
         '        // may return buffers/BigInt/protobufs that cannot be serialized.\n'
         '        // Do NOT repeat a send when the acknowledgement fails.\n'
         '        const messageId = typeof sent?.key?.id === "string" ? sent.key.id : null;\n'
+        '        if (!messageId) {\n'
+        '            // The send may be ambiguous: never retry automatically.\n'
+        '            return NextResponse.json({ status: false,\n'
+        '                message: "Envio sem identificador de confirmação. Verifique o destinatário antes de repetir.",\n'
+        '                error: "MEDIA_ACK_MISSING" }, { status: 502 });\n'
+        '        }\n'
         '        return NextResponse.json({ status: true, message: "Operation successful",\n'
         '            data: { messageId } });',
         "resposta JSON segura para mídia",
