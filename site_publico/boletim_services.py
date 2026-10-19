@@ -139,6 +139,44 @@ def sincronizar_perfil_por_nome_declaracao(perfil, nome=None):
     registros = _mapa_declaracoes_por_nome().get(chave, [])
     return sincronizar_perfil_com_declaracoes(perfil, registros)
 
+
+def religar_boletins_apos_importar_declaracoes():
+    """Vincula somente aluno único por nome e nascimento compatível.
+
+    Não altera histórico de notas, faltas, turmas, nem publica períodos.
+    """
+    declaracoes = _mapa_declaracoes_por_nome()
+    perfis_por_nome = defaultdict(list)
+    for perfil in AlunoBoletim.objects.filter(
+        declaracao__isnull=True, boletins__isnull=False
+    ).distinct():
+        perfis_por_nome[normalizar_nome(perfil.nome)].append(perfil)
+
+    vinculados = 0
+    pendentes = 0
+    for nome, perfis in perfis_por_nome.items():
+        candidatos = declaracoes.get(nome, [])
+        if len(perfis) != 1 or len(candidatos) != 1:
+            pendentes += len(perfis)
+            continue
+        perfil, origem = perfis[0], candidatos[0]
+        if not origem.dataNascimentoAluno or (
+            perfil.data_nascimento
+            and perfil.data_nascimento != origem.dataNascimentoAluno
+        ):
+            pendentes += 1
+            continue
+        if AlunoBoletim.objects.filter(declaracao=origem).exists():
+            pendentes += 1
+            continue
+        try:
+            sincronizar_perfil_declaracao(perfil, origem)
+            vinculados += 1
+        except ValueError:
+            pendentes += 1
+    return vinculados, pendentes
+
+
 @transaction.atomic
 def importar_dados_boletim(dados_planilha, dados_periodo=None):
     """Importa o boletim usando os metadados detectados no próprio arquivo."""
