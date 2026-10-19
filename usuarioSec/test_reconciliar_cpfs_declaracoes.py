@@ -130,6 +130,43 @@ class ReconciliaCPFsTestes(TestCase):
         self.assertIn("linhas_sem_nascimento: 1", resultado)
         self.assertIn("cadastros_atualizaveis: 0", resultado)
 
+    def test_aplicacao_usa_backup_existente_sem_criar_outro(self):
+        planilha = _planilha()
+        previo = self._rodar(planilha)
+        plano = previo.split("plano_id: ")[1].splitlines()[0]
+        with TemporaryDirectory() as pasta:
+            arquivo = Path(pasta) / "declaracoes.xls"
+            arquivo.write_bytes(b"planilha-sintetica")
+            resultado = StringIO()
+            with patch(
+                "usuarioSec.management.commands.reconciliar_cpfs_declaracoes.pd.read_excel",
+                return_value=planilha,
+            ), patch(
+                "usuarioSec.management.commands.reconciliar_cpfs_declaracoes._validar_backup_existente",
+                return_value=Path("/backups/conferencia-boletins/antes-atualizacao-cpfs-teste.sqlite3"),
+            ) as validar, patch(
+                "usuarioSec.management.commands.reconciliar_cpfs_declaracoes._fazer_backup",
+                side_effect=AssertionError("Criou segundo backup desnecessário!"),
+            ):
+                call_command(
+                    "reconciliar_cpfs_declaracoes", str(arquivo),
+                    aplicar=True, plano_id=plano,
+                    backup_existente="/backups/conferencia-boletins/antes-atualizacao-cpfs-teste.sqlite3",
+                    stdout=resultado,
+                )
+            validar.assert_called_once()
+            self.aluno.refresh_from_db()
+            self.assertTrue(self.aluno.cpfMae)
+            self.assertIn("CONCLUÍDO: 1", resultado.getvalue())
+
+    def test_backup_existente_exige_aplicacao_explicita(self):
+        with self.assertRaises(CommandError):
+            call_command(
+                "reconciliar_cpfs_declaracoes", "ficticio.xls",
+                backup_existente="/backups/conferencia-boletins/teste.sqlite3",
+                stdout=StringIO(),
+            )
+
     def test_cpf_repetido_e_invalido(self):
         self.assertFalse(_cpf_valido("11111111111"))
         self.assertTrue(_cpf_valido(_gerar_cpf("529982247")))

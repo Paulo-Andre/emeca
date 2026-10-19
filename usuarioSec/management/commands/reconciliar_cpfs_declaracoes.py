@@ -230,6 +230,39 @@ def _fazer_backup():
     return destino
 
 
+def _validar_backup_existente(caminho):
+    """Aceita UMA cópia consistente criada neste lote, sem gerar outro backup."""
+    if settings.DATABASES["default"]["ENGINE"] != "django.db.backends.sqlite3":
+        raise CommandError("Backup existente só pode ser validado para SQLite.")
+    pasta = Path("/backups/conferencia-boletins").resolve()
+    arquivo = Path(caminho).resolve()
+    if arquivo.parent != pasta or not arquivo.is_file() or not arquivo.name.startswith(
+        "antes-atualizacao-cpfs-"
+    ) or arquivo.suffix != ".sqlite3":
+        raise CommandError("Backup existente fora do diretório ou padrão permitido.")
+    # Reutilizar um backup antigo após novos lançamentos seria inseguro.
+    if abs(datetime.now(timezone.utc).timestamp() - arquivo.stat().st_mtime) > 7200:
+        raise CommandError("Backup está antigo. É necessário um snapshot novo.")
+    origem = Path(settings.DATABASES["default"]["NAME"])
+    with sqlite3.connect(f"file:{arquivo}?mode=ro", uri=True) as copia, sqlite3.connect(
+        f"file:{origem}?mode=ro", uri=True
+    ) as atual:
+        if copia.execute("PRAGMA integrity_check").fetchone() != ("ok",):
+            raise CommandError("Backup existente falhou na integridade.")
+        # Conferir conteúdo de identidade ANTES das gravações.
+        sql = (
+            'SELECT id, nomeDoAluno, dataNascimentoAluno, cpfMae, '
+            'cpfResponsavel, cpfDoAluno FROM "usuarioSec_declaracao" ORDER BY id'
+        )
+        if copia.execute(sql).fetchall() != atual.execute(sql).fetchall():
+            raise CommandError("O backup não corresponde às Declarações atuais.")
+        for tabela in ("site_publico_boletimaluno", "site_publico_notaboletim"):
+            sql_contar = f'SELECT COUNT(*) FROM "{tabela}"'
+            if copia.execute(sql_contar).fetchone() != atual.execute(sql_contar).fetchone():
+                raise CommandError("O backup não corresponde aos boletins atuais.")
+    return arquivo
+
+
 class Command(BaseCommand):
     help = (
         "Simula reconciliação de CPFs AB(mãe), AC(responsável), AD(aluno), "
@@ -240,8 +273,11 @@ class Command(BaseCommand):
         parser.add_argument("arquivo")
         parser.add_argument("--aplicar", action="store_true")
         parser.add_argument("--plano-id", default="")
+        parser.add_argument("--backup-existente", default="")
 
     def handle(self, *args, **options):
+        if options["backup_existente"] and not options["aplicar"]:
+            raise CommandError("--backup-existente exige --aplicar.")
         if options["aplicar"] and not re.fullmatch(r"[0-9a-f]{64}", options["plano_id"]):
             raise CommandError("Para aplicar, informe --plano-id obtido na prévia.")
         contagem = Counter()
@@ -269,8 +305,11 @@ class Command(BaseCommand):
             self.stdout.write("Não há campos novos para gravar.")
             return
 
-        backup = _fazer_backup()
-        self.stdout.write("Backup íntegro criado em: " + str(backup))
+        backup = (
+            _validar_backup_existente(options["backup_existente"])
+            if options["backup_existente"] else _fazer_backup()
+        )
+        self.stdout.write("Backup íntegro validado em: " + str(backup))
         with transaction.atomic():
             for pk, originais, novos in alteracoes:
                 atual = declaracao.objects.select_for_update().get(pk=pk)
