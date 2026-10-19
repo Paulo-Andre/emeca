@@ -160,6 +160,12 @@ def _preparar_plano(fonte, hash_arquivo, contagem):
             continue
 
         aluno_doc = re.sub(r"\D", "", valores["cpfDoAluno"])
+        if aluno_doc and any(
+            re.sub(r"\\D", "", valores[campo]) == aluno_doc
+            for campo in ("cpfMae", "cpfResponsavel") if valores[campo]
+        ):
+            contagem["cpf_aluno_igual_responsavel"] += 1
+            continue
         if aluno_doc and (
             len(cpf_aluno_fonte[aluno_doc]) != 1
             or cpf_aluno_banco[aluno_doc] - {registros[0].pk}
@@ -247,6 +253,7 @@ class Command(BaseCommand):
             "linhas_sem_nascimento", "identidades_duplicadas_planilha",
             "sem_correspondencia", "identidades_duplicadas_banco",
             "cpfs_invalidos", "cpf_aluno_duplicado",
+            "cpf_aluno_igual_responsavel",
             "conflitos_existentes", "sem_cpf_na_planilha",
             "ja_preenchidos_ou_sem_mudancas", "cadastros_atualizaveis",
             "campo_cpfMae", "campo_cpfResponsavel", "campo_cpfDoAluno",
