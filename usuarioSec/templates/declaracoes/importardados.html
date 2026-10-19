@@ -168,7 +168,7 @@
       </header>
 
       <section class="importar-card">
-        <h3>Enviar planilha</h3>
+        <h3>Importar novas declarações</h3>
         <p>Selecione a planilha com os dados das declarações. O importador identifica automaticamente nomes, CPF, telefones e demais campos do modelo antigo da escola, sem alterar o layout das declarações impressas.</p>
 
         {% if messages %}
@@ -176,6 +176,37 @@
             <div class="alert">{{ message }}</div>
           {% endfor %}
         {% endif %}
+
+        <div style="border:1px solid #bdd0d8;border-radius:14px;padding:20px;margin-bottom:24px;background:#f3f9fb">
+          <h3>Atualizar CPFs das declarações existentes</h3>
+          <p style="font-size:13px;line-height:1.6">Este modo preenche exclusivamente CPFs ausentes de cadastros já existentes. Compara nome completo e nascimento, ignora ambiguidades e conflitos. Não cria nem exclui declarações, não modifica boletins, notas ou faltas.</p>
+          {% if previa_cpfs %}
+          <h4>Prévia concluída — nenhuma alteração realizada ainda</h4>
+          <table style="width:100%;text-align:left;margin:12px 0">
+            <tr><th>Cadastros com atualização segura</th><td>{{ previa_cpfs.cadastros_atualizaveis }}</td></tr>
+            <tr><th>CPF da mãe</th><td>{{ previa_cpfs.campo_cpfMae }}</td></tr>
+            <tr><th>CPF do responsável</th><td>{{ previa_cpfs.campo_cpfResponsavel }}</td></tr>
+            <tr><th>CPF do aluno</th><td>{{ previa_cpfs.campo_cpfDoAluno }}</td></tr>
+            <tr><th>Sem correspondência</th><td>{{ previa_cpfs.sem_correspondencia }}</td></tr>
+            <tr><th>Conflitos existentes</th><td>{{ previa_cpfs.conflitos_existentes }}</td></tr>
+            <tr><th>CPFs inválidos</th><td>{{ previa_cpfs.cpfs_invalidos }}</td></tr>
+            <tr><th>Identidades duplicadas na planilha</th><td>{{ previa_cpfs.identidades_duplicadas_planilha }}</td></tr>
+            <tr><th>Identidades duplicadas no sistema</th><td>{{ previa_cpfs.identidades_duplicadas_banco }}</td></tr>
+          </table>
+          <form action="{% url 'importar_cpfs' %}" method="post" style="display:flex;gap:12px;flex-wrap:wrap">
+            {% csrf_token %}
+            <button class="importar-btn" name="acao" value="confirmar" type="submit" {% if not previa_cpfs.cadastros_atualizaveis %}disabled{% endif %}>Confirmar atualização com backup</button>
+            <button class="importar-btn" style="background:#58646b" name="acao" value="cancelar" type="submit">Cancelar</button>
+          </form>
+          {% else %}
+          <form action="{% url 'importar_cpfs' %}" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <label for="planilha_cpfs"><strong>Planilha oficial (.xls ou .xlsx, até 10 MB)</strong></label>
+            <input id="planilha_cpfs" name="arquivo" type="file" accept=".xls,.xlsx" required style="display:block;margin:12px 0">
+            <button class="importar-btn" type="submit" name="acao" value="previsualizar">Validar e visualizar alterações</button>
+          </form>
+          {% endif %}
+        </div>
 
         <form method="POST" enctype="multipart/form-data">
           {% csrf_token %}
@@ -192,7 +223,7 @@
           </label>
 
           <div class="importar-actions">
-            <button type="submit" class="importar-btn">Importar arquivo</button>
+            <button type="submit" class="importar-btn">Importar novos registros</button>
           </div>
         </form>
       </section>
