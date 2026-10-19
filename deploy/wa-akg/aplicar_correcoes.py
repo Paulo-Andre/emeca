@@ -139,6 +139,7 @@ def corrigir_reconexao_instancia(value: str) -> str:
         '            if (connection === "open") {\n'
         '                // Connected — reset reconnect count',
         '            if (connection === "open") {\n'
+        '                if (this.status === "CONNECTED" && !this.closeHandled) return;\n'
         '                if (this.reconnectTimer) {\n'
         '                    clearTimeout(this.reconnectTimer);\n'
         '                    this.reconnectTimer = null;\n'
