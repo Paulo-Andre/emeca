@@ -358,6 +358,8 @@ def importar_alunos(request):
 
         importados = 0
         telefones_salvos = 0
+        boletins_religados = 0
+        boletins_pendentes = 0
 
         try:
             with transaction.atomic():
@@ -383,6 +385,10 @@ def importar_alunos(request):
                             ignore_conflicts=True,
                         )
                         telefones_salvos += len(registros_telefone)
+                # Aguarda todas as linhas: duplicidades da planilha não podem
+                # provocar uma associação prematura ao primeiro cadastro.
+                from site_publico.boletim_services import religar_boletins_apos_importar_declaracoes
+                boletins_religados, boletins_pendentes = religar_boletins_apos_importar_declaracoes()
         except Exception:
             messages.error(
                 request,
@@ -402,6 +408,11 @@ def importar_alunos(request):
         if resultado["ignoradas"]:
             resumo += f" {resultado['ignoradas']} linha{'s' if resultado['ignoradas'] != 1 else ''} sem aluno foi{'ram' if resultado['ignoradas'] != 1 else ''} ignorada{'s' if resultado['ignoradas'] != 1 else ''}."
 
+        resumo += (
+            f" Boletins vinculados automaticamente: {boletins_religados}."
+            f" Boletins pendentes de conferência: {boletins_pendentes}."
+            " Nenhuma nota ou falta foi alterada."
+        )
         messages.success(request, resumo)
         return redirect("importar_alunos")
 
