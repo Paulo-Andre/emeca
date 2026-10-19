@@ -613,8 +613,14 @@ def apagar_todos_alunos(request):
 
     try:
         with transaction.atomic():
+            from site_publico.models import AlunoBoletim
             total_declaracoes = declaracao.objects.count()
             total_telefones = TelefoneDeclaracao.objects.count()
+            # Desvincula as identidades dos boletins antes de apagar a fonte.
+            # As notas, faltas, períodos e nomes históricos permanecem intactos.
+            perfis = AlunoBoletim.objects.filter(declaracao__isnull=False)
+            total_desvinculados = perfis.count()
+            perfis.update(declaracao=None, cpf_mae="", cpf_responsavel="")
             declaracao.objects.all().delete()
     except Exception:
         messages.error(
@@ -627,7 +633,9 @@ def apagar_todos_alunos(request):
         request,
         (
             f"Registros de declarações removidos: {total_declaracoes}. "
-            f"Telefones vinculados removidos: {total_telefones}."
+            f"Telefones vinculados removidos: {total_telefones}. "
+            f"Perfis de boletim desvinculados: {total_desvinculados}. "
+            "Notas e faltas foram preservadas."
         ),
     )
     return redirect("telaDeclaracao")
