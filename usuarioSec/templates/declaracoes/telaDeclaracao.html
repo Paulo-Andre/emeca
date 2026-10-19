@@ -1029,39 +1029,31 @@
      
 
     
-    const novaAba = window.open('', '_blank');
-
-    fetch(`/imprimirDeclaracao/${id}/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
-        },
-        body: JSON.stringify({
-            nome,
-            nasc,
-            naturalidade,
-            serie,
-            ano,
-            mae,
-            pai,
-            tipo,
-            responsavel,
-            anoCursa,
-            assinatura,
-            carimbo,
-            datareuniao,
-            horarioin,
-            horariofim,
-            
-        })
-    })
-    .then(res => res.text())
-    .then(html => {
-        novaAba.document.open();
-        novaAba.document.write(html);
-        novaAba.document.close();
-    });  
+    // Abrir a resposta HTTP diretamente na aba de impressão. Evita about:blank
+    // e garante que o navegador carregue os estilos e a timbragem.
+    const formulario = document.createElement('form');
+    formulario.method = 'POST';
+    formulario.action = `/imprimirDeclaracao/${id}/`;
+    formulario.target = '_blank';
+    formulario.style.display = 'none';
+    const campos = {
+      csrfmiddlewaretoken: getCSRFToken(),
+      dados: JSON.stringify({
+        nome, nasc, naturalidade, serie, ano, mae, pai, tipo,
+        responsavel, anoCursa, assinatura, carimbo,
+        datareuniao, horarioin, horariofim
+      })
+    };
+    Object.entries(campos).forEach(([chave, valor]) => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = chave;
+      input.value = valor;
+      formulario.appendChild(input);
+    });
+    document.body.appendChild(formulario);
+    formulario.submit();
+    formulario.remove();
 }
 function getCSRFToken() {
     return document.cookie
