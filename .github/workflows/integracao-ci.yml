@@ -37,6 +37,7 @@ jobs:
           bash -n deploy/instalar_cpfs_emeca.sh
           bash -n deploy/wa-akg/implantar_emeca.sh
           python3 -m py_compile deploy/wa-akg/aplicar_correcoes.py
+          python3 -m unittest discover -s deploy/wa-akg -p 'test_*.py' -v
           python3 -m unittest discover -s scripts -p 'test_patcher_scheduler.py' -v
           python3 -m unittest discover -s scripts -p 'test_validacao_backups_lote.py' -v
 
