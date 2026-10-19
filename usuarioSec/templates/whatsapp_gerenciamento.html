@@ -64,7 +64,7 @@
       </section>
     {% endif %}
 
-    {% if pode_desconectar and gateway_status == "LOGGED_OUT" %}
+    {% if pode_desconectar and limpeza_pendente %}
       <section class="wa-manager-card wa-connection-management">
         <div class="wa-manager-card-head">
           <i data-lucide="shield-alert"></i>
