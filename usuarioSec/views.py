@@ -360,6 +360,7 @@ def importar_alunos(request):
         telefones_salvos = 0
         boletins_religados = 0
         boletins_pendentes = 0
+        aviso_vinculacao = False
 
         try:
             with transaction.atomic():
@@ -385,10 +386,20 @@ def importar_alunos(request):
                             ignore_conflicts=True,
                         )
                         telefones_salvos += len(registros_telefone)
-                # Aguarda todas as linhas: duplicidades da planilha não podem
-                # provocar uma associação prematura ao primeiro cadastro.
-                from site_publico.boletim_services import religar_boletins_apos_importar_declaracoes
-                boletins_religados, boletins_pendentes = religar_boletins_apos_importar_declaracoes()
+                # A importação cadastral deve concluir mesmo se a rotina
+                # de associação dos boletins apresentar erro inesperado.
+                # Um savepoint isola a associação, sem comprometer CPFs.
+                try:
+                    with transaction.atomic():
+                        from site_publico.boletim_services import religar_boletins_apos_importar_declaracoes
+                        boletins_religados, boletins_pendentes = religar_boletins_apos_importar_declaracoes()
+                except Exception:
+                    import logging
+                    logging.getLogger(__name__).exception(
+                        "Falha ao religar boletins após importar Declarações; "
+                        "cadastros da planilha foram preservados."
+                    )
+                    aviso_vinculacao = True
         except Exception:
             messages.error(
                 request,
@@ -413,6 +424,12 @@ def importar_alunos(request):
             f" Boletins pendentes de conferência: {boletins_pendentes}."
             " Nenhuma nota ou falta foi alterada."
         )
+        if aviso_vinculacao:
+            messages.warning(
+                request,
+                "Declarações importadas, mas a vinculação automática com "
+                "boletins não pôde ser concluída. Notas e faltas permanecem intactas."
+            )
         messages.success(request, resumo)
         return redirect("importar_alunos")
 
