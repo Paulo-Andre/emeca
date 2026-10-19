@@ -34,17 +34,23 @@
             </strong>
           </div>
           <p>
-            {% if gateway_status_detalhe %}{{ gateway_status_detalhe }}{% else %}
+            {% if limpeza_pendente %}A conta anterior precisa ter a limpeza concluída em Gerenciamento antes de conectar outro número.{% elif gateway_status_detalhe %}{{ gateway_status_detalhe }}{% else %}
               Conecte o WhatsApp para carregar as conversas recebidas.
             {% endif %}
           </p>
         </div>
         <div class="connection-actions">
+          {% if limpeza_pendente %}
+          <a class="btn-primary" href="{% url 'whatsapp_gerenciamento' %}">
+            <i data-lucide="shield-alert"></i> Resolver limpeza pendente
+          </a>
+          {% else %}
           <form method="post" action="{% url 'whatsapp_conectar' %}">
             {% csrf_token %}
           <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
             <button class="btn-primary" type="submit"><i data-lucide="power"></i> Conectar WhatsApp</button>
           </form>
+          {% endif %}
           <a class="btn-secondary" href="{% url 'whatsapp' %}"><i data-lucide="qr-code"></i> Tela de conexão</a>
         </div>
       </section>
