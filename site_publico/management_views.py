@@ -331,6 +331,38 @@ def gestao_boletim_publicar(request, pk):
 
 @require_POST
 @login_required
+def gestao_boletim_aluno_excluir(request, periodo_pk, boletim_pk):
+    """Exclui apenas o lançamento deste aluno no período selecionado.
+
+    Não altera Declarações nem outros períodos do mesmo aluno.
+    """
+    periodo = get_object_or_404(PeriodoBoletim, pk=periodo_pk)
+    boletim = get_object_or_404(
+        BoletimAluno.objects.select_related("aluno"),
+        pk=boletim_pk,
+        periodo=periodo,
+    )
+    if periodo.publicado:
+        messages.error(
+            request,
+            "Retire a publicação do período antes de excluir um boletim."
+        )
+        return redirect("site_publico:gestao_boletim_periodo", pk=periodo.pk)
+    if request.POST.get("confirmar") != "EXCLUIR":
+        messages.error(request, "Exclusão não confirmada.")
+        return redirect("site_publico:gestao_boletim_periodo", pk=periodo.pk)
+    nome = boletim.aluno.nome
+    boletim.delete()
+    messages.success(
+        request,
+        f"Boletim de {nome} excluído somente deste período. "
+        "O cadastro de Declarações e os demais boletins foram preservados."
+    )
+    return redirect("site_publico:gestao_boletim_periodo", pk=periodo.pk)
+
+
+@require_POST
+@login_required
 def gestao_boletim_periodo_excluir(request, pk):
     periodo = get_object_or_404(PeriodoBoletim, pk=pk)
     titulo = periodo.titulo
