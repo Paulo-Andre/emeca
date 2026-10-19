@@ -177,83 +177,101 @@
           {% endfor %}
         {% endif %}
 
-        <div style="border:1px solid #bdd0d8;border-radius:14px;padding:20px;margin-bottom:24px;background:#f3f9fb">
-          <h3>Atualizar CPFs das declarações existentes</h3>
-          <p style="font-size:13px;line-height:1.6">Este modo preenche exclusivamente CPFs ausentes de cadastros já existentes. Compara nome completo e nascimento, ignora ambiguidades e conflitos. Não cria nem exclui declarações, não modifica boletins, notas ou faltas.</p>
-          {% if previa_cpfs %}
-          <h4>Prévia concluída — nenhuma alteração realizada ainda</h4>
-          <table style="width:100%;text-align:left;margin:12px 0">
-            <tr><th>Cadastros com atualização segura</th><td>{{ previa_cpfs.cadastros_atualizaveis }}</td></tr>
-            <tr><th>CPF da mãe</th><td>{{ previa_cpfs.campo_cpfMae }}</td></tr>
-            <tr><th>CPF do responsável</th><td>{{ previa_cpfs.campo_cpfResponsavel }}</td></tr>
-            <tr><th>CPF do aluno</th><td>{{ previa_cpfs.campo_cpfDoAluno }}</td></tr>
-            <tr><th>Sem correspondência</th><td>{{ previa_cpfs.sem_correspondencia }}</td></tr>
-            <tr><th>Conflitos existentes</th><td>{{ previa_cpfs.conflitos_existentes }}</td></tr>
-            <tr><th>CPFs inválidos</th><td>{{ previa_cpfs.cpfs_invalidos }}</td></tr>
-            <tr><th>Identidades duplicadas na planilha</th><td>{{ previa_cpfs.identidades_duplicadas_planilha }}</td></tr>
-            <tr><th>Identidades duplicadas no sistema</th><td>{{ previa_cpfs.identidades_duplicadas_banco }}</td></tr>
-          </table>
-          <form action="{% url 'importar_cpfs' %}" method="post" style="display:flex;gap:12px;flex-wrap:wrap">
-            {% csrf_token %}
-            <button class="importar-btn" name="acao" value="confirmar" type="submit" {% if not previa_cpfs.cadastros_atualizaveis %}disabled{% endif %}>Confirmar atualização com backup</button>
-            <button class="importar-btn" style="background:#58646b" name="acao" value="cancelar" type="submit">Cancelar</button>
-          </form>
-          {% else %}
-          <form action="{% url 'importar_cpfs' %}" method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <label for="planilha_cpfs"><strong>Planilha oficial (.xls ou .xlsx, até 10 MB)</strong></label>
-            <input id="planilha_cpfs" name="arquivo" type="file" accept=".xls,.xlsx" required style="display:block;margin:12px 0">
-            <button class="importar-btn" type="submit" name="acao" value="previsualizar">Validar e visualizar alterações</button>
-          </form>
-          {% endif %}
-        </div>
-
-        <form method="POST" enctype="multipart/form-data">
-          {% csrf_token %}
-          <label class="importar-upload-area" id="uploadArea">
-            <div>
-              <div class="importar-upload-icon"><i data-lucide="file-spreadsheet"></i></div>
-              <div class="importar-upload-text">Clique para selecionar ou arraste o arquivo aqui</div>
-              <span class="importar-hint">Formatos aceitos: .xls, .xlsx e .csv</span>
-              <span class="importar-hint">São importados Nome e CPF de Pai, Mãe e Responsável, além dos telefones correspondentes. Cabeçalhos como CPF PAI, CPF MÃE e CPF RESPONS. também são reconhecidos.</span>
-              <span class="importar-hint">Telefones repetidos do mesmo vínculo são unidos automaticamente.</span>
-              <div class="importar-file-name" id="fileName"></div>
-            </div>
-            <input type="file" name="arquivo" id="arquivo" accept=".xls,.xlsx,.csv" required>
-          </label>
-
-          <div class="importar-actions">
-            <button type="submit" class="importar-btn">Importar novos registros</button>
+        {% if previa_cpfs %}
+          <div style="background:#f1f8fb;border:1px solid #bdd0d8;border-radius:14px;padding:20px">
+            <h3>Prévia da atualização de CPFs</h3>
+            <p>Confira os resultados antes de gravar. Nenhum cadastro foi alterado nesta etapa.</p>
+            <table style="width:100%;text-align:left;margin:12px 0">
+              <tr><th>Cadastros atualizáveis</th><td>{{ previa_cpfs.cadastros_atualizaveis }}</td></tr>
+              <tr><th>CPF da mãe</th><td>{{ previa_cpfs.campo_cpfMae }}</td></tr>
+              <tr><th>CPF do responsável</th><td>{{ previa_cpfs.campo_cpfResponsavel }}</td></tr>
+              <tr><th>CPF do aluno</th><td>{{ previa_cpfs.campo_cpfDoAluno }}</td></tr>
+              <tr><th>Sem correspondência</th><td>{{ previa_cpfs.sem_correspondencia }}</td></tr>
+              <tr><th>Conflitos existentes</th><td>{{ previa_cpfs.conflitos_existentes }}</td></tr>
+              <tr><th>CPFs inválidos</th><td>{{ previa_cpfs.cpfs_invalidos }}</td></tr>
+              <tr><th>Duplicados na planilha</th><td>{{ previa_cpfs.identidades_duplicadas_planilha }}</td></tr>
+              <tr><th>Duplicados no sistema</th><td>{{ previa_cpfs.identidades_duplicadas_banco }}</td></tr>
+            </table>
+            <form action="{% url 'importar_cpfs' %}" method="post" style="display:flex;gap:12px;flex-wrap:wrap">
+              {% csrf_token %}
+              <button class="importar-btn" name="acao" value="confirmar" type="submit" {% if not previa_cpfs.cadastros_atualizaveis %}disabled{% endif %}>Confirmar atualização com backup</button>
+              <button class="importar-btn" style="background:#58646b" name="acao" value="cancelar" type="submit">Cancelar</button>
+            </form>
           </div>
-        </form>
+        {% else %}
+          <form method="post" enctype="multipart/form-data" id="formImportacao" action="{% url 'importar_cpfs' %}" data-rota-cpfs="{% url 'importar_cpfs' %}" data-rota-novos="{% url 'importar_alunos' %}">
+            {% csrf_token %}
+            <h3>O que deseja fazer?</h3>
+            <div style="display:grid;gap:10px;margin:14px 0 22px">
+              <label style="display:flex;gap:10px;align-items:flex-start;padding:13px;border:1px solid #bdd0d8;border-radius:11px;background:#f2f9fb;cursor:pointer">
+                <input type="radio" name="modo_importacao" value="atualizar" checked style="margin-top:4px">
+                <span><strong>Atualizar CPFs existentes</strong><br><small>Preenche apenas CPFs ausentes, comparando nome e nascimento. Não cria registros nem altera boletins, notas ou faltas.</small></span>
+              </label>
+              <label style="display:flex;gap:10px;align-items:flex-start;padding:13px;border:1px solid #dce3e7;border-radius:11px;cursor:pointer">
+                <input type="radio" name="modo_importacao" value="novos" style="margin-top:4px">
+                <span><strong>Importar novas declarações</strong><br><small>Cria registros a partir do Excel. Use apenas para alunos ainda não cadastrados; esta importação não verifica duplicidades existentes.</small></span>
+              </label>
+            </div>
+            <label class="importar-upload-area" id="uploadArea">
+              <div>
+                <div class="importar-upload-icon"><i data-lucide="file-spreadsheet"></i></div>
+                <div class="importar-upload-text">Clique para selecionar ou arraste o arquivo aqui</div>
+                <span class="importar-hint" id="fileHint">Formatos: .xls ou .xlsx (até 10 MB)</span>
+                <div class="importar-file-name" id="fileName"></div>
+              </div>
+              <input type="file" name="arquivo" id="arquivo" accept=".xls,.xlsx" required>
+            </label>
+            <input type="hidden" name="acao" id="acaoImportacao" value="previsualizar">
+            <div class="importar-actions">
+              <button type="submit" class="importar-btn" id="botaoImportacao">Validar e visualizar alterações</button>
+            </div>
+          </form>
+        {% endif %}
       </section>
     </div>
   </main>
 
   <script>
-    const uploadArea = document.getElementById("uploadArea");
-    const inputFile = document.getElementById("arquivo");
-    const fileName = document.getElementById("fileName");
-
-    inputFile.addEventListener("change", () => {
-      fileName.textContent = inputFile.files.length ? inputFile.files[0].name : "";
-    });
-
-    uploadArea.addEventListener("dragover", (event) => {
-      event.preventDefault();
-      uploadArea.classList.add("dragover");
-    });
-
-    uploadArea.addEventListener("dragleave", () => uploadArea.classList.remove("dragover"));
-
-    uploadArea.addEventListener("drop", (event) => {
-      event.preventDefault();
-      uploadArea.classList.remove("dragover");
-      if (event.dataTransfer.files.length) {
-        inputFile.files = event.dataTransfer.files;
-        fileName.textContent = event.dataTransfer.files[0].name;
+    const formulario = document.getElementById("formImportacao");
+    if (formulario) {
+      const uploadArea = document.getElementById("uploadArea");
+      const inputFile = document.getElementById("arquivo");
+      const fileName = document.getElementById("fileName");
+      const botao = document.getElementById("botaoImportacao");
+      const acao = document.getElementById("acaoImportacao");
+      const dica = document.getElementById("fileHint");
+      function atualizarModo() {
+        const modo = formulario.querySelector('input[name="modo_importacao"]:checked').value;
+        const atualizacao = modo === "atualizar";
+        formulario.action = atualizacao ? formulario.dataset.rotaCpfs : formulario.dataset.rotaNovos;
+        acao.value = atualizacao ? "previsualizar" : "";
+        inputFile.accept = atualizacao ? ".xls,.xlsx" : ".xls,.xlsx,.csv";
+        dica.textContent = atualizacao ? "Formatos: .xls ou .xlsx (até 10 MB)" : "Formatos: .xls, .xlsx ou .csv";
+        botao.textContent = atualizacao ? "Validar e visualizar alterações" : "Importar novos registros";
+        inputFile.value = "";
+        fileName.textContent = "";
       }
-    });
+      formulario.querySelectorAll('input[name="modo_importacao"]').forEach(
+        radio => radio.addEventListener("change", atualizarModo)
+      );
+      inputFile.addEventListener("change", () => {
+        fileName.textContent = inputFile.files.length ? inputFile.files[0].name : "";
+      });
+      uploadArea.addEventListener("dragover", event => {
+        event.preventDefault();
+        uploadArea.classList.add("dragover");
+      });
+      uploadArea.addEventListener("dragleave", () => uploadArea.classList.remove("dragover"));
+      uploadArea.addEventListener("drop", event => {
+        event.preventDefault();
+        uploadArea.classList.remove("dragover");
+        if (event.dataTransfer.files.length) {
+          inputFile.files = event.dataTransfer.files;
+          fileName.textContent = event.dataTransfer.files[0].name;
+        }
+      });
+      atualizarModo();
+    }
 
     lucide.createIcons();
   </script>
