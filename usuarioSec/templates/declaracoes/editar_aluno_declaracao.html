@@ -22,7 +22,7 @@
     .de-edit-section svg { width: 21px; height: 21px; }
     .de-edit-section h2 { font-size: 16px; margin: 0; color: #214857; }
     .de-edit-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; }
-    .de-edit-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .de-edit-pessoa { display: flex; flex-direction: column; gap: 16px; min-width: 0; }\n    .de-edit-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
     .de-edit-field label, .de-edit-label { font-size: 12px; font-weight: 700; color: #435d69; }
     .de-edit-field input, .de-edit-field select, .de-edit-phone input { box-sizing: border-box; width: 100%; min-height: 43px; border: 1px solid #cbdce2; border-radius: 10px; background: #fff; padding: 10px 12px; font: inherit; color: #183c4b; }
     .de-edit-field input:focus, .de-edit-phone input:focus { border-color: #176585; outline: 3px solid #e2f1f7; }
@@ -81,13 +81,19 @@
         <section class="de-edit-card">
           <div class="de-edit-section"><i data-lucide="users"></i><h2>Filiação e responsável</h2></div>
           <p class="de-edit-info">Você pode acrescentar ou corrigir os nomes e CPFs do pai, da mãe e do responsável.</p>
-          <div class="de-edit-grid">
-            <div class="de-edit-field"><label for="{{ form.nomePai.id_for_label }}">{{ form.nomePai.label }}</label>{{ form.nomePai }}{{ form.nomePai.errors }}</div>
-            <div class="de-edit-field"><label for="{{ form.cpfPai.id_for_label }}">{{ form.cpfPai.label }}</label>{{ form.cpfPai }}{{ form.cpfPai.errors }}</div>
-            <div class="de-edit-field"><label for="{{ form.nomeMae.id_for_label }}">{{ form.nomeMae.label }}</label>{{ form.nomeMae }}{{ form.nomeMae.errors }}</div>
-            <div class="de-edit-field"><label for="{{ form.cpfMae.id_for_label }}">{{ form.cpfMae.label }}</label>{{ form.cpfMae }}{{ form.cpfMae.errors }}</div>
-            <div class="de-edit-field"><label for="{{ form.nomeResponsavel.id_for_label }}">{{ form.nomeResponsavel.label }}</label>{{ form.nomeResponsavel }}{{ form.nomeResponsavel.errors }}</div>
-            <div class="de-edit-field"><label for="{{ form.cpfResponsavel.id_for_label }}">{{ form.cpfResponsavel.label }}</label>{{ form.cpfResponsavel }}{{ form.cpfResponsavel.errors }}</div>
+          <div class="de-edit-grid de-edit-filiacao">
+            <div class="de-edit-pessoa">
+              <div class="de-edit-field"><label for="{{ form.nomePai.id_for_label }}">{{ form.nomePai.label }}</label>{{ form.nomePai }}{{ form.nomePai.errors }}</div>
+              <div class="de-edit-field"><label for="{{ form.cpfPai.id_for_label }}">{{ form.cpfPai.label }}</label>{{ form.cpfPai }}{{ form.cpfPai.errors }}</div>
+            </div>
+            <div class="de-edit-pessoa">
+              <div class="de-edit-field"><label for="{{ form.nomeMae.id_for_label }}">{{ form.nomeMae.label }}</label>{{ form.nomeMae }}{{ form.nomeMae.errors }}</div>
+              <div class="de-edit-field"><label for="{{ form.cpfMae.id_for_label }}">{{ form.cpfMae.label }}</label>{{ form.cpfMae }}{{ form.cpfMae.errors }}</div>
+            </div>
+            <div class="de-edit-pessoa">
+              <div class="de-edit-field"><label for="{{ form.nomeResponsavel.id_for_label }}">{{ form.nomeResponsavel.label }}</label>{{ form.nomeResponsavel }}{{ form.nomeResponsavel.errors }}</div>
+              <div class="de-edit-field"><label for="{{ form.cpfResponsavel.id_for_label }}">{{ form.cpfResponsavel.label }}</label>{{ form.cpfResponsavel }}{{ form.cpfResponsavel.errors }}</div>
+            </div>
           </div>
         </section>
         <section class="de-edit-card">
