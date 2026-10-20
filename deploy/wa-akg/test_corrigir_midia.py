@@ -17,6 +17,10 @@ MEDIA_ROUTE = Path("/srv/projetos/wa-akg/src/app/api/messages/[sessionId]/[jid]/
 UPSTREAM_SAMPLE = """
 export async function POST() {
     try {
+        const user = await getAuthenticatedUser(request);
+        const formData = await request.formData();
+        const file = formData.get("file") as File;
+        const buffer = Buffer.from(await file.arrayBuffer());
         const sent = await ChatService.sendMediaMessage(
              sessionId,
              decodedJid,
