@@ -65,6 +65,7 @@ from .whatsapp_gateway import (
     editar_mensagem,
     encaminhar_mensagem,
     enviar_broadcast,
+    enviar_broadcast_midia,
     enviar_mensagem_chat,
     enviar_midia,
     enviar_presenca,
@@ -899,8 +900,14 @@ def whatsapp_enviar(request):
         return _enfileirar_boletins(request)
 
     mensagem = (request.POST.get("mensagem") or "").strip()
-    if not mensagem:
-        messages.error(request, "Digite a mensagem antes de enviar.")
+    anexo = request.FILES.get("anexo")
+    try:
+        formato_anexo = _validar_anexo_campanha(anexo)
+    except ValueError as exc:
+        messages.error(request, str(exc))
+        return redirect("whatsapp")
+    if not mensagem and not anexo:
+        messages.error(request, "Digite uma mensagem ou anexe uma imagem/PDF.")
         return redirect("whatsapp")
     if len(mensagem) > 4000:
         messages.error(
@@ -945,14 +952,32 @@ def whatsapp_enviar(request):
                 )
                 return redirect("whatsapp")
             jid_real = valido.get("jid") or jid
-            resposta = confirmar_operacao_wa(
-                enviar_mensagem_chat(jid_real, mensagem), "envio individual",
-            )
+            if anexo:
+                resposta = confirmar_operacao_wa(
+                    enviar_midia(
+                        jid_real, anexo.read(), formato_anexo["nome"],
+                        formato_anexo["mime"], formato_anexo["tipo"], mensagem,
+                    ),
+                    "envio individual de anexo",
+                )
+            else:
+                resposta = confirmar_operacao_wa(
+                    enviar_mensagem_chat(jid_real, mensagem), "envio individual",
+                )
             broadcast_id = None
         else:
-            resposta = confirmar_operacao_wa(
-                enviar_broadcast(destinatarios, mensagem), "envio coletivo",
-            )
+            if anexo:
+                resposta = confirmar_operacao_wa(
+                    enviar_broadcast_midia(
+                        destinatarios, mensagem, anexo.read(),
+                        formato_anexo["nome"], formato_anexo["mime"],
+                    ),
+                    "disparo de imagem/PDF",
+                )
+            else:
+                resposta = confirmar_operacao_wa(
+                    enviar_broadcast(destinatarios, mensagem), "envio coletivo",
+                )
             broadcast_id = (resposta.get("data") or {}).get("broadcastId")
     except WhatsAppGatewayError as exc:
         messages.error(request, f"Falha ao enviar a mensagem: {exc}")
@@ -972,6 +997,35 @@ def whatsapp_enviar(request):
         ),
     )
     return redirect("whatsapp")
+
+
+
+def _validar_anexo_campanha(arquivo):
+    """Uma única imagem ou PDF; conteúdo verificado, não só a extensão.
+
+    A mesma validação serve aos anexos opcionais dos boletins. Nunca
+    persiste os bytes quando o tipo é desconhecido.
+    """
+    if not arquivo:
+        return None
+    if arquivo.size <= 0 or arquivo.size > 25 * 1024 * 1024:
+        raise ValueError("O anexo deve ter entre 1 byte e 25 MB.")
+    nome = str(arquivo.name or "").lower().rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
+    extensao = nome.rsplit(".", 1)[-1] if "." in nome else ""
+    cabecalho = arquivo.read(16)
+    arquivo.seek(0)
+    formatos = {
+        "jpg": ("image/jpeg", cabecalho.startswith(b"\xff\xd8\xff"), "imagem.jpg", "image"),
+        "jpeg": ("image/jpeg", cabecalho.startswith(b"\xff\xd8\xff"), "imagem.jpg", "image"),
+        "png": ("image/png", cabecalho.startswith(b"\x89PNG\r\n\x1a\n"), "imagem.png", "image"),
+        "webp": ("image/webp", cabecalho[:4] == b"RIFF" and cabecalho[8:12] == b"WEBP", "imagem.webp", "image"),
+        "pdf": ("application/pdf", cabecalho.startswith(b"%PDF-"), "documento.pdf", "document"),
+    }
+    formato = formatos.get(extensao)
+    if not formato or not formato[1]:
+        raise ValueError("Anexe somente imagens JPG, PNG, WEBP ou documentos PDF válidos.")
+    mime, _, nome_seguro, tipo = formato
+    return {"mime": mime, "nome": nome_seguro, "tipo": tipo}
 
 
 def _jid_eh_telefone(jid):
