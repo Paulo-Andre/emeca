@@ -387,6 +387,11 @@
                   {% if envio.turma %} · {{ envio.turma }}{% endif %}
                   {% if envio.usuario %} · {{ envio.usuario.username }}{% endif %}
                 </span>
+                {% if envio.falhas %}
+                  <small class="history-error" style="display:block;margin-top:6px;color:#b91c1c;max-width:600px;overflow-wrap:anywhere;">
+                    Motivo da falha: {{ envio.primeiro_erro|default:"O servidor não registrou detalhes. Consulte o histórico técnico."|truncatechars:250 }}
+                  </small>
+                {% endif %}
               </div>
               <div class="history-numbers">
                 <span class="history-status status-job-{{ envio.status|lower }}">{{ envio.get_status_display }}</span>
