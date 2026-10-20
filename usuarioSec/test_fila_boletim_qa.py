@@ -3,6 +3,14 @@
 Todos os contatos e alunos são fictícios. Não usa gateway externo.
 """
 from io import BytesIO
+from pathlib import Path
+import tempfile
+
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
+from usuarioSec.anexos_boletim_whatsapp import (
+    salvar_anexo, mensagem_com_anexo, apagar_anexo,
+)
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -199,6 +207,53 @@ class FilaBoletimPrivacidadeTests(TestCase):
         self.assertEqual(resultado, "ERRO")
         render.assert_not_called()
         enviar.assert_not_called()
+
+
+    def test_boletim_e_imagem_adicional_vao_para_o_mesmo_jid(self):
+        modulo = "usuarioSec.management.commands.processar_envios_whatsapp"
+        with tempfile.TemporaryDirectory() as temp:
+            with override_settings(MEDIA_ROOT=Path(temp) / "media"):
+                arquivo = SimpleUploadedFile(
+                    "foto.png", b"\\x89PNG\\r\\n\\x1a\\n" + b"QA" * 50,
+                    content_type="image/png",
+                )
+                referencia = salvar_anexo(arquivo, "imagem.png")
+                self.lote.mensagem = mensagem_com_anexo(
+                    "Segue o boletim de {aluno}", referencia,
+                )
+                self.lote.save(update_fields=["mensagem"])
+                try:
+                    with patch(f"{modulo}.enviar_midia", return_value={"status": True}) as midia:
+                        status, _, pdf = self._processar_sem_rede(resposta={"status": True})
+                    self.assertEqual(status, "ENVIADO")
+                    self.assertEqual(pdf.call_count, 1)
+                    self.assertEqual(midia.call_count, 1)
+                    self.assertEqual(midia.call_args.args[0], self.item.jid)
+                    self.assertEqual(midia.call_args.args[3], "image/png")
+                finally:
+                    apagar_anexo(referencia)
+
+    def test_falha_do_anexo_nao_reenvia_o_pdf_ja_aceito(self):
+        modulo = "usuarioSec.management.commands.processar_envios_whatsapp"
+        with tempfile.TemporaryDirectory() as temp:
+            with override_settings(MEDIA_ROOT=Path(temp) / "media"):
+                arquivo = SimpleUploadedFile(
+                    "complemento.pdf", b"%PDF-1.4\\nSINTETICO\\n%%EOF\\n",
+                    content_type="application/pdf",
+                )
+                referencia = salvar_anexo(arquivo, "documento.pdf")
+                self.lote.mensagem = mensagem_com_anexo("", referencia)
+                self.lote.save(update_fields=["mensagem"])
+                try:
+                    with patch(f"{modulo}.enviar_midia",
+                               side_effect=WhatsAppGatewayError("falhou")) as midia:
+                        status, _, pdf = self._processar_sem_rede(resposta={"status": True})
+                    self.assertEqual(status, "ERRO")
+                    self.assertEqual(pdf.call_count, 1)
+                    self.assertEqual(midia.call_count, 1)
+                    self.assertIn("PDF principal aceito", self.item.erro)
+                finally:
+                    apagar_anexo(referencia)
 
     def test_timeout_nao_reativa_envio_automatico(self):
         resultado, render, enviar = self._processar_sem_rede(
