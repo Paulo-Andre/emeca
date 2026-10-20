@@ -31,6 +31,7 @@ from .sessao_whatsapp import (
 )
 from .agenda_android import AgendaImportError, MAX_VCF_BYTES, processar_agenda_vcf
 from .limpeza_historico_whatsapp import limpar_emeca_e_criar_sessao_nova
+from .anexos_boletim_whatsapp import salvar_anexo, mensagem_com_anexo, apagar_anexo
 from .models import (
     EnvioBoletimWhatsApp,
     ContatoAgendaWhatsApp,
@@ -814,6 +815,12 @@ def _enfileirar_boletins(request):
         return redirect("whatsapp")
 
     mensagem_pdf = (request.POST.get("mensagem_boletim") or "").strip()
+    anexo_boletim = request.FILES.get("anexo_boletim")
+    try:
+        formato_boletim = _validar_anexo_campanha(anexo_boletim)
+    except ValueError as exc:
+        messages.error(request, str(exc))
+        return redirect("whatsapp")
     if len(mensagem_pdf) > 1200:
         messages.error(
             request,
@@ -842,34 +849,47 @@ def _enfileirar_boletins(request):
         )
         return redirect("whatsapp")
 
-    with transaction.atomic():
-        envio = EnvioBoletimWhatsApp.objects.create(
-            usuario=request.user,
-            sessao=sessao_atual_id(),
-            tipo_periodo=dados["tipo"],
-            numero_periodo=dados["numero"],
-            ano=dados["ano"],
-            modo=request.POST.get("modo") or "todos",
-            turma=(request.POST.get("turma") or "").strip(),
-            mensagem=mensagem_pdf,
-            total=len(dados["itens"]),
-            ignorados=(
-                dados["invalidos"]
-                + dados["sem_boletim"]
-                + dados["ambiguos"]
-            ),
-        )
-        ItemEnvioBoletimWhatsApp.objects.bulk_create(
-            [
-                ItemEnvioBoletimWhatsApp(
-                    envio=envio,
-                    boletim=item["boletim"],
-                    jid=item["jid"],
-                    tipo_contato=item["tipo_contato"],
-                )
-                for item in dados["itens"]
-            ]
-        )
+    referencia_anexo = ""
+    if anexo_boletim:
+        try:
+            referencia_anexo = salvar_anexo(anexo_boletim, formato_boletim["nome"])
+        except (OSError, ValueError):
+            messages.error(request, "Não foi possível armazenar o anexo de forma privada.")
+            return redirect("whatsapp")
+
+    try:
+        with transaction.atomic():
+            envio = EnvioBoletimWhatsApp.objects.create(
+                usuario=request.user,
+                sessao=sessao_atual_id(),
+                tipo_periodo=dados["tipo"],
+                numero_periodo=dados["numero"],
+                ano=dados["ano"],
+                modo=request.POST.get("modo") or "todos",
+                turma=(request.POST.get("turma") or "").strip(),
+                mensagem=mensagem_pdf,
+                total=len(dados["itens"]),
+                ignorados=(
+                    dados["invalidos"]
+                    + dados["sem_boletim"]
+                    + dados["ambiguos"]
+                ),
+            )
+            ItemEnvioBoletimWhatsApp.objects.bulk_create(
+                [
+                    ItemEnvioBoletimWhatsApp(
+                        envio=envio,
+                        boletim=item["boletim"],
+                        jid=item["jid"],
+                        tipo_contato=item["tipo_contato"],
+                    )
+                    for item in dados["itens"]
+                ]
+            )
+
+    except Exception:
+        apagar_anexo(referencia_anexo)
+        raise
 
     avisos = []
     if dados["sem_boletim"]:
