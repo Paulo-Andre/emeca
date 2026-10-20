@@ -138,6 +138,26 @@ def enviar_broadcast(recipients, message):
     )
 
 
+
+def enviar_broadcast_midia(recipients, message, content, filename, content_type):
+    """Inicia um lote de mensagens individuais com imagem/PDF.
+
+    Não envia uma mensagem coletiva a um grupo do WhatsApp.
+    """
+    session_id = quote(sessao_atual_id(), safe="")
+    return _request_multipart(
+        f"messages/{session_id}/broadcast",
+        {
+            "recipients": json.dumps(recipients),
+            "message": message,
+            "delay": settings.WA_AKG_BROADCAST_DELAY_MS,
+        },
+        filename,
+        content_type,
+        content,
+    )
+
+
 def _request_multipart(path, fields, filename, content_type, content):
     if not configurado():
         raise WhatsAppGatewayError(
