@@ -34,11 +34,21 @@ class DiagnosticoUploadTests(unittest.TestCase):
         self.assertEqual(changed, patcher.corrigir_diagnostico_upload_instancia(changed))
         refined = patcher.detalhar_resposta_upload_instancia(changed)
         self.assertIn('EMPTY_OR_NON_JSON', refined)
+        instrumented = patcher.observar_status_http_midia(refined)
+        self.assertIn("WA-MEDIA-HTTP-DIAG", instrumented)
         self.assertIn('candidateCodes', refined)
         self.assertIn('responseStatus, hasError', refined)
         self.assertNotIn('console.error("WA-MEDIA-UPLOAD-DIAG", { reason });', refined)
         self.assertEqual(refined, patcher.corrigir_diagnostico_upload_instancia(refined))
         self.assertEqual(refined, patcher.detalhar_resposta_upload_instancia(refined))
+        instrumented = patcher.observar_status_http_midia(refined)
+        self.assertIn('fetchAgent: mediaFetchAgent', instrumented)
+        self.assertIn('WA-MEDIA-HTTP-DIAG', instrumented)
+        self.assertIn('new HttpsAgent({ keepAlive: true })', instrumented)
+        self.assertEqual(instrumented, patcher.observar_status_http_midia(instrumented))
+        self.assertEqual(instrumented, patcher.corrigir_diagnostico_upload_instancia(instrumented))
+        self.assertEqual(instrumented, patcher.detalhar_resposta_upload_instancia(instrumented))
+
 
 
     def test_instrumentacao_recusa_codigo_desconhecido(self):
