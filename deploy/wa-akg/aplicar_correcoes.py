@@ -224,6 +224,62 @@ def corrigir_resposta_envio_midia(value: str) -> str:
         '            message: "Falha no envio de mídia (" + publicCode + ", etapa " + stage + ").",',
         "estágio no erro exibido ao administrador",
     )
+    value = substitute(
+        value,
+        '        const publicCode = disconnected ? "MEDIA_SESSION_DISCONNECTED" : safeCode;',
+        '        const uploadAllHosts = e?.message === "Media upload failed on all hosts";\n'
+        '        const publicCode = disconnected ? "MEDIA_SESSION_DISCONNECTED" :\n'
+        '            uploadAllHosts ? "MEDIA_UPLOAD_ALL_HOSTS" : safeCode;',
+        "diagnóstico do upload do Baileys",
+    )
+    return value
+
+
+
+
+def corrigir_diagnostico_upload_instancia(value: str) -> str:
+    """Captura somente a classe da falha de upload, nunca URL, token ou stack.
+
+    Baileys registra a causa de cada host em logger.warn, mas a configuração
+    de produção usa nível error. Preservamos esse nível e interceptamos
+    EXCLUSIVAMENTE os avisos de upload, emitindo um código enumerado.
+    """
+    value = substitute(
+        value,
+        '        this.socket = makeWASocket({',
+        '        // EMECA: observe apenas motivos tipificados de falha de upload.\n'
+        '        // Nunca imprimir trace, URL assinada, token, JID nem conteúdo.\n'
+        '        const baileysLogger = pino({ level: process.env.BAILEYS_LOG_LEVEL || "error" }) as any;\n'
+        '        const previousWarn = baileysLogger.warn.bind(baileysLogger);\n'
+        '        baileysLogger.warn = (details: any, text?: string) => {\n'
+        '            if (typeof text === "string" && text.startsWith("Error in uploading to ")) {\n'
+        '                const trace = typeof details?.trace === "string" ? details.trace : "";\n'
+        '                const recognized = [\n'
+        '                    "ENOTFOUND", "EAI_AGAIN", "ETIMEDOUT", "ECONNRESET",\n'
+        '                    "ECONNREFUSED", "ENETUNREACH", "EHOSTUNREACH",\n'
+        '                    "ERR_INVALID_ARG_TYPE", "ERR_TLS_CERT_ALTNAME_INVALID",\n'
+        '                    "CERT_HAS_EXPIRED", "UNABLE_TO_VERIFY_LEAF_SIGNATURE",\n'
+        '                    "SELF_SIGNED_CERT_IN_CHAIN", "HPE_CLOSED_CONNECTION"\n'
+        '                ].find(code => trace.includes(code));\n'
+        '                const reason = recognized || (\n'
+        '                    trace.includes("Upload timeout") ? "UPLOAD_TIMEOUT" :\n'
+        '                    trace.includes("upload failed, reason:") ? "UNEXPECTED_UPLOAD_RESPONSE" :\n'
+        '                    "UNKNOWN_UPLOAD_ERROR"\n'
+        '                );\n'
+        '                console.error("WA-MEDIA-UPLOAD-DIAG", { reason });\n'
+        '                return;\n'
+        '            }\n'
+        '            previousWarn(details, text);\n'
+        '        };\n'
+        '        this.socket = makeWASocket({',
+        "diagnóstico sanitizado de hosts de upload",
+    )
+    value = substitute(
+        value,
+        '            logger: pino({ level: process.env.BAILEYS_LOG_LEVEL || "error" }) as any,',
+        '            logger: baileysLogger,',
+        "logger de mídia do socket",
+    )
     return value
 
 
@@ -562,6 +618,7 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
         "ligação dos eventos Baileys",
     )
     value = corrigir_reconexao_instancia(value)
+    value = corrigir_diagnostico_upload_instancia(value)
     edits[instance] = value
 
     value = index.read_text(encoding="utf-8")
