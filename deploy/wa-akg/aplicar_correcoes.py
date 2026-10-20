@@ -243,6 +243,52 @@ def corrigir_resposta_envio_midia(value: str) -> str:
 
 
 
+
+
+def observar_status_http_midia(value: str) -> str:
+    """Observa SOMENTE status HTTP de POSTs de mídia enviados pelo Baileys.
+
+    Usa um https.Agent nativo compatível com o transportador do Baileys rc14,
+    sem alterar URL, headers, conteúdo, chave ou fluxo de retransmissão.
+    """
+    value = substitute(
+        value,
+        'import pino from "pino";',
+        'import pino from "pino";\n'
+        'import { Agent as HttpsAgent } from "node:https";',
+        "import de agente HTTP nativo para diagnóstico de mídia",
+    )
+    value = substitute(
+        value,
+        '        this.socket = makeWASocket({',
+        '        // EMECA: observar apenas o código HTTP do upload, nunca a URL\n'
+        '        // autenticada ou o corpo da resposta. Nenhum reenvio é realizado.\n'
+        '        const mediaFetchAgent = new HttpsAgent({ keepAlive: true });\n'
+        '        const nativeAddRequest = mediaFetchAgent.addRequest.bind(mediaFetchAgent);\n'
+        '        mediaFetchAgent.addRequest = (request: any, options: any) => {\n'
+        '            if (request.method === "POST") {\n'
+        '                request.once("response", (response: any) => {\n'
+        '                    const httpStatus = typeof response.statusCode === "number" &&\n'
+        '                        response.statusCode >= 100 && response.statusCode <= 599\n'
+        '                        ? response.statusCode : null;\n'
+        '                    console.error("WA-MEDIA-HTTP-DIAG", { httpStatus });\n'
+        '                });\n'
+        '            }\n'
+        '            return nativeAddRequest(request, options);\n'
+        '        };\n'
+        '        this.socket = makeWASocket({',
+        "observação de respostas HTTP de upload sem dados pessoais",
+    )
+    value = substitute(
+        value,
+        '            logger: baileysLogger,',
+        '            logger: baileysLogger,\n'
+        '            fetchAgent: mediaFetchAgent,',
+        "inserção do agente HTTPS observador no Baileys",
+    )
+    return value
+
+
 def detalhar_resposta_upload_instancia(value: str) -> str:
     """Exibe apenas forma da resposta e códigos numéricos, nunca body nem URL.
 
@@ -674,6 +720,7 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
     value = corrigir_reconexao_instancia(value)
     value = corrigir_diagnostico_upload_instancia(value)
     value = detalhar_resposta_upload_instancia(value)
+    value = observar_status_http_midia(value)
     edits[instance] = value
 
     value = index.read_text(encoding="utf-8")
