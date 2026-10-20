@@ -11,6 +11,7 @@ from django.test import SimpleTestCase, override_settings
 from usuarioSec.whatsapp_gateway import (
     WhatsAppGatewayError,
     enviar_documento,
+    enviar_broadcast_midia,
 )
 
 
@@ -57,6 +58,29 @@ class GatewayPdfContratoTests(SimpleTestCase):
             b'name="file"; filename="boletim-sintetico.pdf"', requisicao.data
         )
         self.assertIn(b"Content-Type: application/pdf\r\n\r\n" + texto, requisicao.data)
+        self.assertEqual(resposta["status"], True)
+        self.assertEqual(http.call_count, 1)
+
+    def test_campanha_arquivo_multipart_preserva_lista_de_destinatarios(self):
+        pdf = b"%PDF-1.4\nFICTICIO\n%%EOF\n"
+        with (
+            patch("usuarioSec.whatsapp_gateway.sessao_atual_id", return_value="sessao-qa"),
+            patch("usuarioSec.whatsapp_gateway.urlopen", return_value=_HttpResponse(
+                b'{"status":true,"data":{"broadcastId":"lote-qa"}}'
+            )) as http,
+        ):
+            resposta = enviar_broadcast_midia(
+                ["5538999991111@s.whatsapp.net", "5538999992222@s.whatsapp.net"],
+                "", pdf, "documento.pdf", "application/pdf",
+            )
+        req = http.call_args.args[0]
+        self.assertTrue(req.full_url.endswith("/messages/sessao-qa/broadcast"))
+        self.assertIn(b'name="recipients"', req.data)
+        self.assertIn(b'5538999991111@s.whatsapp.net', req.data)
+        self.assertIn(b'5538999992222@s.whatsapp.net', req.data)
+        self.assertIn(b'name="message"', req.data)
+        self.assertIn(b'Content-Type: application/pdf', req.data)
+        self.assertIn(pdf, req.data)
         self.assertEqual(resposta["status"], True)
         self.assertEqual(http.call_count, 1)
 
