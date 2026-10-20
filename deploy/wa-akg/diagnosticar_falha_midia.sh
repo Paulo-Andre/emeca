@@ -6,7 +6,7 @@ set -euo pipefail
 echo "=== Últimas falhas sanitizadas de envio de mídia ==="
 docker logs --since=90m wa-akg-app 2>&1 \
   | grep -A 6 -F 'Media send error (sanitized)' \
-  | grep -E 'Media send error \(sanitized\)|code:|name:|statusCode:|stage:' \
+  | grep -F -e 'Media send error (sanitized)' -e 'code:' -e 'name:' -e 'statusCode:' -e 'stage:' \
   | tail -n 35 || true
 
 echo
