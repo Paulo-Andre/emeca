@@ -1,16 +1,19 @@
-"""Testes sem rede para registro seguro dos erros de upload Baileys."""
+"""Regressão sintética: nenhum contato com WhatsApp, nenhuma mídia real."""
 import importlib.util
 from pathlib import Path
 import unittest
 
-SOURCE = Path(__file__).resolve().parent / "aplicar_correcoes.py"
-SPEC = importlib.util.spec_from_file_location("emeca_patch_upload", SOURCE)
+BASE = Path(__file__).resolve().parent
+SPEC = importlib.util.spec_from_file_location(
+    "emeca_patch_upload", BASE / "aplicar_correcoes.py"
+)
 patcher = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(patcher)
 
 INSTANCE = Path("/srv/projetos/wa-akg/src/modules/whatsapp/instance.ts")
 ORIGINAL = """
 import pino from "pino";
+const MAX_RECONNECT_ATTEMPTS = 3;
     async initializeSocket() {
         this.socket = makeWASocket({
             version,
@@ -20,62 +23,111 @@ import pino from "pino";
     }
 """
 
+OLD_AGENT = """
+        // EMECA: observar apenas o código HTTP do upload, nunca a URL
+        // autenticada ou o corpo da resposta. Nenhum reenvio é realizado.
+        const mediaFetchAgent = new HttpsAgent({ keepAlive: true });
+        const nativeAddRequest = (mediaFetchAgent as any).addRequest.bind(mediaFetchAgent);
+        (mediaFetchAgent as any).addRequest = (request: any, options: any) => {
+            if (request.method === "POST") {
+                request.once("response", (response: any) => {
+                    const httpStatus = typeof response.statusCode === "number" &&
+                        response.statusCode >= 100 && response.statusCode <= 599
+                        ? response.statusCode : null;
+                    console.error("WA-MEDIA-HTTP-DIAG", { httpStatus });
+                });
+            }
+            return nativeAddRequest(request, options);
+        };
+"""
+
 
 class DiagnosticoUploadTests(unittest.TestCase):
-    def test_instrumentacao_nao_registra_dados_confidenciais(self):
-        changed = patcher.corrigir_diagnostico_upload_instancia(ORIGINAL)
-        self.assertIn("WA-MEDIA-UPLOAD-DIAG", changed)
-        self.assertIn("const baileysLogger =", changed)
-        self.assertIn("logger: baileysLogger", changed)
-        self.assertIn("UNKNOWN_UPLOAD_ERROR", changed)
-        self.assertIn("ETIMEDOUT", changed)
-        self.assertNotIn("console.error(trace", changed)
-        self.assertNotIn("console.error(details", changed)
-        self.assertEqual(changed.count("this.socket = makeWASocket({"), 1)
-        self.assertEqual(changed, patcher.corrigir_diagnostico_upload_instancia(changed))
-        refined = patcher.detalhar_resposta_upload_instancia(changed)
-        self.assertIn('EMPTY_OR_NON_JSON', refined)
-        instrumented = patcher.observar_status_http_midia(refined)
-        self.assertIn("WA-MEDIA-HTTP-DIAG", instrumented)
-        self.assertIn('candidateCodes', refined)
-        self.assertIn('responseStatus, hasError', refined)
-        self.assertNotIn('console.error("WA-MEDIA-UPLOAD-DIAG", { reason });', refined)
-        self.assertEqual(refined, patcher.corrigir_diagnostico_upload_instancia(refined))
-        self.assertEqual(refined, patcher.detalhar_resposta_upload_instancia(refined))
-        instrumented = patcher.observar_status_http_midia(refined)
-        self.assertIn('fetchAgent: mediaFetchAgent', instrumented)
-        self.assertIn('WA-MEDIA-HTTP-DIAG', instrumented)
-        self.assertIn('new HttpsAgent({ keepAlive: true })', instrumented)
-        self.assertIn('(mediaFetchAgent as any).addRequest', instrumented)
-        self.assertNotIn('mediaFetchAgent.addRequest', instrumented)
-        antigo = instrumented.replace(
-            '(mediaFetchAgent as any).addRequest',
-            'mediaFetchAgent.addRequest',
+    def _base(self):
+        primeiro = patcher.corrigir_diagnostico_upload_instancia(ORIGINAL)
+        return patcher.detalhar_resposta_upload_instancia(primeiro)
+
+    def _assert_passivo(self, content):
+        self.assertIn("WA-MEDIA-UPLOAD-DIAG", content)
+        self.assertIn("resultKind", content)
+        self.assertIn('diagnosticChannel("http.client.response.finish")', content)
+        self.assertIn("WA-MEDIA-HTTP-DIAG", content)
+        self.assertIn("EMECA_MEDIA_HTTP_PASSIVE_V1", content)
+        self.assertEqual(content.count("WA-MEDIA-HTTP-DIAG"), 1)
+        self.assertEqual(content.count("EMECA_MEDIA_HTTP_PASSIVE_V1"), 1)
+        self.assertEqual(content.count("this.socket = makeWASocket({"), 1)
+        self.assertNotIn("fetchAgent: mediaFetchAgent", content)
+        self.assertNotIn("new HttpsAgent", content)
+        self.assertNotIn("nativeAddRequest", content)
+        self.assertNotIn("Agent as HttpsAgent", content)
+        self.assertNotIn("console.error(trace", content)
+        self.assertNotIn("console.error(details", content)
+
+    def test_telemetria_passiva_na_versao_original(self):
+        base = self._base()
+        patched = patcher.observar_status_http_midia(base)
+        self._assert_passivo(patched)
+        self.assertEqual(
+            patched, patcher.observar_status_http_midia(patched)
         )
-        corrigido = patcher.observar_status_http_midia(antigo)
-        self.assertEqual(corrigido, instrumented)
-        self.assertEqual(corrigido.count('WA-MEDIA-HTTP-DIAG'), 1)
-        self.assertEqual(corrigido.count('const mediaFetchAgent = '), 1)
+        self.assertEqual(
+            patched, patcher.corrigir_diagnostico_upload_instancia(patched)
+        )
+        self.assertEqual(
+            patched, patcher.detalhar_resposta_upload_instancia(patched)
+        )
 
-        self.assertEqual(instrumented, patcher.observar_status_http_midia(instrumented))
-        self.assertEqual(instrumented, patcher.corrigir_diagnostico_upload_instancia(instrumented))
-        self.assertEqual(instrumented, patcher.detalhar_resposta_upload_instancia(instrumented))
+    def test_migra_observador_antigo_sem_duplica_lo(self):
+        base = self._base()
+        old = base.replace(
+            'import pino from "pino";',
+            'import pino from "pino";\n'
+            'import { Agent as HttpsAgent } from "node:https";',
+        ).replace(
+            '        this.socket = makeWASocket({',
+            OLD_AGENT + '        this.socket = makeWASocket({',
+        ).replace(
+            '            logger: baileysLogger,',
+            '            logger: baileysLogger,\n'
+            '            fetchAgent: mediaFetchAgent,',
+        )
+        self.assertIn("WA-MEDIA-HTTP-DIAG", old)
+        self.assertIn("fetchAgent: mediaFetchAgent", old)
+        patched = patcher.observar_status_http_midia(old)
+        self._assert_passivo(patched)
+        self.assertEqual(patched, patcher.observar_status_http_midia(patched))
 
-
-
-    def test_instrumentacao_recusa_codigo_desconhecido(self):
+    def test_erro_se_observador_antigo_foi_modificado(self):
+        base = self._base()
+        broken = base.replace(
+            '        this.socket = makeWASocket({',
+            OLD_AGENT.replace("nativeAddRequest(request, options)", "unknownCall()")
+            + '        this.socket = makeWASocket({',
+        )
+        broken = broken.replace(
+            'import pino from "pino";',
+            'import pino from "pino";\n'
+            'import { Agent as HttpsAgent } from "node:https";',
+        )
+        broken = broken.replace(
+            '            logger: baileysLogger,',
+            '            logger: baileysLogger,\n'
+            '            fetchAgent: mediaFetchAgent,',
+        )
         with self.assertRaises(RuntimeError):
-            patcher.corrigir_diagnostico_upload_instancia("outro makeWASocket")
+            patcher.observar_status_http_midia(broken)
 
-    def test_versao_local_se_existir_permanece_inalterada(self):
+    def test_arquivo_no_servidor_nao_e_modificado(self):
         if not INSTANCE.exists():
             self.skipTest("WA-AKG não montado neste ambiente")
-        before = INSTANCE.read_text(encoding="utf-8")
-        after = patcher.corrigir_diagnostico_upload_instancia(before)
-        self.assertIn("WA-MEDIA-UPLOAD-DIAG", after)
-        refined = patcher.detalhar_resposta_upload_instancia(after)
-        self.assertIn('EMPTY_OR_NON_JSON', refined)
-        self.assertEqual(before, INSTANCE.read_text(encoding="utf-8"))
+        original = INSTANCE.read_text(encoding="utf-8")
+        resultado = patcher.observar_status_http_midia(
+            patcher.detalhar_resposta_upload_instancia(
+                patcher.corrigir_diagnostico_upload_instancia(original)
+            )
+        )
+        self._assert_passivo(resultado)
+        self.assertEqual(original, INSTANCE.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":
