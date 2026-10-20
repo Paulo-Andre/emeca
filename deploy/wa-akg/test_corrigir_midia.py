@@ -45,6 +45,7 @@ class TestCorrecaoMedia(unittest.TestCase):
         self.assertIn('data: { messageId }', patched)
         self.assertIn('typeof sent?.key?.id === "string"', patched)
         self.assertIn('"MEDIA_SEND_FAILED"', patched)
+        self.assertIn('MEDIA_UPLOAD_ALL_HOSTS', patched)
         self.assertIn('"MEDIA_SESSION_DISCONNECTED"', patched)
         self.assertIn('Media send error (sanitized)', patched)
         self.assertIn('stage = "SEND";', patched)
