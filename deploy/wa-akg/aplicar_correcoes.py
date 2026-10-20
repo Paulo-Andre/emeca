@@ -30,6 +30,73 @@ def substitute(text: str, before: str, after: str, context: str) -> str:
 
 
 
+
+def corrigir_broadcast_anexo(value: str) -> str:
+    """Aceita imagem/PDF em broadcast sem modificar envio somente texto.
+
+    O envio permanece uma mensagem individual por destinatário. WA-AKG só
+    confirma que o lote foi iniciado; a fila interna não garante entrega.
+    """
+    value = substitute(
+        value,
+        '    message: z.string().min(1),',
+        '    message: z.string().max(4000),',
+        "legenda opcional para broadcast com arquivo",
+    )
+    value = substitute(
+        value,
+        '        const body = await request.json();',
+        '        const multipart = (request.headers.get("content-type") || "")\n'
+        '            .includes("multipart/form-data");\n'
+        '        const form = multipart ? await request.formData() : null;\n'
+        '        const upload = form?.get("file");\n'
+        '        const mediaFile = upload instanceof File ? upload : null;\n'
+        '        const body = multipart ? {\n'
+        '            recipients: JSON.parse(String(form?.get("recipients") || "[]")),\n'
+        '            message: String(form?.get("message") || ""),\n'
+        '            delay: Number(form?.get("delay") || 2000),\n'
+        '        } : await request.json();',
+        "recebimento multipart de campanhas",
+    )
+    value = substitute(
+        value,
+        '        const { recipients, message, delay } = parseResult.data;',
+        '        const { recipients, message, delay } = parseResult.data;\n'
+        '        if ((!message.trim() && !mediaFile) || recipients.length === 0) {\n'
+        '            return NextResponse.json({ status: false,\n'
+        '                error: "Mensagem ou arquivo e destinatários são obrigatórios." },\n'
+        '                { status: 400 });\n'
+        '        }\n'
+        '        if (mediaFile && (mediaFile.size < 1 || mediaFile.size > 25 * 1024 * 1024 ||\n'
+        '            !["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(mediaFile.type))) {\n'
+        '            return NextResponse.json({ status: false,\n'
+        '                error: "Anexe JPG, PNG, WEBP ou PDF de até 25 MB." },\n'
+        '                { status: 400 });\n'
+        '        }',
+        "validar imagem/PDF e destinatários",
+    )
+    value = substitute(
+        value,
+        '                message,\n                total: recipients.length,',
+        '                message: message || (mediaFile ? "[anexo]" : ""),\n                total: recipients.length,',
+        "registro do lote de arquivos",
+    )
+    value = substitute(
+        value,
+        '        const messageContent: AnyMessageContent = { text: message };',
+        '        const mediaBuffer = mediaFile ? Buffer.from(await mediaFile.arrayBuffer()) : null;\n'
+        '        const messageContent: AnyMessageContent = mediaBuffer && mediaFile\n'
+        '            ? mediaFile.type === "application/pdf"\n'
+        '                ? { document: mediaBuffer, mimetype: "application/pdf",\n'
+        '                    fileName: "documento.pdf", caption: message || undefined }\n'
+        '                : { image: mediaBuffer, mimetype: mediaFile.type,\n'
+        '                    caption: message || undefined }\n'
+        '            : { text: message };',
+        "conteúdo do broadcast com mídia",
+    )
+    return value
+
+
 def corrigir_resposta_envio_midia(value: str) -> str:
     """Não transformar envio de mídia confirmado em HTTP 500 por serialização.
 
@@ -412,6 +479,7 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
     contact_store = source / "src/modules/whatsapp/store/contacts.ts"
     chat_service = source / "src/modules/whatsapp/chat.service.ts"
     media_route = source / "src/app/api/messages/[sessionId]/[jid]/media/route.ts"
+    broadcast_route = source / "src/app/api/messages/[sessionId]/broadcast/route.ts"
     chat_route = source / "src/app/api/chat/[sessionId]/route.ts"
     messages_route = source / "src/app/api/chat/[sessionId]/[jid]/route.ts"
     contacts_route = source / "src/app/api/contacts/[sessionId]/route.ts"
@@ -426,7 +494,7 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
     scheduler_overlay = patch_dir / "overrides/src/modules/whatsapp/scheduler.ts"
     scheduler_target = source / "src/modules/whatsapp/scheduler.ts"
 
-    required = [manager, instance, index, contact_store, chat_service, media_route, chat_route, messages_route, contacts_route, overlay_file, profile_route_overlay, purge_route_overlay, group_route_overlay, scheduler_overlay, group_route_target, scheduler_target]
+    required = [manager, instance, index, contact_store, chat_service, media_route, broadcast_route, chat_route, messages_route, contacts_route, overlay_file, profile_route_overlay, purge_route_overlay, group_route_overlay, scheduler_overlay, group_route_target, scheduler_target]
     missing = [str(p) for p in required if not p.is_file()]
     if missing:
         raise RuntimeError("Arquivos não encontrados: " + ", ".join(missing))
@@ -544,6 +612,9 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
 
     value = corrigir_resposta_envio_midia(media_route.read_text(encoding="utf-8"))
     edits[media_route] = value
+
+    value = corrigir_broadcast_anexo(broadcast_route.read_text(encoding="utf-8"))
+    edits[broadcast_route] = value
 
     value = chat_route.read_text(encoding="utf-8")
     value = substitute(
