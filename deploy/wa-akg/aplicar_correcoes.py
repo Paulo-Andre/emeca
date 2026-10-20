@@ -245,12 +245,44 @@ def corrigir_resposta_envio_midia(value: str) -> str:
 
 
 
+
+def corrigir_tipos_observador_https(value: str) -> str:
+    """Acesso ao método real do Agent sem exigir tipagem ausente no @types/node."""
+    value = substitute(
+        value,
+        '        const nativeAddRequest = mediaFetchAgent.addRequest.bind(mediaFetchAgent);',
+        '        const nativeAddRequest = (mediaFetchAgent as any).addRequest.bind(mediaFetchAgent);',
+        "compatibilidade TypeScript do agente HTTPS de mídia",
+    )
+    return substitute(
+        value,
+        '        mediaFetchAgent.addRequest = (request: any, options: any) => {',
+        '        (mediaFetchAgent as any).addRequest = (request: any, options: any) => {',
+        "compatibilidade TypeScript do interceptor HTTP",
+    )
+
+
 def observar_status_http_midia(value: str) -> str:
     """Observa SOMENTE status HTTP de POSTs de mídia enviados pelo Baileys.
 
     Usa um https.Agent nativo compatível com o transportador do Baileys rc14,
     sem alterar URL, headers, conteúdo, chave ou fluxo de retransmissão.
     """
+    # Uma instalação anterior pode ter gravado o observador com a assinatura
+    # TypeScript incompatível. Não duplicar o observador ao corrigir esse caso.
+    if 'WA-MEDIA-HTTP-DIAG' in value:
+        marcadores = (
+            'WA-MEDIA-HTTP-DIAG',
+            'fetchAgent: mediaFetchAgent,',
+            'const nativeAddRequest = ',
+            'import { Agent as HttpsAgent } from "node:https";',
+        )
+        if any(value.count(m) != 1 for m in marcadores):
+            raise RuntimeError(
+                "Observador HTTP do WA-AKG incompleto ou duplicado; "
+                "nenhum arquivo será alterado."
+            )
+        return corrigir_tipos_observador_https(value)
     value = substitute(
         value,
         'import pino from "pino";',
@@ -286,22 +318,7 @@ def observar_status_http_midia(value: str) -> str:
         '            fetchAgent: mediaFetchAgent,',
         "inserção do agente HTTPS observador no Baileys",
     )
-    # A definição de tipos do Node não expõe Agent.addRequest, embora o
-    # método exista em runtime. Corrige inclusive o código que foi preparado
-    # antes desta revisão e garante a reaplicação idempotente.
-    value = substitute(
-        value,
-        '        const nativeAddRequest = mediaFetchAgent.addRequest.bind(mediaFetchAgent);',
-        '        const nativeAddRequest = (mediaFetchAgent as any).addRequest.bind(mediaFetchAgent);',
-        "compatibilidade TypeScript do agente HTTPS de mídia",
-    )
-    value = substitute(
-        value,
-        '        mediaFetchAgent.addRequest = (request: any, options: any) => {',
-        '        (mediaFetchAgent as any).addRequest = (request: any, options: any) => {',
-        "compatibilidade TypeScript do interceptor HTTP",
-    )
-    return value
+    return corrigir_tipos_observador_https(value)
 
 
 def detalhar_resposta_upload_instancia(value: str) -> str:
