@@ -2046,54 +2046,25 @@
       replyFile.click();
     });
 
-    replyFile.addEventListener("change", async () => {
-      const file = replyFile.files?.[0];
-      if (!file || !activeJid) return;
-
-      if (file.size > 25 * 1024 * 1024) {
+    replyFile.addEventListener("change", () => {
+      const arquivo = replyFile.files?.[0];
+      if (arquivo && arquivo.size > 25 * 1024 * 1024) {
         replyStatus.textContent = "O arquivo deve ter no máximo 25 MB.";
         replyStatus.className = "wa-reply-status error";
         replyFile.value = "";
         return;
       }
-
-      const body = new FormData();
-      body.append("jid", activeJid);
-      body.append("arquivo", file);
-      body.append("legenda", replyMessage.value.trim());
-      body.append("csrfmiddlewaretoken", csrfToken());
-
-      attachButton.disabled = true;
-      replyStatus.textContent = "Enviando " + file.name + "…";
+      replyStatus.textContent = arquivo
+        ? "Anexo preparado: " + arquivo.name + ". Clique em Enviar para confirmar."
+        : "";
       replyStatus.className = "wa-reply-status";
-
-      try {
-        const resp = await waFetch("{% url 'whatsapp_enviar_midia_api' %}", {
-          method: "POST",
-          body,
-          headers: {"X-CSRFToken": csrfToken()}
-        });
-        const data = await resp.json();
-        if (!resp.ok || !data.ok) throw new Error(data.erro || "Não foi possível enviar o arquivo.");
-        replyStatus.textContent = "Arquivo enviado.";
-        replyStatus.className = "wa-reply-status success";
-        replyMessage.value = "";
-        replyMessage.style.height = "auto";
-        const current = chats.find(item => item.jid === activeJid) || {jid: activeJid};
-        setTimeout(() => openChat(current, true), 700);
-      } catch (err) {
-        replyStatus.textContent = err.message;
-        replyStatus.className = "wa-reply-status error";
-      } finally {
-        attachButton.disabled = false;
-        replyFile.value = "";
-      }
     });
 
     replyForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const text = replyMessage.value.trim();
-      if (!activeJid || !text) return;
+      const attachment = replyFile.files?.[0];
+      if (!activeJid || (!text && !attachment)) return;
 
       const button = document.getElementById("sendReply");
       button.disabled = true;
@@ -2103,7 +2074,16 @@
       const formData = new FormData(replyForm);
       try {
         let resp;
-        if (quotedMessage) {
+        if (attachment) {
+          const body = new FormData();
+          body.append("jid", activeJid);
+          body.append("arquivo", attachment);
+          body.append("legenda", text);
+          body.append("csrfmiddlewaretoken", csrfToken());
+          resp = await waFetch("{% url 'whatsapp_enviar_midia_api' %}", {
+            method: "POST", body, headers: {"X-CSRFToken": csrfToken()}
+          });
+        } else if (quotedMessage) {
           const body = new FormData();
           body.append("jid", activeJid);
           body.append("message_id", quotedMessage.keyId || quotedMessage.id);
@@ -2124,11 +2104,12 @@
         const data = await resp.json();
         if (!resp.ok || !data.ok) throw new Error(data.erro || "Não foi possível enviar.");
         replyMessage.value = "";
+        replyFile.value = "";
         replyMessage.style.height = "auto";
         quotedMessage = null;
         quotedBanner.hidden = true;
         quotedPreview.textContent = "";
-        replyStatus.textContent = "Mensagem enviada.";
+        replyStatus.textContent = attachment ? "Arquivo enviado." : "Mensagem enviada.";
         replyStatus.className = "wa-reply-status success";
         const current = chats.find(c => c.jid === activeJid) || {jid:activeJid};
         setTimeout(() => openChat(current, true), 500);
