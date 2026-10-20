@@ -654,6 +654,11 @@
 
     form.addEventListener("submit", event => {
       if (conteudoAtual() === "boletim") {
+        if (anexoBoletim.files.length && modoAtual() !== "individual" &&
+            !confirm("Enviar o anexo complementar junto de cada boletim para todos os responsáveis selecionados?")) {
+          event.preventDefault();
+          return;
+        }
         const quantidade = Number(boletimCount.textContent);
         if (!quantidade) {
           event.preventDefault();
@@ -666,6 +671,11 @@
       }
 
       const quantidade = Number(recipientCount.textContent);
+      if (anexoMensagem.files.length && modoAtual() !== "individual" &&
+          !confirm("Enviar este arquivo para " + quantidade + " contatos individualmente pelo WhatsApp?")) {
+        event.preventDefault();
+        return;
+      }
       if (!quantidade) {
         event.preventDefault();
         alert("Selecione pelo menos um destinatário válido.");
