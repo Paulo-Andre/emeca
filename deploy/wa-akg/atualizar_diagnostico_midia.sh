@@ -29,7 +29,7 @@ echo "[3/5] Aplicando patch no código..."
 python3 deploy/wa-akg/aplicar_correcoes.py
 echo "Confirmando que o código-fonte contém o diagnóstico novo..."
 ARQUIVO_WA="/srv/projetos/wa-akg/src/modules/whatsapp/instance.ts"
-for MARCADOR in WA-MEDIA-HTTP-DIAG resultKind; do
+for MARCADOR in WA-MEDIA-HTTP-DIAG resultKind EMECA_MEDIA_HTTP_PASSIVE_V1; do
   if ! grep -Fq "$MARCADOR" "$ARQUIVO_WA"; then
     echo "ERRO: marcador $MARCADOR ausente do código-fonte. Não reiniciando o WhatsApp." >&2
     exit 1
@@ -45,7 +45,9 @@ echo "Conferindo a versão executada no contêiner..."
 if ! docker exec wa-akg-app sh -c '
 ARQUIVO=/app/src/modules/whatsapp/instance.ts
 grep -Fq WA-MEDIA-HTTP-DIAG "$ARQUIVO" &&
-grep -Fq resultKind "$ARQUIVO"
+grep -Fq resultKind "$ARQUIVO" &&
+grep -Fq EMECA_MEDIA_HTTP_PASSIVE_V1 "$ARQUIVO" &&
+! grep -Fq "fetchAgent: mediaFetchAgent" "$ARQUIVO"
 '; then
   echo "ERRO: contêiner não contém o diagnóstico novo; não considere a instalação concluída." >&2
   exit 1
