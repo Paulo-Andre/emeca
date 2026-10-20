@@ -867,7 +867,8 @@ def _enfileirar_boletins(request):
                 ano=dados["ano"],
                 modo=request.POST.get("modo") or "todos",
                 turma=(request.POST.get("turma") or "").strip(),
-                mensagem=mensagem_pdf,
+                mensagem=(mensagem_com_anexo(mensagem_pdf, referencia_anexo)
+                          if referencia_anexo else mensagem_pdf),
                 total=len(dados["itens"]),
                 ignorados=(
                     dados["invalidos"]
