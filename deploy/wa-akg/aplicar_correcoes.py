@@ -102,8 +102,8 @@ def adicionar_codigo_upload_midia(value: str) -> str:
     return substitute(
         value,
         '        const publicCode = disconnected ? "MEDIA_SESSION_DISCONNECTED" : safeCode;',
-        '        const uploadAllHosts = e?.message === "Media upload failed on all hosts";\\n'
-        '        const publicCode = disconnected ? "MEDIA_SESSION_DISCONNECTED" :\\n'
+        '        const uploadAllHosts = e?.message === "Media upload failed on all hosts";\n'
+        '        const publicCode = disconnected ? "MEDIA_SESSION_DISCONNECTED" :\n'
         '            uploadAllHosts ? "MEDIA_UPLOAD_ALL_HOSTS" : safeCode;',
         "diagnóstico do upload do Baileys",
     )
