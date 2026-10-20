@@ -5,6 +5,8 @@ set -euo pipefail
 
 echo "=== Últimas falhas sanitizadas de envio de mídia ==="
 docker logs --since=90m wa-akg-app 2>&1 \
+  | grep -F "WA-MEDIA-UPLOAD-DIAG" | tail -n 30 || true
+docker logs --since=90m wa-akg-app 2>&1 \
   | grep -A 6 -F 'Media send error (sanitized)' \
   | grep -F -e 'Media send error (sanitized)' -e 'code:' -e 'name:' -e 'statusCode:' -e 'stage:' \
   | tail -n 35 || true
@@ -26,22 +28,36 @@ const https = require('node:https');
     console.log('DNS mídia WhatsApp: FALHA', String(e.code || e.name || 'UNKNOWN'));
   }
   await new Promise(resolve => {
+    let finished = false;
+    const finish = () => {
+      if (finished) return false;
+      finished = true;
+      resolve();
+      return true;
+    };
     const req = https.request({
       hostname: host, path: '/', method: 'HEAD', timeout: 12000
     }, res => {
       // 4xx é esperado sem token de upload, mas comprova acesso HTTPS.
-      console.log('HTTPS mídia WhatsApp: CONECTOU (HTTP ' + res.statusCode + ')');
+      if (!finished) {
+        console.log('HTTPS mídia WhatsApp: CONECTOU (HTTP ' + res.statusCode + ')');
+        finish();
+      }
       res.resume();
-      resolve();
     });
     req.on('timeout', () => {
-      console.log('HTTPS mídia WhatsApp: TIMEOUT');
+      if (!finished) {
+        console.log('HTTPS mídia WhatsApp: TIMEOUT');
+        finish();
+      }
       req.destroy();
     });
     req.on('error', e => {
-      console.log('HTTPS mídia WhatsApp: FALHA',
-        String(e.code || e.name || 'UNKNOWN'));
-      resolve();
+      if (!finished) {
+        console.log('HTTPS mídia WhatsApp: FALHA',
+          String(e.code || e.name || 'UNKNOWN'));
+        finish();
+      }
     });
     req.end();
   });
