@@ -338,6 +338,11 @@
             <span>Você pode usar {aluno}, {periodo}, {ano}, {turma} e {escola}.</span>
             <span id="boletimCharCount">0 / 1200</span>
           </div>
+          <div class="field-block" style="margin-top:16px">
+            <label for="anexoBoletim"><i data-lucide="paperclip"></i> Imagem ou PDF adicional (opcional)</label>
+            <input type="file" name="anexo_boletim" id="anexoBoletim" accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf">
+            <small id="anexoBoletimInfo">JPG, PNG, WEBP ou PDF • máximo 25 MB. Cada responsável receberá seu boletim individual e, depois, o mesmo anexo complementar.</small>
+          </div>
         </div>
 
         <div class="send-warning">
@@ -435,6 +440,8 @@
     const mensagemBoletim = document.getElementById("mensagemBoletim");
     const anexoMensagem = document.getElementById("anexoMensagem");
     const anexoMensagemInfo = document.getElementById("anexoMensagemInfo");
+    const anexoBoletim = document.getElementById("anexoBoletim");
+    const anexoBoletimInfo = document.getElementById("anexoBoletimInfo");
     const boletimCharCount = document.getElementById("boletimCharCount");
     const btnEnviarTexto = document.getElementById("btnEnviarTexto");
     const sendWarningText = document.getElementById("sendWarningText");
@@ -611,6 +618,18 @@
         });
         resultados.hidden = !data.results.length;
       }, 250);
+    });
+
+    anexoBoletim.addEventListener("change", () => {
+      const arquivo = anexoBoletim.files[0];
+      if (arquivo && arquivo.size > 25 * 1024 * 1024) {
+        alert("O arquivo adicional não pode ultrapassar 25 MB.");
+        anexoBoletim.value = "";
+      }
+      const selecionado = anexoBoletim.files[0];
+      anexoBoletimInfo.textContent = selecionado
+        ? "Anexo extra para cada boletim: " + selecionado.name + " (" + (selecionado.size / 1024 / 1024).toFixed(2) + " MB)"
+        : "JPG, PNG, WEBP ou PDF, até 25 MB. Arquivo complementar ao boletim individual.";
     });
 
     anexoMensagem.addEventListener("change", () => {
