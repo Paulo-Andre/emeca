@@ -62,6 +62,12 @@ class TestCorrecaoMedia(unittest.TestCase):
         self.assertSeguro(patched)
         self.assertEqual(patched, patcher.corrigir_resposta_envio_midia(patched))
 
+    def test_patch_parcial_e_rejeitado(self):
+        corrigido = patcher.corrigir_resposta_envio_midia(UPSTREAM_SAMPLE)
+        incompleto = corrigido.replace('stage = "ACK";', 'stage = "UNKNOWN";', 1)
+        with self.assertRaisesRegex(RuntimeError, "patch parcial"):
+            patcher.corrigir_resposta_envio_midia(incompleto)
+
     def test_rejeita_codigo_desconhecido_sem_substituir(self):
         with self.assertRaises(RuntimeError):
             patcher.corrigir_resposta_envio_midia("rota de mídia modificada manualmente")
