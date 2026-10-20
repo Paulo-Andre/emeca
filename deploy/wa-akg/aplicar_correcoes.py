@@ -246,79 +246,84 @@ def corrigir_resposta_envio_midia(value: str) -> str:
 
 
 
-def corrigir_tipos_observador_https(value: str) -> str:
-    """Acesso ao método real do Agent sem exigir tipagem ausente no @types/node."""
-    value = substitute(
-        value,
-        '        const nativeAddRequest = mediaFetchAgent.addRequest.bind(mediaFetchAgent);',
-        '        const nativeAddRequest = (mediaFetchAgent as any).addRequest.bind(mediaFetchAgent);',
-        "compatibilidade TypeScript do agente HTTPS de mídia",
-    )
-    return substitute(
-        value,
-        '        mediaFetchAgent.addRequest = (request: any, options: any) => {',
-        '        (mediaFetchAgent as any).addRequest = (request: any, options: any) => {',
-        "compatibilidade TypeScript do interceptor HTTP",
-    )
-
-
 def observar_status_http_midia(value: str) -> str:
-    """Observa SOMENTE status HTTP de POSTs de mídia enviados pelo Baileys.
+    """Observa POST de mídia por diagnostics_channel, SEM mexer no transporte.
 
-    Usa um https.Agent nativo compatível com o transportador do Baileys rc14,
-    sem alterar URL, headers, conteúdo, chave ou fluxo de retransmissão.
+    A versão anterior inseria fetchAgent/addRequest e alterava o caminho de
+    rede do Baileys. Restauramos o agente padrão e preservamos só telemetria
+    de status, sem URL, token, JID, nome de host ou conteúdo.
     """
-    # Uma instalação anterior pode ter gravado o observador com a assinatura
-    # TypeScript incompatível. Não duplicar o observador ao corrigir esse caso.
-    if 'WA-MEDIA-HTTP-DIAG' in value:
-        marcadores = (
-            'WA-MEDIA-HTTP-DIAG',
-            'fetchAgent: mediaFetchAgent,',
+    import_agente = 'import { Agent as HttpsAgent } from "node:https";\n'
+    config_agente = '            fetchAgent: mediaFetchAgent,\n'
+    inicio_agente = '        // EMECA: observar apenas o código HTTP do upload, nunca a URL\n'
+    inicio_socket = '        this.socket = makeWASocket({'
+
+    if inicio_agente in value:
+        if value.count(inicio_agente) != 1:
+            raise RuntimeError("Observador antigo duplicado; nenhum arquivo será alterado.")
+        inicio = value.index(inicio_agente)
+        fim = value.find(inicio_socket, inicio)
+        if fim < 0:
+            raise RuntimeError("Socket após observador antigo não encontrado.")
+        trecho = value[inicio:fim]
+        esperados = (
+            'const mediaFetchAgent = new HttpsAgent(',
             'const nativeAddRequest = ',
-            'import { Agent as HttpsAgent } from "node:https";',
+            'WA-MEDIA-HTTP-DIAG',
+            'nativeAddRequest(request, options)',
         )
-        if any(value.count(m) != 1 for m in marcadores):
-            raise RuntimeError(
-                "Observador HTTP do WA-AKG incompleto ou duplicado; "
-                "nenhum arquivo será alterado."
-            )
-        return corrigir_tipos_observador_https(value)
+        if any(trecho.count(x) != 1 for x in esperados):
+            raise RuntimeError("Observador antigo foi modificado; revisão manual necessária.")
+        if value.count(import_agente) != 1 or value.count(config_agente) != 1:
+            raise RuntimeError("Agente de mídia antigo parcialmente instalado.")
+        value = value[:inicio] + value[fim:]
+        value = value.replace(import_agente, '', 1)
+        value = value.replace(config_agente, '', 1)
+    elif ('const mediaFetchAgent = ' in value or config_agente in value
+          or import_agente in value):
+        raise RuntimeError("Configuração de agente HTTP de mídia inconsistente.")
+
+    marker = '// EMECA_MEDIA_HTTP_PASSIVE_V1'
+    if marker in value:
+        if (value.count(marker) != 1 or
+            value.count('WA-MEDIA-HTTP-DIAG') != 1 or
+            value.count('diagnosticChannel("http.client.response.finish")') != 1 or
+            'fetchAgent: mediaFetchAgent' in value):
+            raise RuntimeError("Diagnóstico HTTP passivo parcial ou duplicado.")
+        return value
+
     value = substitute(
         value,
         'import pino from "pino";',
         'import pino from "pino";\n'
-        'import { Agent as HttpsAgent } from "node:https";',
-        "import de agente HTTP nativo para diagnóstico de mídia",
+        'import { channel as diagnosticChannel } from "node:diagnostics_channel";',
+        "import de diagnóstico HTTP passivo",
     )
+    # O módulo carrega uma vez. Sem envolver https.request, instalar Agent,
+    # interceptar socket, alterar upload ou gerar tentativa adicional.
     value = substitute(
         value,
-        '        this.socket = makeWASocket({',
-        '        // EMECA: observar apenas o código HTTP do upload, nunca a URL\n'
-        '        // autenticada ou o corpo da resposta. Nenhum reenvio é realizado.\n'
-        '        const mediaFetchAgent = new HttpsAgent({ keepAlive: true });\n'
-        '        const nativeAddRequest = (mediaFetchAgent as any).addRequest.bind(mediaFetchAgent);\n'
-        '        (mediaFetchAgent as any).addRequest = (request: any, options: any) => {\n'
-        '            if (request.method === "POST") {\n'
-        '                request.once("response", (response: any) => {\n'
-        '                    const httpStatus = typeof response.statusCode === "number" &&\n'
-        '                        response.statusCode >= 100 && response.statusCode <= 599\n'
-        '                        ? response.statusCode : null;\n'
-        '                    console.error("WA-MEDIA-HTTP-DIAG", { httpStatus });\n'
-        '                });\n'
-        '            }\n'
-        '            return nativeAddRequest(request, options);\n'
-        '        };\n'
-        '        this.socket = makeWASocket({',
-        "observação de respostas HTTP de upload sem dados pessoais",
+        'const MAX_RECONNECT_ATTEMPTS = 3;',
+        '// EMECA_MEDIA_HTTP_PASSIVE_V1\n'
+        'const emecaHttpResponses = diagnosticChannel("http.client.response.finish");\n'
+        'if (!(globalThis as any).__emecaMediaHttpPassiveInstalled) {\n'
+        '    (globalThis as any).__emecaMediaHttpPassiveInstalled = true;\n'
+        '    emecaHttpResponses.subscribe(({ request, response }: any) => {\n'
+        '        // Filtra exclusivamente POST binário do Baileys ao WhatsApp.\n'
+        '        // Nenhum header, URL, nome de servidor ou resposta é registrado.\n'
+        '        if (request?.method !== "POST" ||\n'
+        '            request?.getHeader?.("origin") !== "https://web.whatsapp.com" ||\n'
+        '            request?.getHeader?.("content-type") !== "application/octet-stream") return;\n'
+        '        const status = response?.statusCode;\n'
+        '        const httpStatus = Number.isInteger(status) && status >= 100 && status <= 599\n'
+        '            ? status : null;\n'
+        '        console.error("WA-MEDIA-HTTP-DIAG", { httpStatus });\n'
+        '    });\n'
+        '}\n\n'
+        'const MAX_RECONNECT_ATTEMPTS = 3;',
+        "observação passiva de status HTTP de mídia",
     )
-    value = substitute(
-        value,
-        '            logger: baileysLogger,',
-        '            logger: baileysLogger,\n'
-        '            fetchAgent: mediaFetchAgent,',
-        "inserção do agente HTTPS observador no Baileys",
-    )
-    return corrigir_tipos_observador_https(value)
+    return value
 
 
 def detalhar_resposta_upload_instancia(value: str) -> str:
