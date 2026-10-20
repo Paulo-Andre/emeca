@@ -264,8 +264,8 @@ def observar_status_http_midia(value: str) -> str:
         '        // EMECA: observar apenas o código HTTP do upload, nunca a URL\n'
         '        // autenticada ou o corpo da resposta. Nenhum reenvio é realizado.\n'
         '        const mediaFetchAgent = new HttpsAgent({ keepAlive: true });\n'
-        '        const nativeAddRequest = mediaFetchAgent.addRequest.bind(mediaFetchAgent);\n'
-        '        mediaFetchAgent.addRequest = (request: any, options: any) => {\n'
+        '        const nativeAddRequest = (mediaFetchAgent as any).addRequest.bind(mediaFetchAgent);\n'
+        '        (mediaFetchAgent as any).addRequest = (request: any, options: any) => {\n'
         '            if (request.method === "POST") {\n'
         '                request.once("response", (response: any) => {\n'
         '                    const httpStatus = typeof response.statusCode === "number" &&\n'
@@ -285,6 +285,21 @@ def observar_status_http_midia(value: str) -> str:
         '            logger: baileysLogger,\n'
         '            fetchAgent: mediaFetchAgent,',
         "inserção do agente HTTPS observador no Baileys",
+    )
+    # A definição de tipos do Node não expõe Agent.addRequest, embora o
+    # método exista em runtime. Corrige inclusive o código que foi preparado
+    # antes desta revisão e garante a reaplicação idempotente.
+    value = substitute(
+        value,
+        '        const nativeAddRequest = mediaFetchAgent.addRequest.bind(mediaFetchAgent);',
+        '        const nativeAddRequest = (mediaFetchAgent as any).addRequest.bind(mediaFetchAgent);',
+        "compatibilidade TypeScript do agente HTTPS de mídia",
+    )
+    value = substitute(
+        value,
+        '        mediaFetchAgent.addRequest = (request: any, options: any) => {',
+        '        (mediaFetchAgent as any).addRequest = (request: any, options: any) => {',
+        "compatibilidade TypeScript do interceptor HTTP",
     )
     return value
 
