@@ -241,6 +241,40 @@ def corrigir_resposta_envio_midia(value: str) -> str:
 
 
 
+
+
+def detalhar_resposta_upload_instancia(value: str) -> str:
+    """Exibe apenas forma da resposta e códigos numéricos, nunca body nem URL.
+
+    Falha tipo UNEXPECTED_UPLOAD_RESPONSE pode significar JSON inválido,
+    JSON sem direct_path/url ou recusa estruturada. Sem isso, os logs anteriores
+    não distinguem essas causas.
+    """
+    return substitute(
+        value,
+        '                console.error("WA-MEDIA-UPLOAD-DIAG", { reason });',
+        '                // Nenhum dado retornado, identificador, token ou nome de host\n'
+        '                // aparece nos logs. Apenas tipagem e código numérico.\n'
+        '                const result = details?.uploadResult;\n'
+        '                const resultKind = result == null ? "EMPTY_OR_NON_JSON" :\n'
+        '                    Array.isArray(result) ? "ARRAY" :\n'
+        '                    typeof result === "object" ? "OBJECT" :\n'
+        '                    typeof result === "string" ? "STRING" : "OTHER";\n'
+        '                const candidateCodes = [result?.statusCode, result?.status,\n'
+        '                    result?.code, result?.error?.statusCode,\n'
+        '                    result?.error?.status, result?.error?.code];\n'
+        '                const responseStatus = candidateCodes.find(\n'
+        '                    (code: unknown) => Number.isInteger(code) &&\n'
+        '                    Number(code) >= 100 && Number(code) <= 599) ?? null;\n'
+        '                const hasError = result != null && typeof result === "object" &&\n'
+        '                    Object.prototype.hasOwnProperty.call(result, "error");\n'
+        '                console.error("WA-MEDIA-UPLOAD-DIAG", {\n'
+        '                    reason, resultKind, responseStatus, hasError\n'
+        '                });',
+        "metadados seguros de resposta do servidor de mídia",
+    )
+
+
 def corrigir_diagnostico_upload_instancia(value: str) -> str:
     """Captura somente a classe da falha de upload, nunca URL, token ou stack.
 
@@ -248,6 +282,22 @@ def corrigir_diagnostico_upload_instancia(value: str) -> str:
     de produção usa nível error. Preservamos esse nível e interceptamos
     EXCLUSIVAMENTE os avisos de upload, emitindo um código enumerado.
     """
+
+    # Compatibilidade com a instrumentação já ampliada. Nunca reinstalar
+    # o wrapper nem duplicar listeners quando o patch roda novamente.
+    if 'const resultKind = ' in value:
+        marcadores = (
+            'const baileysLogger = ',
+            'logger: baileysLogger,',
+            'WA-MEDIA-UPLOAD-DIAG',
+            'responseStatus, hasError',
+        )
+        if any(value.count(m) != 1 for m in marcadores):
+            raise RuntimeError(
+                "Instrumentação de upload parcial ou inesperada; "
+                "nenhum arquivo será alterado."
+            )
+        return value
     value = substitute(
         value,
         '        this.socket = makeWASocket({',
@@ -623,6 +673,7 @@ def prepare(source: pathlib.Path, patch_dir: pathlib.Path):
     )
     value = corrigir_reconexao_instancia(value)
     value = corrigir_diagnostico_upload_instancia(value)
+    value = detalhar_resposta_upload_instancia(value)
     edits[instance] = value
 
     value = index.read_text(encoding="utf-8")
