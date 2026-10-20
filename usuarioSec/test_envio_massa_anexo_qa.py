@@ -2,6 +2,8 @@
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
+from usuarioSec.access_control import GRUPO_WHATSAPP
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
@@ -12,7 +14,18 @@ class CampanhaComAnexoTests(TestCase):
         self.usuario = get_user_model().objects.create_user(
             username="qa-campanha-arquivos", password="senha-de-teste-ficticia"
         )
+        # O middleware exige o perfil do módulo, inclusive na base de testes.
+        # Não desligar RBAC nem elevar o usuário a superadministrador.
+        grupo, _ = Group.objects.get_or_create(name=GRUPO_WHATSAPP)
+        self.usuario.groups.add(grupo)
         self.client.force_login(self.usuario)
+
+    def test_sem_perfil_whatsapp_o_acesso_continua_proibido(self):
+        self.usuario.groups.clear()
+        resposta = self.client.post(reverse("whatsapp_enviar"), {
+            "conteudo": "mensagem", "modo": "todos", "mensagem": "QA",
+        })
+        self.assertEqual(resposta.status_code, 403)
 
     def test_mensagem_em_massa_pode_conter_pdf_sem_legenda(self):
         arquivo = SimpleUploadedFile(
