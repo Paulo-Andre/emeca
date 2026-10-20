@@ -151,7 +151,7 @@
       </section>
     {% endif %}
 
-    <form method="post" action="{% url 'whatsapp_enviar' %}" id="formEnvio" class="send-grid">
+    <form method="post" enctype="multipart/form-data" action="{% url 'whatsapp_enviar' %}" id="formEnvio" class="send-grid">
       {% csrf_token %}
           <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
       <section class="card audience-card">
@@ -270,6 +270,11 @@
           <div class="message-meta">
             <span>Evite enviar informações sensíveis desnecessárias.</span>
             <span id="charCount">0 / 4000</span>
+          </div>
+          <div class="field-block" style="margin-top:16px">
+            <label for="anexoMensagem"><i data-lucide="paperclip"></i> Anexar imagem ou PDF (opcional)</label>
+            <input type="file" name="anexo" id="anexoMensagem" accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf">
+            <small id="anexoMensagemInfo">JPG, PNG, WEBP ou PDF • máximo 25 MB. Cada destinatário recebe uma mensagem individual com o arquivo e a legenda.</small>
           </div>
         </div>
 
@@ -428,6 +433,8 @@
     const boletimCount = document.getElementById("boletimCount");
     const boletimHint = document.getElementById("boletimHint");
     const mensagemBoletim = document.getElementById("mensagemBoletim");
+    const anexoMensagem = document.getElementById("anexoMensagem");
+    const anexoMensagemInfo = document.getElementById("anexoMensagemInfo");
     const boletimCharCount = document.getElementById("boletimCharCount");
     const btnEnviarTexto = document.getElementById("btnEnviarTexto");
     const sendWarningText = document.getElementById("sendWarningText");
@@ -500,7 +507,8 @@
       const boletim = conteudoAtual() === "boletim";
       painelMensagem.hidden = boletim;
       painelBoletim.hidden = !boletim;
-      mensagem.required = !boletim;
+      mensagem.required = !boletim && !anexoMensagem.files.length;
+      anexoMensagem.disabled = boletim;
       boletimAno.required = boletim;
       boletimTipo.required = boletim;
       boletimNumero.required = boletim;
@@ -603,6 +611,19 @@
         });
         resultados.hidden = !data.results.length;
       }, 250);
+    });
+
+    anexoMensagem.addEventListener("change", () => {
+      const file = anexoMensagem.files[0];
+      if (file && file.size > 25 * 1024 * 1024) {
+        alert("O arquivo deve ter no máximo 25 MB.");
+        anexoMensagem.value = "";
+      }
+      const atual = anexoMensagem.files[0];
+      anexoMensagemInfo.textContent = atual
+        ? "Anexo selecionado: " + atual.name + " (" + (atual.size / 1024 / 1024).toFixed(2) + " MB)"
+        : "JPG, PNG, WEBP ou PDF • máximo 25 MB. Cada contato recebe o arquivo individualmente.";
+      mensagem.required = conteudoAtual() !== "boletim" && !atual;
     });
 
     mensagem.addEventListener("input", () => {
