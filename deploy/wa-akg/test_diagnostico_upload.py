@@ -32,6 +32,14 @@ class DiagnosticoUploadTests(unittest.TestCase):
         self.assertNotIn("console.error(details", changed)
         self.assertEqual(changed.count("this.socket = makeWASocket({"), 1)
         self.assertEqual(changed, patcher.corrigir_diagnostico_upload_instancia(changed))
+        refined = patcher.detalhar_resposta_upload_instancia(changed)
+        self.assertIn('EMPTY_OR_NON_JSON', refined)
+        self.assertIn('candidateCodes', refined)
+        self.assertIn('responseStatus, hasError', refined)
+        self.assertNotIn('console.error("WA-MEDIA-UPLOAD-DIAG", { reason });', refined)
+        self.assertEqual(refined, patcher.corrigir_diagnostico_upload_instancia(refined))
+        self.assertEqual(refined, patcher.detalhar_resposta_upload_instancia(refined))
+
 
     def test_instrumentacao_recusa_codigo_desconhecido(self):
         with self.assertRaises(RuntimeError):
@@ -43,6 +51,8 @@ class DiagnosticoUploadTests(unittest.TestCase):
         before = INSTANCE.read_text(encoding="utf-8")
         after = patcher.corrigir_diagnostico_upload_instancia(before)
         self.assertIn("WA-MEDIA-UPLOAD-DIAG", after)
+        refined = patcher.detalhar_resposta_upload_instancia(after)
+        self.assertIn('EMPTY_OR_NON_JSON', refined)
         self.assertEqual(before, INSTANCE.read_text(encoding="utf-8"))
 
 
