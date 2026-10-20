@@ -24,6 +24,8 @@ echo "[1/5] Verificando filas..."
 sem_envios_ativos
 echo "[2/5] Testando patch sem envio de mensagens..."
 python3 -m unittest discover -s deploy/wa-akg -p 'test_*.py' -v
+echo "Validando canal HTTP passivo no Node.js do contêiner ativo, sem WhatsApp externo..."
+docker exec -i wa-akg-app node - < deploy/wa-akg/testar_http_passivo.cjs
 python3 deploy/wa-akg/aplicar_correcoes.py --dry-run
 echo "[3/5] Aplicando patch no código..."
 python3 deploy/wa-akg/aplicar_correcoes.py
