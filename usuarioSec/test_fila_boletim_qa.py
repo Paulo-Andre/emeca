@@ -214,7 +214,7 @@ class FilaBoletimPrivacidadeTests(TestCase):
         with tempfile.TemporaryDirectory() as temp:
             with override_settings(MEDIA_ROOT=Path(temp) / "media"):
                 arquivo = SimpleUploadedFile(
-                    "foto.png", b"\\x89PNG\\r\\n\\x1a\\n" + b"QA" * 50,
+                    "foto.png", b"\x89PNG\r\n\x1a\n" + b"QA" * 50,
                     content_type="image/png",
                 )
                 referencia = salvar_anexo(arquivo, "imagem.png")
@@ -238,7 +238,7 @@ class FilaBoletimPrivacidadeTests(TestCase):
         with tempfile.TemporaryDirectory() as temp:
             with override_settings(MEDIA_ROOT=Path(temp) / "media"):
                 arquivo = SimpleUploadedFile(
-                    "complemento.pdf", b"%PDF-1.4\\nSINTETICO\\n%%EOF\\n",
+                    "complemento.pdf", b"%PDF-1.4\nSINTETICO\n%%EOF\n",
                     content_type="application/pdf",
                 )
                 referencia = salvar_anexo(arquivo, "documento.pdf")
