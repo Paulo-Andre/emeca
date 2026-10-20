@@ -152,8 +152,14 @@
           <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
             <input type="hidden" id="replyJid" name="jid">
             <input type="file" id="replyFile" hidden accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.odt,.ods,.zip">
-            <button type="button" class="wa-attach-button" id="attachButton" aria-label="Anexar arquivo" title="Anexar imagem, vídeo, áudio ou documento">
+            <button type="button" class="wa-attach-button" id="attachButton" aria-label="Anexar arquivo" title="Anexar arquivo">
               <i data-lucide="paperclip"></i>
+            </button>
+            <button type="button" class="wa-attach-button" id="attachImageButton" aria-label="Enviar imagem" title="Enviar imagem JPG, PNG ou WEBP">
+              <i data-lucide="image"></i>
+            </button>
+            <button type="button" class="wa-attach-button" id="attachPdfButton" aria-label="Enviar documento PDF" title="Enviar documento PDF">
+              <i data-lucide="file-text"></i>
             </button>
             <textarea id="replyMessage" name="mensagem" rows="1" maxlength="4000" placeholder="Escreva sua mensagem…" aria-label="Escreva sua mensagem"></textarea>
             <button type="submit" class="wa-send-reply" id="sendReply" aria-label="Enviar mensagem">
@@ -190,7 +196,7 @@
 
       <label for="waNewMessage">Mensagem ou legenda (opcional com anexo)</label>
       <textarea class="wa-new-chat-input" id="waNewMessage" rows="4" maxlength="4000" placeholder="Digite a mensagem"></textarea>
-      <label for="waNewFile"><i data-lucide="paperclip"></i> Anexar imagem, vídeo, áudio ou documento (até 25 MB)</label>
+      <label for="waNewFile"><i data-lucide="paperclip"></i> Adicionar imagem ou documento PDF (até 25 MB; outros formatos também disponíveis)</label>
       <input class="wa-new-chat-input" id="waNewFile" type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.odt,.ods,.zip">
 
       <input type="hidden" id="waSelectedJid">
@@ -2019,6 +2025,24 @@
         replyStatus.className = "wa-reply-status error";
         return;
       }
+      replyFile.accept = "image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.odt,.ods,.zip";
+      replyFile.click();
+    });
+
+    document.getElementById("attachImageButton").addEventListener("click", () => {
+      if (!activeJid) {
+        replyStatus.textContent = "Selecione uma conversa para enviar imagem.";
+        return;
+      }
+      replyFile.accept = ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp";
+      replyFile.click();
+    });
+    document.getElementById("attachPdfButton").addEventListener("click", () => {
+      if (!activeJid) {
+        replyStatus.textContent = "Selecione uma conversa para enviar PDF.";
+        return;
+      }
+      replyFile.accept = ".pdf,application/pdf";
       replyFile.click();
     });
 
