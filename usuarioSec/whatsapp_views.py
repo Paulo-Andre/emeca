@@ -14,7 +14,7 @@ from django.contrib import messages
 from django.core.cache import cache
 from django.contrib.auth.decorators import login_required
 from django.db import DatabaseError, transaction
-from django.db.models import Q
+from django.db.models import Q, OuterRef, Subquery
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_POST
@@ -370,6 +370,12 @@ def whatsapp(request):
             "anos_boletim": anos_boletim,
             "envios_boletim": EnvioBoletimWhatsApp.objects.filter(
                 sessao=sessao_atual_id()
+            ).annotate(
+                primeiro_erro=Subquery(
+                    ItemEnvioBoletimWhatsApp.objects.filter(
+                        envio_id=OuterRef("pk"), status="ERRO",
+                    ).exclude(erro="").order_by("id").values("erro")[:1]
+                )
             ).select_related("usuario")[:8],
             "gateway_configurado": gateway_configurado(),
             "gateway_status": status,
