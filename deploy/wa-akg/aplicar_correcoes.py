@@ -104,6 +104,33 @@ def corrigir_resposta_envio_midia(value: str) -> str:
     tenta serializar tudo após sendMessage; isso pode gerar falso erro mesmo
     quando o documento já foi transmitido. Não introduz qualquer reenvio.
     """
+    # O passo de diagnóstico acrescenta `stage = "ACK"` DENTRO da saída
+    # gerada pelo primeiro substitute(). Isso torna o marcador completo
+    # anterior invisível numa segunda aplicação. Reconheça a versão final
+    # somente quando TODOS os marcadores de segurança estiverem presentes.
+    marcador = "        // EMECA: acknowledge with a JSON-safe identifier only. Baileys"
+    if marcador in value:
+        obrigatorios = (
+            '    let stage = "AUTH";',
+            '        stage = "MULTIPART";',
+            '        stage = "BUFFER";',
+            '        stage = "SEND";',
+            '        stage = "ACK";',
+            '        if (!messageId) {',
+            '                error: "MEDIA_ACK_MISSING"',
+            '            data: { messageId } });',
+            '        console.error("Media send error (sanitized)", {',
+            '            code: publicCode, name: safeName, statusCode, stage',
+            '            message: "Falha no envio de mídia (" + publicCode + ", etapa " + stage + ").",',
+        )
+        faltantes = [marker for marker in obrigatorios if value.count(marker) != 1]
+        if faltantes or value.count(marcador) != 1:
+            raise RuntimeError(
+                "Endpoint de mídia EMECA com patch parcial ou personalizado; "
+                "nenhum arquivo será alterado. Marcadores inconsistentes: "
+                + str(len(faltantes))
+            )
+        return value
     value = substitute(
         value,
         '        return NextResponse.json({ status: true, message: "Operation successful", data: sent });',
