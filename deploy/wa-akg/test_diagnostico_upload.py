@@ -46,6 +46,17 @@ class DiagnosticoUploadTests(unittest.TestCase):
         self.assertIn('fetchAgent: mediaFetchAgent', instrumented)
         self.assertIn('WA-MEDIA-HTTP-DIAG', instrumented)
         self.assertIn('new HttpsAgent({ keepAlive: true })', instrumented)
+        self.assertIn('(mediaFetchAgent as any).addRequest', instrumented)
+        self.assertNotIn('mediaFetchAgent.addRequest', instrumented)
+        antigo = instrumented.replace(
+            '(mediaFetchAgent as any).addRequest',
+            'mediaFetchAgent.addRequest',
+        )
+        corrigido = patcher.observar_status_http_midia(antigo)
+        self.assertEqual(corrigido, instrumented)
+        self.assertEqual(corrigido.count('WA-MEDIA-HTTP-DIAG'), 1)
+        self.assertEqual(corrigido.count('const mediaFetchAgent = '), 1)
+
         self.assertEqual(instrumented, patcher.observar_status_http_midia(instrumented))
         self.assertEqual(instrumented, patcher.corrigir_diagnostico_upload_instancia(instrumented))
         self.assertEqual(instrumented, patcher.detalhar_resposta_upload_instancia(instrumented))
