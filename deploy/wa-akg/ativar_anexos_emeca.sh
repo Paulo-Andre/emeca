@@ -34,6 +34,14 @@ echo "[5/7] Construindo as novas imagens (pode demorar alguns minutos)..."
 docker compose -f deploy/wa-akg/compose.secure.yaml build app
 docker compose build web whatsapp-worker
 
+echo "Executando testes da imagem nova ANTES da substituição de contêineres..."
+docker compose run --rm --no-deps -e SKIP_DJANGO_INIT=1 web python manage.py check
+docker compose run --rm --no-deps -e SKIP_DJANGO_INIT=1 web python manage.py test \
+    usuarioSec.test_anexos_whatsapp_qa \
+    usuarioSec.test_envio_massa_anexo_qa \
+    usuarioSec.test_gateway_media_qa \
+    usuarioSec.test_fila_boletim_qa
+
 echo "[6/7] Rechecando lotes que possam ter iniciado durante a compilação..."
 docker compose exec -T web python manage.py shell -c '
 from usuarioSec.models import EnvioBoletimWhatsApp
@@ -51,11 +59,6 @@ echo "[7/7] Atualizando SOMENTE os aplicativos (nenhum banco ou volume é removi
 docker compose -f deploy/wa-akg/compose.secure.yaml up -d --no-deps app
 docker compose up -d --no-deps web whatsapp-worker
 docker compose exec -T web python manage.py check
-docker compose exec -T web python manage.py test \
-    usuarioSec.test_anexos_whatsapp_qa \
-    usuarioSec.test_envio_massa_anexo_qa \
-    usuarioSec.test_gateway_media_qa \
-    usuarioSec.test_fila_boletim_qa
 
 echo "Instalação concluída. Confirme WhatsApp CONNECTED e teste somente UM documento autorizado."
 echo "Não repetir automaticamente um PDF que possa ter sido recebido."
