@@ -60,6 +60,9 @@ jobs:
           cache: "npm"
           cache-dependency-path: frontend_publico/package-lock.json
 
+      - name: Validar telemetria passiva HTTP sem rede externa
+        run: node deploy/wa-akg/testar_http_passivo.cjs
+
       - name: Compilar e auditar área pública
         working-directory: frontend_publico
         run: |
