@@ -27,10 +27,28 @@ python3 -m unittest discover -s deploy/wa-akg -p 'test_*.py' -v
 python3 deploy/wa-akg/aplicar_correcoes.py --dry-run
 echo "[3/5] Aplicando patch no código..."
 python3 deploy/wa-akg/aplicar_correcoes.py
+echo "Confirmando que o código-fonte contém o diagnóstico novo..."
+ARQUIVO_WA="/srv/projetos/wa-akg/src/modules/whatsapp/instance.ts"
+for MARCADOR in WA-MEDIA-HTTP-DIAG resultKind; do
+  if ! grep -Fq "$MARCADOR" "$ARQUIVO_WA"; then
+    echo "ERRO: marcador $MARCADOR ausente do código-fonte. Não reiniciando o WhatsApp." >&2
+    exit 1
+  fi
+done
+
 echo "[4/5] Compilando apenas WA-AKG..."
 docker compose -f deploy/wa-akg/compose.secure.yaml build app
 echo "[5/5] Rechecando filas e atualizando apenas WA-AKG..."
 sem_envios_ativos
 docker compose -f deploy/wa-akg/compose.secure.yaml up -d --no-deps app
+echo "Conferindo a versão executada no contêiner..."
+if ! docker exec wa-akg-app sh -c '
+ARQUIVO=/app/src/modules/whatsapp/instance.ts
+grep -Fq WA-MEDIA-HTTP-DIAG "$ARQUIVO" &&
+grep -Fq resultKind "$ARQUIVO"
+'; then
+  echo "ERRO: contêiner não contém o diagnóstico novo; não considere a instalação concluída." >&2
+  exit 1
+fi
 echo "Instrumentação instalada. Nenhum banco ou volume removido."
 echo "Aguarde WhatsApp CONNECTED antes do teste para o próprio número."
