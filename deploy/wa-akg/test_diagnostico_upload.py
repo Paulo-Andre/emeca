@@ -10,6 +10,7 @@ SPEC.loader.exec_module(patcher)
 
 INSTANCE = Path("/srv/projetos/wa-akg/src/modules/whatsapp/instance.ts")
 ORIGINAL = """
+import pino from "pino";
     async initializeSocket() {
         this.socket = makeWASocket({
             version,
