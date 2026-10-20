@@ -12,13 +12,17 @@ from site_publico.models import BoletimAluno, ConfiguracaoSite
 
 from usuarioSec.models import EnvioBoletimWhatsApp, ItemEnvioBoletimWhatsApp, TelefoneDeclaracao
 from usuarioSec.sessao_whatsapp import sessao_atual_id
-from usuarioSec.whatsapp_gateway import WhatsAppGatewayError, enviar_documento, confirmar_operacao_wa
+from usuarioSec.anexos_boletim_whatsapp import (
+    extrair_mensagem_anexo, ler_anexo, apagar_anexo,
+)
+from usuarioSec.whatsapp_gateway import WhatsAppGatewayError, enviar_documento, enviar_midia, confirmar_operacao_wa
 from usuarioSec.whatsapp_views import _normalizar_jid
 
 
 def _legenda(envio, item, escola):
     boletim = item.boletim
-    modelo = (envio.mensagem or "").strip()
+    modelo, _ = extrair_mensagem_anexo(envio.mensagem)
+    modelo = modelo.strip()
     if not modelo:
         return (
             f"Olá! Segue o boletim escolar de {boletim.aluno.nome_oficial}, referente ao "
@@ -109,6 +113,24 @@ def processar_item(envio, item, config, escola):
             sessao_id=envio.sessao,
         )
         confirmar_aceite_documento(resposta)
+
+        # O PDF é individual. Se existir um anexo extra na campanha, ele é
+        # transmitido ao MESMO JID, como outra mensagem individual.
+        # Falha após PDF confirmado NÃO causa reenvio automático do boletim.
+        _, referencia_anexo = extrair_mensagem_anexo(envio.mensagem)
+        if referencia_anexo:
+            try:
+                dados_anexo, nome_anexo, mime_anexo, tipo_anexo = ler_anexo(referencia_anexo)
+                resposta_anexo = enviar_midia(
+                    item.jid, dados_anexo, nome_anexo, mime_anexo,
+                    tipo_anexo, "",
+                )
+                confirmar_operacao_wa(resposta_anexo, "anexo complementar do boletim")
+            except (WhatsAppGatewayError, OSError, ValueError) as exc:
+                raise WhatsAppGatewayError(
+                    "PDF principal aceito pelo WA-AKG, mas o anexo complementar "
+                    "não foi confirmado. Verifique o recebimento antes de repetir."
+                ) from exc
 
         item.status = "ENVIADO"
         item.enviado_em = timezone.now()
@@ -231,3 +253,12 @@ class Command(BaseCommand):
                 envio.concluido_em = timezone.now()
                 envio.save(update_fields=["status", "falhas", "concluido_em"])
                 self.stderr.write(f"Falha no lote {envio.pk}: {exc}")
+            finally:
+                # Remove o anexo privado após o processamento definitivo do lote.
+                # Nunca remove o PDF individual gerado só em memória.
+                try:
+                    _, referencia_anexo = extrair_mensagem_anexo(envio.mensagem)
+                    apagar_anexo(referencia_anexo)
+                except (OSError, ValueError):
+                    self.stderr.write(f"Não foi possível limpar anexo privado do lote {envio.pk}.")
+
