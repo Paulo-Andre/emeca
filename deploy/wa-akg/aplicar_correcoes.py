@@ -97,6 +97,18 @@ def corrigir_broadcast_anexo(value: str) -> str:
     return value
 
 
+def adicionar_codigo_upload_midia(value: str) -> str:
+    """Identifica falha geral nos servidores de upload sem vazar exceção bruta."""
+    return substitute(
+        value,
+        '        const publicCode = disconnected ? "MEDIA_SESSION_DISCONNECTED" : safeCode;',
+        '        const uploadAllHosts = e?.message === "Media upload failed on all hosts";\\n'
+        '        const publicCode = disconnected ? "MEDIA_SESSION_DISCONNECTED" :\\n'
+        '            uploadAllHosts ? "MEDIA_UPLOAD_ALL_HOSTS" : safeCode;',
+        "diagnóstico do upload do Baileys",
+    )
+
+
 def corrigir_resposta_envio_midia(value: str) -> str:
     """Não transformar envio de mídia confirmado em HTTP 500 por serialização.
 
@@ -130,7 +142,7 @@ def corrigir_resposta_envio_midia(value: str) -> str:
                 "nenhum arquivo será alterado. Marcadores inconsistentes: "
                 + str(len(faltantes))
             )
-        return value
+        return adicionar_codigo_upload_midia(value)
     value = substitute(
         value,
         '        return NextResponse.json({ status: true, message: "Operation successful", data: sent });',
@@ -224,15 +236,7 @@ def corrigir_resposta_envio_midia(value: str) -> str:
         '            message: "Falha no envio de mídia (" + publicCode + ", etapa " + stage + ").",',
         "estágio no erro exibido ao administrador",
     )
-    value = substitute(
-        value,
-        '        const publicCode = disconnected ? "MEDIA_SESSION_DISCONNECTED" : safeCode;',
-        '        const uploadAllHosts = e?.message === "Media upload failed on all hosts";\n'
-        '        const publicCode = disconnected ? "MEDIA_SESSION_DISCONNECTED" :\n'
-        '            uploadAllHosts ? "MEDIA_UPLOAD_ALL_HOSTS" : safeCode;',
-        "diagnóstico do upload do Baileys",
-    )
-    return value
+    return adicionar_codigo_upload_midia(value)
 
 
 
