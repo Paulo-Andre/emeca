@@ -90,7 +90,7 @@ def _jid_eh_mesmo_numero_confirmado(jid_cadastro, jid_whatsapp):
     JID @lid ou um outro número não pode ser inferido como o responsável.
     O WhatsApp pode devolver o número móvel no formato legado sem o 9.
     """
-    padrao = r"55[1-9][0-9][0-9]{8,9}@s\\.whatsapp\\.net"
+    padrao = r"55[1-9][0-9][0-9]{8,9}@s\.whatsapp\.net"
     if not isinstance(jid_cadastro, str) or not isinstance(jid_whatsapp, str):
         return False
     if not re.fullmatch(padrao, jid_cadastro) or not re.fullmatch(padrao, jid_whatsapp):
@@ -114,7 +114,7 @@ def confirmar_jid_whatsapp_do_boletim(item):
     retorno ambíguo ou usuário que não existe. Nunca inventa associações.
     """
     jid_cadastro = item.jid
-    if not re.fullmatch(r"55[1-9][0-9][0-9]{8,9}@s\\.whatsapp\\.net", jid_cadastro or ""):
+    if not re.fullmatch(r"55[1-9][0-9][0-9]{8,9}@s\.whatsapp\.net", jid_cadastro or ""):
         raise WhatsAppGatewayError(
             "Telefone cadastrado não está num formato seguro para envio do boletim."
         )
