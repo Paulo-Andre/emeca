@@ -31,7 +31,10 @@ for name in ("emeca-web-1","wa-akg-app"):
 PY
 echo "Pulando a sonda interna EMECA->WA-AKG: não é necessária para recuperar um contêiner em restart loop."
 echo "=== Porta HTTP do WA-AKG no host ==="
-if timeout -k 2s 10s python3 - <<'PY'
+APP_STATE="$(docker inspect -f '{{.State.Status}}' wa-akg-app)"
+if [[ "$APP_STATE" == "restarting" || "$APP_STATE" == "exited" || "$APP_STATE" == "dead" ]]; then
+  echo "Contêiner em estado $APP_STATE; priorizando a imagem anterior."
+elif timeout -k 2s 10s python3 - <<'PY'
 import urllib.error, urllib.request
 url="http://127.0.0.1:3100/"
 try:
@@ -96,6 +99,13 @@ RECOVERY_TAG="wa-akg-emeca-rc14-to-investigate:$(date -u +%Y%m%dT%H%M%SZ)"
 docker image tag "$CURRENT_IMAGE" "$RECOVERY_TAG"
 docker image tag "$OLD_TAG" 'wa-akg-app:latest'
 docker compose -f "$COMPOSE" up -d --no-deps --force-recreate app
+EXPECTED_ID="$(docker image inspect -f '{{.Id}}' "$OLD_TAG")"
+ACTUAL_ID="$(docker inspect -f '{{.Image}}' wa-akg-app)"
+if [[ "$EXPECTED_ID" != "$ACTUAL_ID" ]]; then
+  echo "ERRO: o contêiner não iniciou a imagem esperada; não apague imagens/volumes." >&2
+  exit 1
+fi
+echo "Imagem anterior confirmada no contêiner."
 
 echo "=== Verificando HTTP restaurado ==="
 if ! python3 - <<'PY'
