@@ -22,7 +22,7 @@ SAMPLE=(
 )
 
 SAMPLE_FETCH_V1=(
-    "export const getWAUploadToServer = () => {\n"
+    "export const getWAUploadToServer = async () => {\n"
     " // EMECA_BAILEYS_RC9_UPLOAD_V1\n"
     " const response = await fetch(url, {body: stream});\n"
     " let parsed = undefined;\n"
