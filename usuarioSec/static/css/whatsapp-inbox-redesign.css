@@ -640,3 +640,22 @@
 @media (prefers-reduced-motion: reduce) {
   .whatsapp-inbox-main *, .whatsapp-inbox-main *::before, .whatsapp-inbox-main *::after { transition: none !important; }
 }
+
+/* Paginação do histórico: botão persistente fora da região de rolagem. */
+.whatsapp-inbox-main .wa-chat-load-more {
+  display: block;
+  width: calc(100% - 22px);
+  margin: 6px 11px 10px;
+  padding: 10px 8px;
+  border-radius: 9px;
+  border: 1px solid #aacfe0;
+  background: #f1f8fc;
+  color: #145a77;
+  font-size: .8rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.whatsapp-inbox-main .wa-chat-load-more[hidden] { display: none; }
+.whatsapp-inbox-main .wa-chat-load-more:hover { background: #e4f2f8; }
+.whatsapp-inbox-main .wa-chat-load-more:disabled { cursor: wait; opacity: .65; }
