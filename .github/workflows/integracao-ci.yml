@@ -42,6 +42,9 @@ jobs:
           bash -n deploy/wa-akg/recuperar_wa_akg_pos_upgrade.sh
           bash -n deploy/wa-akg/corrigir_upload_pdf_rc9.sh
           bash -n deploy/wa-akg/verificar_patch_upload_sem_build.sh
+          bash -n deploy/wa-akg/verificar_transporte_https_rc9_sem_build.sh
+          node --check deploy/wa-akg/patch-baileys-rc9-https.cjs
+          python3 -m unittest discover -s deploy/wa-akg -p 'test_patch_https_rc9.py' -v
           python3 -m py_compile deploy/wa-akg/preparar_fix_upload_rc9.py
           node --check deploy/wa-akg/patch-baileys-rc9.cjs
           python3 -m unittest discover -s deploy/wa-akg -p 'test_patch_upload_rc9.py' -v
