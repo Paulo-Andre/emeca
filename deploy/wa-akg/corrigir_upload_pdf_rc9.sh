@@ -55,8 +55,16 @@ docker image tag "$OLD_IMAGE" "$OLD_TAG"
 echo "Imagem original preservada em $OLD_TAG"
 
 SWAPPED=0
+# Preservar Dockerfile exatamente como estava antes da tentativa.
+DOCKERFILE_BACKUP="$(mktemp)"
+cp -p "$SRC/Dockerfile" "$DOCKERFILE_BACKUP"
 rollback_on_failure() {
   code=$?
+  if [[ "$code" -ne 0 ]]; then
+    cp -p "$DOCKERFILE_BACKUP" "$SRC/Dockerfile" || true
+    echo "Dockerfile anterior restaurado após falha." >&2
+  fi
+  rm -f "$DOCKERFILE_BACKUP"
   if [[ "$code" -ne 0 && "$SWAPPED" -eq 1 ]]; then
     echo "Falha após início da atualização: recuperando a imagem antiga." >&2
     docker image tag "$OLD_TAG" wa-akg-app:latest || true
