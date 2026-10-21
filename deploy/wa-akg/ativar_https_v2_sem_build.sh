@@ -76,14 +76,29 @@ if [[ "$MODE" == "--verificar" ]]; then
 fi
 
 echo "=== Conferindo ausência de envios em andamento antes do reinício ==="
-timeout -k 5s 30s docker compose exec -T web python manage.py shell -c '
+echo "[FILAS 1/2] Consultando boletins do EMECA (limite de 30s)..."
+if ! timeout -k 5s 30s docker compose exec -T web python manage.py shell -c '
 from usuarioSec.models import EnvioBoletimWhatsApp
 n=EnvioBoletimWhatsApp.objects.filter(status__in=["PENDENTE","PROCESSANDO"]).count()
 print("Boletins pendentes/processando:",n)
 if n: raise SystemExit("Existem boletins ativos: intervenção cancelada")
-'
-N="$(timeout -k 5s 25s docker exec wa-akg-db sh -c 'mysql -N -s -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SELECT COUNT(*) FROM BroadcastLog WHERE status = '\''running'\'';"' 2>/dev/null | tr -d '[:space:]')"
-[[ "$N" == "0" ]] || { echo "Campanhas ativas ou consulta inconclusiva; não modificar." >&2; exit 1; }
+'; then
+  echo "ERRO: consulta EMECA falhou ou excedeu limite; WA-AKG não foi reiniciado." >&2
+  exit 1
+fi
+echo "[FILAS 1/2] EMECA: OK."
+echo "[FILAS 2/2] Consultando campanhas WA-AKG (limite de 25s)..."
+if ! N="$(timeout -k 5s 25s docker exec wa-akg-db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -N -s -uroot "$MYSQL_DATABASE" -e "SELECT COUNT(*) FROM BroadcastLog WHERE status = '\''running'\'';"' 2>/dev/null)"; then
+  echo "ERRO: consulta WA-AKG falhou ou excedeu limite; WA-AKG não foi reiniciado." >&2
+  exit 1
+fi
+N="$(printf '%s' "$N" | tr -d '[:space:]')"
+echo "Campanhas WA-AKG em execução: $N"
+if [[ "$N" != "0" ]]; then
+  echo "Campanhas WA-AKG ativas ou resposta inconclusiva; WA-AKG não foi reiniciado." >&2
+  exit 1
+fi
+echo "[FILAS 2/2] WA-AKG: OK. Não existem filas ativas nesses dois sistemas."
 
 docker image tag "$(docker inspect -f '{{.Image}}' "$APP")" "wa-akg-pre-https-v2:$STAMP"
 
