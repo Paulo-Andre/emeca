@@ -1,3 +1,4 @@
+import re
 import time
 from datetime import timedelta
 
@@ -15,7 +16,10 @@ from usuarioSec.sessao_whatsapp import sessao_atual_id
 from usuarioSec.anexos_boletim_whatsapp import (
     extrair_mensagem_anexo, ler_anexo, apagar_anexo,
 )
-from usuarioSec.whatsapp_gateway import WhatsAppGatewayError, enviar_documento, enviar_midia, confirmar_operacao_wa
+from usuarioSec.whatsapp_gateway import (
+    WhatsAppGatewayError, enviar_documento, enviar_midia,
+    confirmar_operacao_wa, verificar_numeros,
+)
 from usuarioSec.whatsapp_views import _normalizar_jid
 
 
@@ -80,6 +84,68 @@ def confirmar_aceite_documento(resposta):
     return confirmar_operacao_wa(resposta, "envio do PDF do boletim")
 
 
+def _jid_eh_mesmo_numero_confirmado(jid_cadastro, jid_whatsapp):
+    """Somente equivalência explícita de telefone brasileiro e 9º dígito.
+
+    JID @lid ou um outro número não pode ser inferido como o responsável.
+    O WhatsApp pode devolver o número móvel no formato legado sem o 9.
+    """
+    padrao = r"55[1-9][0-9][0-9]{8,9}@s\\.whatsapp\\.net"
+    if not isinstance(jid_cadastro, str) or not isinstance(jid_whatsapp, str):
+        return False
+    if not re.fullmatch(padrao, jid_cadastro) or not re.fullmatch(padrao, jid_whatsapp):
+        return False
+    if jid_cadastro == jid_whatsapp:
+        return True
+
+    original = jid_cadastro.split("@", 1)[0]
+    confirmado = jid_whatsapp.split("@", 1)[0]
+    maior, menor = sorted((original, confirmado), key=len, reverse=True)
+    # 55 + DDD(2) + 9 + 8 dígitos = 13; legado sem o 9 = 12.
+    return len(maior) == 13 and len(menor) == 12 and (
+        maior[:4] == menor[:4] and maior[4] == "9" and maior[5:] == menor[4:]
+    )
+
+
+def confirmar_jid_whatsapp_do_boletim(item):
+    """Consulta o número registrado para usar exclusivamente o JID verificado.
+
+    Falha fechada: não aceita @lid, JID inesperado, outro DDD/assinante,
+    retorno ambíguo ou usuário que não existe. Nunca inventa associações.
+    """
+    jid_cadastro = item.jid
+    if not re.fullmatch(r"55[1-9][0-9][0-9]{8,9}@s\\.whatsapp\\.net", jid_cadastro or ""):
+        raise WhatsAppGatewayError(
+            "Telefone cadastrado não está num formato seguro para envio do boletim."
+        )
+    numero = jid_cadastro.split("@", 1)[0]
+    resposta = confirmar_operacao_wa(
+        verificar_numeros([numero]), "verificação do destinatário do boletim"
+    )
+    dados = resposta.get("data")
+    registros = dados.get("results") if isinstance(dados, dict) else None
+    if not isinstance(registros, list) or len(registros) != 1 or not isinstance(registros[0], dict):
+        raise WhatsAppGatewayError(
+            "Verificação do destinatário foi inconclusiva. Boletim não enviado."
+        )
+    resultado = registros[0]
+    if str(resultado.get("number") or numero) != numero:
+        raise WhatsAppGatewayError(
+            "Verificação retornou um telefone diferente. Boletim não enviado."
+        )
+    if resultado.get("exists") is not True:
+        raise WhatsAppGatewayError(
+            "Telefone do responsável não foi encontrado no WhatsApp. Boletim não enviado."
+        )
+    jid_confirmado = resultado.get("jid")
+    if not _jid_eh_mesmo_numero_confirmado(jid_cadastro, jid_confirmado):
+        raise WhatsAppGatewayError(
+            "O WhatsApp devolveu identificador não correspondente ao cadastro. "
+            "Confira o telefone do responsável antes de enviar o boletim."
+        )
+    return jid_confirmado
+
+
 def processar_item(envio, item, config, escola):
     """Processa um único PDF; sucesso significa aceite pela API, não entrega.
 
@@ -95,6 +161,10 @@ def processar_item(envio, item, config, escola):
             raise WhatsAppGatewayError(
                 "Conta WhatsApp alterada: envio da sessão anterior cancelado."
             )
+        # Usar o JID realmente confirmado por onWhatsApp(), não aquele
+        # montado a partir do telefone cadastrado. Em caso de divergência
+        # não justificável pelo 9º dígito, não gerar nem transmitir o PDF.
+        jid_confirmado = confirmar_jid_whatsapp_do_boletim(item)
         arquivo = gerar_pdf_boletim(item.boletim, config)
         try:
             conteudo = arquivo.getvalue()
@@ -108,7 +178,7 @@ def processar_item(envio, item, config, escola):
             f"{item.boletim.periodo.ano}.pdf"
         )
         resposta = enviar_documento(
-            item.jid, conteudo, nome_arquivo,
+            jid_confirmado, conteudo, nome_arquivo,
             _legenda(envio, item, escola),
             sessao_id=envio.sessao,
         )
@@ -122,7 +192,7 @@ def processar_item(envio, item, config, escola):
             try:
                 dados_anexo, nome_anexo, mime_anexo, tipo_anexo = ler_anexo(referencia_anexo)
                 resposta_anexo = enviar_midia(
-                    item.jid, dados_anexo, nome_anexo, mime_anexo,
+                    jid_confirmado, dados_anexo, nome_anexo, mime_anexo,
                     tipo_anexo, "",
                 )
                 confirmar_operacao_wa(resposta_anexo, "anexo complementar do boletim")
