@@ -2156,6 +2156,10 @@
 
     renderChats();
     if (connected) {
+      // Indicar carregamento enquanto a primeira página vem do servidor.
+      chatCount.textContent = "Carregando conversas…";
+      const empty = chatList.querySelector(".wa-empty-list");
+      if (empty) empty.textContent = "Consultando conversas do WhatsApp…";
       // Primeiro renderizar a interface; buscar a caixa em segundo plano.
       // Uma falha de carga não deve transformar a página inteira em erro 500.
       refreshChats(true);
