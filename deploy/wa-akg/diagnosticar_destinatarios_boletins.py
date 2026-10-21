@@ -52,7 +52,27 @@ for item in items:
             dado["situacao"]="RETORNO_INVALIDO"
         elif registro.get("exists") is True:
             real=registro.get("jid") or ""
-            dado["situacao"]="REGISTRO_CONFIRMADO" if real == item.jid else "REGISTRO_JID_DIFERENTE"
+            if real == item.jid:
+                dado["situacao"]="REGISTRO_CONFIRMADO"
+                dado["tipo_divergencia"]="NENHUMA"
+            else:
+                dado["situacao"]="REGISTRO_JID_DIFERENTE"
+                if str(real).endswith("@lid"):
+                    dado["tipo_divergencia"]="LID_SEM_RELACAO_COMPROVADA"
+                elif str(real).endswith("@s.whatsapp.net"):
+                    recebido=str(real).split("@")[0]
+                    entrada=numero
+                    maior,menor=sorted((entrada,recebido),key=len,reverse=True)
+                    if (maior.isdigit() and menor.isdigit()
+                        and len(maior)==13 and len(menor)==12
+                        and maior[:4]==menor[:4]
+                        and maior[4]=="9"
+                        and maior[5:]==menor[4:]):
+                        dado["tipo_divergencia"]="APENAS_NONO_DIGITO_BR"
+                    else:
+                        dado["tipo_divergencia"]="DDD_OU_ASSINANTE_DIFERENTE"
+                else:
+                    dado["tipo_divergencia"]="JID_NAO_TELEFONICO"
         elif registro.get("exists") is False:
             dado["situacao"]="NUMERO_NAO_ENCONTRADO"
         else:
@@ -98,6 +118,7 @@ def main():
             print("Lote",item.get("lote"),"| registro WhatsApp:",item.get("situacao"),
                   "| sessão correta:",item.get("sessao_correta"),
                   "| telefone vinculado ao aluno:",item.get("cadastro_consistente"),
+                  "| divergência:",item.get("tipo_divergencia","—"),
                   "| HTTP:",item.get("codigo_http","—"))
         print("O WhatsApp pode confirmar um registro sem comprovar a entrega da mensagem.")
         print("SEM ENVIO DE PDF, SEM ALTERAÇÃO DO BANCO E SEM REINÍCIO.")
