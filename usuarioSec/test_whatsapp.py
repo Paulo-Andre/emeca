@@ -337,7 +337,7 @@ class WhatsAppInboxTests(TestCase):
     @patch("usuarioSec.whatsapp_views.listar_chats")
     @patch("usuarioSec.whatsapp_views.obter_sessao")
     @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
-    def test_tela_mensagens_lista_conversas(
+    def test_tela_mensagens_carrega_sem_bloquear_por_conversas(
         self,
         _configurado,
         obter_sessao_mock,
@@ -363,7 +363,10 @@ class WhatsAppInboxTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Conversas")
-        self.assertContains(response, "RESPONSAVEL SINTETICO")
+        self.assertNotContains(response, "RESPONSAVEL SINTETICO")
+        listar_chats_mock.assert_not_called()
+        self.assertContains(response, "refreshChats(true);")
+        self.assertContains(response, 'id="wa-chats-iniciais"')
         self.assertContains(response, 'id="newChatButton"')
         self.assertContains(response, 'id="refreshChats"')
         self.assertNotContains(response, 'class="header whatsapp-inbox-header"')
