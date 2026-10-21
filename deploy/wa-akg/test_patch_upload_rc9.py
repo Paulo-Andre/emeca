@@ -5,6 +5,7 @@ Não depende de rede, Docker, sessão, credenciais nem mídia de aluno.
 from __future__ import annotations
 import importlib.util
 import json
+import shutil
 from pathlib import Path
 import subprocess
 import tempfile
@@ -40,10 +41,18 @@ const getMediaRetryKey = () => {};
 
 class PatchRc9Tests(unittest.TestCase):
     def run_patch(self, root: Path):
-        return subprocess.run(
-            ["node", str(HERE / "patch-baileys-rc9.cjs"), str(root)],
-            capture_output=True, text=True, check=False
-        )
+        if shutil.which("node"):
+            cmd = ["node", str(HERE / "patch-baileys-rc9.cjs"), str(root)]
+        else:
+            # No mini PC não é preciso instalar Node no host: usar a imagem
+            # Docker existente, com fixture isolada e sem acesso ao WhatsApp.
+            cmd = [
+                "docker", "run", "--rm", "--network", "none",
+                "-v", str(HERE) + ":/scripts:ro",
+                "-v", str(root) + ":/fixture",
+                "node:26-alpine", "node", "/scripts/patch-baileys-rc9.cjs", "/fixture",
+            ]
+        return subprocess.run(cmd, capture_output=True, text=True, check=False)
 
     def create_pkg(self, root, version="7.0.0-rc.9", code=FAKE_SOURCE):
         f = root / "lib" / "Utils" / "messages-media.js"
