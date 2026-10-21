@@ -9,7 +9,7 @@ echo "=== Contêiner ativo (somente leitura) ==="
 docker ps --filter name='^/wa-akg-app$' --format '{{.Names}} {{.Status}}'
 echo "=== Simulação em contêiner descartável da imagem ativa ==="
 IMAGE_ID="$(docker inspect -f '{{.Image}}' wa-akg-app)"
-docker run --rm --network none \
+docker run --rm --network none --user 0 \
   --mount "type=bind,src=$PATCH,dst=/tmp/patch-baileys-rc9.cjs,readonly" \
   --entrypoint sh "$IMAGE_ID" -ec '
     echo "Baileys na imagem:"
