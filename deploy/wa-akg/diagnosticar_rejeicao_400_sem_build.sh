@@ -21,10 +21,16 @@ docker exec wa-akg-app node -e '
 const fs=require("node:fs");
 const pkg=require("/app/node_modules/@whiskeysockets/baileys/package.json");
 const code=fs.readFileSync("/app/node_modules/@whiskeysockets/baileys/lib/Utils/messages-media.js","utf8");
-if(pkg.version!=="7.0.0-rc.9"||!code.includes("EMECA_RC9_HTTPS_UPLOAD_V2")){
-  throw Error("A biblioteca ativa não é o Baileys rc.9 com o transporte HTTPS V2 esperado");
+if(pkg.version!=="7.0.0-rc.9"){
+  throw Error("Versão Baileys diferente de rc.9; nenhuma alteração.");
 }
-console.log("Baileys rc.9 com HTTPS V2: verificado");
+const v2=code.includes("EMECA_RC9_HTTPS_UPLOAD_V2");
+const v1=code.includes("EMECA_BAILEYS_RC9_UPLOAD_V1");
+if(!v2&&!v1){
+  throw Error("Uploader sem instrumentação reconhecida V1/V2; nenhuma alteração.");
+}
+console.log("Baileys rc.9. Transporte em uso:",v2?"HTTPS V2":"fetch V1");
+console.log("Código existente preservado até a validação da cópia.");
 '
 
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
@@ -42,6 +48,7 @@ docker cp "$BACKUP/package.json" "wa-akg-app:$WORK/package.json"
 docker cp "$PATCH" "wa-akg-app:$WORK/patch.cjs"
 docker exec -u 0 wa-akg-app node "$WORK/patch.cjs" "$WORK"
 docker exec -u 0 wa-akg-app node --check "$WORK/lib/Utils/messages-media.js"
+docker exec -u 0 wa-akg-app node -e 'const fs=require("node:fs");const code=fs.readFileSync(process.argv[1],"utf8");if(!code.includes("WA-MEDIA-REJECTION-DIAG-V1")) process.exit(2);console.log("Diagnóstico sanitizado verificado na cópia.");' "$WORK/lib/Utils/messages-media.js"
 docker exec -u 0 wa-akg-app node "$WORK/patch.cjs" "$WORK"
 docker cp "wa-akg-app:$WORK/lib/Utils/messages-media.js" "$BACKUP/verificado.js"
 echo "Diagnóstico verificado numa cópia. Nenhum PDF enviado."
