@@ -372,6 +372,58 @@ class WhatsAppInboxTests(TestCase):
         self.assertNotContains(response, 'class="header whatsapp-inbox-header"')
         self.assertNotContains(response, 'class="wa-header-actions"')
 
+    @patch("usuarioSec.whatsapp_views._sincronizar_nao_lidas",
+           side_effect=lambda _usuario, chats: chats)
+    @patch("usuarioSec.whatsapp_views._filtrar_conversas_excluidas_wa",
+           side_effect=lambda _usuario, chats: chats)
+    @patch("usuarioSec.whatsapp_views._enriquecer_chats",
+           side_effect=lambda chats: chats)
+    @patch("usuarioSec.whatsapp_views.listar_chats_pagina")
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
+    def test_api_conversas_paginadas_com_cursor(
+        self, _gateway, pagina, _enriquecer, _filtrar, _nao_lidas,
+    ):
+        pagina.return_value = {
+            "status": True,
+            "data": [{"jid": "5538999990000@s.whatsapp.net"}],
+            "meta": {"nextBefore": "2026-10-18T10:00:00.000Z"},
+        }
+        response = self.client.get(
+            reverse("whatsapp_chats_api"),
+            {"limit": "30", "before": "2026-10-19T10:00:00Z"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        self.assertEqual(len(response.json()["chats"]), 1)
+        self.assertEqual(response.json()["nextBefore"], "2026-10-18T10:00:00.000Z")
+        pagina.assert_called_once_with(limit=30, before="2026-10-19T10:00:00Z")
+
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
+    def test_api_conversas_recusa_cursor_invalido(self, _gateway):
+        response = self.client.get(
+            reverse("whatsapp_chats_api"), {"before": "cursor-invalido"},
+        )
+        self.assertEqual(response.status_code, 400)
+
+    @patch("usuarioSec.whatsapp_views._sincronizar_nao_lidas",
+           side_effect=lambda _usuario, chats: chats)
+    @patch("usuarioSec.whatsapp_views._filtrar_conversas_excluidas_wa",
+           side_effect=lambda _usuario, chats: chats)
+    @patch("usuarioSec.whatsapp_views._enriquecer_chats",
+           side_effect=lambda chats: chats)
+    @patch("usuarioSec.whatsapp_views._combinar_chats_e_grupos_wa",
+           side_effect=lambda chats: chats)
+    @patch("usuarioSec.whatsapp_views.listar_chats_pagina")
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
+    def test_api_conversas_limita_tamanho_sem_carregar_todo_historico(
+        self, _gateway, pagina, _combinar, _enriquecer, _filtrar, _nao_lidas,
+    ):
+        pagina.return_value = {"status": True, "data": [], "meta": {}}
+        response = self.client.get(reverse("whatsapp_chats_api"), {"limit": "2000"})
+        self.assertEqual(response.status_code, 200)
+        pagina.assert_called_once_with(limit=50, before="")
+        self.assertIsNone(response.json()["nextBefore"])
+
     @patch("usuarioSec.whatsapp_views.listar_contatos")
     def test_enriquece_lid_com_numero_real_nome_e_foto(self, listar_contatos_mock):
         listar_contatos_mock.return_value = {
