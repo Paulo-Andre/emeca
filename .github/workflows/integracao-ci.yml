@@ -40,6 +40,10 @@ jobs:
           bash -n deploy/wa-akg/atualizar_diagnostico_midia.sh
           bash -n deploy/wa-akg/atualizar_baileys_rc14_seguro.sh
           bash -n deploy/wa-akg/recuperar_wa_akg_pos_upgrade.sh
+          bash -n deploy/wa-akg/corrigir_upload_pdf_rc9.sh
+          python3 -m py_compile deploy/wa-akg/preparar_fix_upload_rc9.py
+          node --check deploy/wa-akg/patch-baileys-rc9.cjs
+          python3 -m unittest discover -s deploy/wa-akg -p 'test_patch_upload_rc9.py' -v
           python3 -m py_compile deploy/wa-akg/aplicar_correcoes.py
           python3 -m unittest discover -s deploy/wa-akg -p 'test_*.py' -v
           python3 -m unittest discover -s scripts -p 'test_patcher_scheduler.py' -v
