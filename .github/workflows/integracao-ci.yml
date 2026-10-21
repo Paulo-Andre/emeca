@@ -41,6 +41,7 @@ jobs:
           bash -n deploy/wa-akg/atualizar_baileys_rc14_seguro.sh
           bash -n deploy/wa-akg/recuperar_wa_akg_pos_upgrade.sh
           bash -n deploy/wa-akg/corrigir_upload_pdf_rc9.sh
+          bash -n deploy/wa-akg/verificar_patch_upload_sem_build.sh
           python3 -m py_compile deploy/wa-akg/preparar_fix_upload_rc9.py
           node --check deploy/wa-akg/patch-baileys-rc9.cjs
           python3 -m unittest discover -s deploy/wa-akg -p 'test_patch_upload_rc9.py' -v
