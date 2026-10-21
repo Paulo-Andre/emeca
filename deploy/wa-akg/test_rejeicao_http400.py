@@ -21,6 +21,17 @@ SAMPLE=(
     "const getMediaRetryKey = () => {};\n"
 )
 
+SAMPLE_FETCH_V1=(
+    "export const getWAUploadToServer = () => {\n"
+    " // EMECA_BAILEYS_RC9_UPLOAD_V1\n"
+    " const response = await fetch(url, {body: stream});\n"
+    " let parsed = undefined;\n"
+    " try { parsed = await response.json(); } catch { parsed = undefined; }\n"
+    " return parsed;\n"
+    "};\n"
+    "const getMediaRetryKey = () => {};\n"
+)
+
 class TestRejeicao400(unittest.TestCase):
     def setUp(self):
         if not shutil.which("node"):
@@ -54,6 +65,24 @@ class TestRejeicao400(unittest.TestCase):
             second=self.patch(root)
             self.assertEqual(second.returncode,0,second.stderr)
             self.assertEqual(f.read_text(),result)
+
+    def test_transporte_fetch_v1_sanitizado(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            f=self.fixture(root,code=SAMPLE_FETCH_V1)
+            first=self.patch(root)
+            self.assertEqual(first.returncode,0,first.stderr)
+            patched=f.read_text()
+            self.assertIn("WA-MEDIA-REJECTION-DIAG-V1",patched)
+            self.assertIn("await response.text()",patched)
+            self.assertIn("parsed = JSON.parse(emecaRawResponse)",patched)
+            self.assertNotIn("parsed = await response.json()",patched)
+            self.assertNotIn("console.error(emecaRawResponse)",patched)
+            second=self.patch(root)
+            self.assertEqual(second.returncode,0,second.stderr)
+            self.assertEqual(f.read_text(),patched)
+            syntax=subprocess.run(["node","--check",str(f)],capture_output=True,text=True)
+            self.assertEqual(syntax.returncode,0,syntax.stderr)
 
     def test_outro_baileys_recusado(self):
         with tempfile.TemporaryDirectory() as d:
