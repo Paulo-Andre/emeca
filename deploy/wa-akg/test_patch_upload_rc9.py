@@ -77,6 +77,39 @@ class PatchRc9Tests(unittest.TestCase):
             self.assertEqual(self.run_patch(folder).returncode, 0)
             self.assertEqual(patched, source.read_text())
 
+
+    def test_compilado_com_campo_de_confirmacao_ja_corrigido(self):
+        # Reproduz a variação do JS compilado observada no contêiner:
+        # não há a expressão exata antiga com result?.directPath.
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            compiled = FAKE_SOURCE.replace(
+                "if (result?.url || result?.directPath) {",
+                "if (result?.url || result?.direct_path) {",
+            )
+            source = self.create_pkg(folder, code=compiled)
+            result = self.run_patch(folder)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            patched = source.read_text()
+            self.assertIn("'Content-Length': emecaEncryptedFileSize", patched)
+            self.assertIn("WA-MEDIA-HTTP-DIAG", patched)
+            self.assertEqual(self.run_patch(folder).returncode, 0)
+
+    def test_compilado_com_condicao_desconhecida_conserva_condicao(self):
+        # Não alterar uma condição compilada que não seja reconhecida.
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            compiled = FAKE_SOURCE.replace(
+                "if (result?.url || result?.directPath) {",
+                "if (result && result.url) {",
+            )
+            source = self.create_pkg(folder, code=compiled)
+            result = self.run_patch(folder)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            patched = source.read_text()
+            self.assertIn("if (result && result.url) {", patched)
+            self.assertIn("'Content-Length': emecaEncryptedFileSize", patched)
+
     def test_nao_patchar_outra_versao(self):
         with tempfile.TemporaryDirectory() as tmp:
             folder = Path(tmp)
@@ -118,6 +151,36 @@ class PatchRc9Tests(unittest.TestCase):
             self.assertEqual(actual.count("RUN node emeca-patches/patch-baileys-rc9.cjs"), 2)
             self.assertTrue((source / "emeca-patches" / "patch-baileys-rc9.cjs").exists())
             self.assertEqual(PREPARO.preparar(source, patch_file, dry_run=False), [])
+
+    def test_patch_residual_conhecido_pode_ser_atualizado(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp)
+            (source / "Dockerfile").write_text(
+                "FROM node:26-alpine\n"
+                "RUN npx prisma generate && npm run build\n"
+                "RUN npm prune --omit=dev && npm install --no-save tsx typescript\n"
+            )
+            (source / "package.json").write_text(json.dumps({
+                "dependencies": {"@whiskeysockets/baileys": "7.0.0-rc.9"}
+            }))
+            (source / "package-lock.json").write_text(json.dumps({
+                "packages": {"node_modules/@whiskeysockets/baileys": {"version": "7.0.0-rc.9"}}
+            }))
+            legacy = source / "emeca-patches" / "patch-baileys-rc9.cjs"
+            legacy.parent.mkdir()
+            previous = "\n".join((
+                "EMECA_BAILEYS_RC9_UPLOAD_V1",
+                "Estrutura inesperada (",
+                "if (result?.url || result?.directPath) {",
+                "directPath: result.direct_path || result.directPath,",
+                "WA-MEDIA-HTTP-DIAG",
+            ))
+            legacy.write_text(previous)
+            changes = PREPARO.preparar(source, HERE / "patch-baileys-rc9.cjs", dry_run=True)
+            self.assertEqual(len(changes), 2)
+            self.assertEqual(legacy.read_text(), previous)
+            PREPARO.preparar(source, HERE / "patch-baileys-rc9.cjs", dry_run=False)
+            self.assertEqual(legacy.read_text(), (HERE / "patch-baileys-rc9.cjs").read_text())
 
     def test_manifesto_nao_rc9_e_rejeitado(self):
         with tempfile.TemporaryDirectory() as tmp:
