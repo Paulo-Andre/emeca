@@ -375,7 +375,7 @@
             <span class="step"><i data-lucide="history"></i></span>
             <h3>Envios recentes de boletins</h3>
           </div>
-          <span class="helper">Envio aceito pela API não confirma entrega no aparelho. Atualize para acompanhar.</span>
+          <span class="helper">O painel registra o aceite da API. A entrega no aparelho ainda não é confirmada automaticamente.</span>
         </div>
         <div class="history-list">
           {% for envio in envios_boletim %}
@@ -394,8 +394,8 @@
                 {% endif %}
               </div>
               <div class="history-numbers">
-                <span class="history-status status-job-{{ envio.status|lower }}">{{ envio.get_status_display }}</span>
-                <small>{{ envio.enviados }} aceitos pelo gateway · {{ envio.falhas }} falhas</small>
+                <span class="history-status status-job-{{ envio.status|lower }}">{% if envio.status == "CONCLUIDO" %}Processamento concluído · entrega não confirmada{% elif envio.status == "COM_ERROS" %}Processamento encerrado com erros{% else %}{{ envio.get_status_display }}{% endif %}</span>
+                <small>{{ envio.enviados }} solicitação(ões) aceita(s) pela API · {{ envio.falhas }} falha(s) · entrega não verificada</small>
               </div>
             </div>
           {% endfor %}
@@ -671,7 +671,7 @@
           return;
         }
         document.getElementById("btnEnviar").disabled = true;
-        btnEnviarTexto.textContent = "Enviando…";
+        btnEnviarTexto.textContent = "Registrando solicitação…";
         return;
       }
 
