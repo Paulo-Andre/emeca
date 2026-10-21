@@ -256,6 +256,30 @@ def enviar_documento(jid, conteudo_pdf, nome_arquivo, legenda="", *, sessao_id=N
     )
 
 
+def listar_chats_pagina(*, limit=30, before=""):
+    """Carrega somente uma página da caixa de entrada, sem percorrer histórico inteiro.
+
+    A paginação ocorre na API WA-AKG. O cursor é um horário ISO retornado
+    pelo próprio gateway; a validação da requisição do navegador ocorre na view.
+    A rota de exportação/listagem completa existente permanece inalterada.
+    """
+    limite = max(1, min(50, int(limit)))
+    session_id = quote(sessao_atual_id(), safe="")
+    url = f"chat/{session_id}?limit={limite}"
+    if before:
+        url += "&before=" + quote(str(before), safe="")
+    resposta = _request("GET", url)
+    if not isinstance(resposta, dict) or resposta.get("status") is False:
+        return resposta
+    dados = resposta.get("data")
+    meta = resposta.get("meta")
+    return {
+        "status": True,
+        "data": dados if isinstance(dados, list) else [],
+        "meta": meta if isinstance(meta, dict) else {},
+    }
+
+
 def listar_chats():
     """Recebe todas as páginas disponíveis, com proteção contra cursores repetidos.
 
