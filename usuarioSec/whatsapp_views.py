@@ -1853,26 +1853,18 @@ def whatsapp_mensagens(request):
     status_detalhe = ""
     chats = []
 
+    # A página deve abrir antes do carregamento da caixa de entrada.
+    # Consultar e enriquecer todas as conversas aqui bloqueava a requisição
+    # HTML e podia derrubar a tela inteira (erro 500/timeout) com histórico grande.
+    # O navegador usa whatsapp_chats_api para consultar as conversas depois.
     if gateway_configurado():
         try:
             resposta = obter_sessao()
-            status = str(
-                resposta.get("data", {}).get("status")
-                or resposta.get("status")
-                or "DESCONHECIDO"
-            ).upper()
-            if status == "CONNECTED":
-                payload = listar_chats()
-                chats = payload.get("data") if isinstance(payload, dict) else []
-                if not isinstance(chats, list):
-                    chats = []
-                chats = _sincronizar_nao_lidas(
-                    request.user,
-                    _filtrar_conversas_excluidas_wa(
-                        request.user,
-                        _enriquecer_chats(_combinar_chats_e_grupos_wa(chats))
-                    )
-                )
+            data = resposta.get("data") if isinstance(resposta, dict) else {}
+            data = data if isinstance(data, dict) else {}
+            status = str(data.get("status") or (
+                resposta.get("status") if isinstance(resposta, dict) else ""
+            ) or "DESCONHECIDO").upper()
         except WhatsAppGatewayError as exc:
             status = "INDISPONIVEL"
             status_detalhe = str(exc)
