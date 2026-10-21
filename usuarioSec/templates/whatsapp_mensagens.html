@@ -87,8 +87,9 @@
         </div>
 
         <div class="wa-chat-list" id="chatList">
-          <div class="wa-empty-list">Nenhuma conversa carregada.</div>
+          <div class="wa-empty-list">Carregando conversas…</div>
         </div>
+        <button type="button" class="wa-chat-load-more" id="loadMoreChats" hidden>Carregar mais conversas</button>
       </aside>
 
       <section class="wa-conversation-panel" aria-label="Mensagens da conversa selecionada">
@@ -491,6 +492,9 @@
     const labelsStatus = document.getElementById("labelsStatus");
 
     let chats = Array.isArray(initialChats) ? initialChats : [];
+    let nextChatsCursor = "";
+    let paginationInitialized = false;
+    const loadMoreChatsButton = document.getElementById("loadMoreChats");
     let activeJid = "";
     let refreshTimer = null;
     let refreshingChats = false;
@@ -1428,22 +1432,31 @@
       }
     }
 
-    async function refreshChats(force=false) {
+    async function refreshChats(force=false, older=false) {
       if (!connected || refreshingChats || (document.hidden && !force)) return;
+      if (older && !nextChatsCursor) return;
       refreshingChats = true;
+      const requestedCursor = older ? nextChatsCursor : "";
+      if (older) {
+        loadMoreChatsButton.disabled = true;
+        loadMoreChatsButton.textContent = "Carregando…";
+      }
       try {
-        const resp = await waFetch("{% url 'whatsapp_chats_api' %}", {headers: {"Accept":"application/json"}});
+        const params = new URLSearchParams({limit: "30"});
+        if (requestedCursor) params.set("before", requestedCursor);
+        const resp = await waFetch("{% url 'whatsapp_chats_api' %}?" + params.toString(), {
+          headers: {"Accept":"application/json"}
+        });
         const data = await resp.json();
         if (!resp.ok || !data.ok) throw new Error(data.erro || "Falha ao atualizar conversas.");
         if (data.sessao_id && data.sessao_id !== clientSessionId) {
           window.location.assign("{% url 'whatsapp' %}");
           return;
         }
+
         const incoming = Array.isArray(data.chats) ? data.chats : [];
         const previousByJid = new Map(chats.map(chat => [chat.jid, chat]));
         const previousActive = previousByJid.get(activeJid);
-        // Preservar o nome descoberto no histórico quando o WA-AKG ainda
-        // não atualizou sua lista de contatos (evita atualizar fotos em loop).
         incoming.forEach(chat => {
           const previous = previousByJid.get(chat.jid);
           if (previous && !previous.nomeManual && !chat.nomeManual &&
@@ -1451,23 +1464,40 @@
             chat.name = previous.name;
           }
         });
-        const changed = chatListSignature(incoming) !== chatListSignature(chats);
-        chats = incoming;
+        // Conservar páginas já carregadas, sem sobrescrever os dados mais
+        // recentes na atualização periódica. Identidade sempre baseada no JID.
+        const combined = new Map(previousByJid);
+        incoming.forEach(chat => combined.set(chat.jid, chat));
+        const merged = [...combined.values()];
+        const changed = chatListSignature(merged) !== chatListSignature(chats);
+        chats = merged;
 
-        // Não recriar a lista, as fotos e a conversa a cada verificação.
-        if (changed) renderChats();
+        if (older || !paginationInitialized) {
+          const next = typeof data.nextBefore === "string" ? data.nextBefore : "";
+          nextChatsCursor = next !== requestedCursor ? next : "";
+          paginationInitialized = true;
+        }
+        loadMoreChatsButton.hidden = !nextChatsCursor;
+        if (changed || older || force) renderChats();
         const current = chats.find(chat => chat.jid === activeJid);
         if (current) updateChatActionButtons(current);
-        if (current && (force || lastMessageSignature(current) !== lastMessageSignature(previousActive))) {
+        if (current && !older &&
+            (force || lastMessageSignature(current) !== lastMessageSignature(previousActive))) {
           await openChat(current, true);
         }
       } catch (err) {
-        if (force || !chats.length) chatCount.textContent = "Erro ao atualizar";
+        // Não informar lista vazia como se fosse ausência de conversas no WA-AKG.
+        if (!chats.length) {
+          chatCount.textContent = "Não foi possível carregar conversas";
+          const empty = chatList.querySelector(".wa-empty-list");
+          if (empty) empty.textContent = "Falha ao consultar as conversas. Clique em Atualizar.";
+        }
       } finally {
         refreshingChats = false;
+        loadMoreChatsButton.disabled = false;
+        loadMoreChatsButton.textContent = "Carregar mais conversas";
       }
     }
-
 
     deleteChatButton.addEventListener("click", () => {
       const chat = chats.find(item => item.jid === activeJid);
@@ -2012,6 +2042,7 @@
       setGroupFilter(true);
     }
     document.getElementById("refreshChats").addEventListener("click", () => refreshChats(true));
+    loadMoreChatsButton.addEventListener("click", () => refreshChats(true, true));
 
     replyMessage.addEventListener("input", () => {
       replyMessage.style.height = "auto";
