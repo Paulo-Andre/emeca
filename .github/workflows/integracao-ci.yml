@@ -39,6 +39,7 @@ jobs:
           bash -n deploy/wa-akg/ativar_anexos_emeca.sh
           bash -n deploy/wa-akg/atualizar_diagnostico_midia.sh
           bash -n deploy/wa-akg/atualizar_baileys_rc14_seguro.sh
+          bash -n deploy/wa-akg/recuperar_wa_akg_pos_upgrade.sh
           python3 -m py_compile deploy/wa-akg/aplicar_correcoes.py
           python3 -m unittest discover -s deploy/wa-akg -p 'test_*.py' -v
           python3 -m unittest discover -s scripts -p 'test_patcher_scheduler.py' -v
