@@ -21,7 +21,9 @@ if(source.includes(mark)){
   console.log("Diagnóstico HTTP 400 já aplicado.");
   process.exit(0);
 }
-if(!source.includes("EMECA_RC9_HTTPS_UPLOAD_V2"))throw Error("Transporte HTTPS V2 não instalado");
+const hasV2 = source.includes("EMECA_RC9_HTTPS_UPLOAD_V2");
+const hasV1 = source.includes("EMECA_BAILEYS_RC9_UPLOAD_V1");
+if(!hasV1 && !hasV2) throw Error("Uploader fora das versões instrumentadas V1/V2; sem alteração");
 const needle = [
 'res.on("end", () => resolve({',
 '                status: res.statusCode,',
@@ -51,7 +53,40 @@ const replacement = [
 '                resolve({status: res.statusCode, json: async () => JSON.parse(responseBody)});',
 '            });'
 ].join("\n");
-const patched=source.replace(needle,replacement);
+// Na versão V1 o upload usa fetch() e não o transporte HTTPS nativo.
+// Não mudar corpo, cabeçalhos, token nem URL: apenas classificar a resposta.
+const v1Needle = "parsed = await response.json()";
+const v1Replacement = [
+  "// WA-MEDIA-REJECTION-DIAG-V1",
+  "const emecaRawResponse = await response.text();",
+  "if (response.status >= 400) {",
+  "    const lower = emecaRawResponse.toLowerCase();",
+  "    let responseFormat = emecaRawResponse.length === 0 ? \"EMPTY\" : \"TEXT\";",
+  "    try { JSON.parse(emecaRawResponse); responseFormat = \"JSON\"; }",
+  "    catch { if (/^\\s*<!?doctype|^\\s*<html/i.test(emecaRawResponse)) responseFormat = \"HTML\"; }",
+  "    let responseClass = \"UNCLASSIFIED\";",
+  "    if (/\\b(expired|expirado|expire)\\b/i.test(lower)) responseClass = \"EXPIRED\";",
+  "    else if (/\\b(auth|token|permission|unauthoriz|forbidden|credential|signature)\\b/i.test(lower)) responseClass = \"AUTHORIZATION\";",
+  "    else if (/\\b(content.length|too.large|payload.too.large|size|length|quota)\\b/i.test(lower)) responseClass = \"CONTENT_SIZE\";",
+  "    else if (/\\b(hash|sha256|checksum|digest|integrity)\\b/i.test(lower)) responseClass = \"HASH_INTEGRITY\";",
+  "    else if (/\\b(missing|malformed|invalid|parameter|bad.request)\\b/i.test(lower)) responseClass = \"INVALID_REQUEST\";",
+  "    else if (/\\b(rate.limit|too.many.requests)\\b/i.test(lower)) responseClass = \"RATE_LIMIT\";",
+  "    console.error(\"WA-MEDIA-REJECTION-DIAG\", {",
+  "        httpStatus: response.status, responseFormat, responseClass,",
+  "        responseBytes: Buffer.byteLength(emecaRawResponse)",
+  "    });",
+  "}",
+  "parsed = JSON.parse(emecaRawResponse);"
+].join("\n");
+let patched;
+if (hasV2) {
+  if(source.split(needle).length!==2) throw Error("Resposta HTTPS V2 desconhecida; sem alteração");
+  patched=source.replace(needle,replacement);
+} else {
+  if(!source.includes("const response = await fetch(url, {") || source.split(v1Needle).length!==2)
+    throw Error("Resposta fetch V1 desconhecida; sem alteração");
+  patched=source.replace(v1Needle,v1Replacement);
+}
 if(patched===source || patched.split(mark).length!==2) throw Error("Patch inesperado; sem escrita");
 fs.writeFileSync(file,patched,"utf8");
-console.log("Diagnóstico temporário de rejeição instalado; nenhum dado sensível registrado.");
+console.log("Diagnóstico temporário de rejeição instalado para " + (hasV2 ? "HTTPS V2" : "fetch V1") + "; sem dados sensíveis.");
