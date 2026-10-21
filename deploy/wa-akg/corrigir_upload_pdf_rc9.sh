@@ -23,6 +23,9 @@ if(p.version!=="7.0.0-rc.9")process.exit(1);
 echo "=== Executando testes sintéticos sem WhatsApp ==="
 python3 -m unittest discover -s deploy/wa-akg -p 'test_patch_upload_rc9.py' -v
 
+echo "=== Verificando o patch em contêiner descartável sem build ==="
+bash deploy/wa-akg/verificar_patch_upload_sem_build.sh
+
 echo "=== Conferindo patch e Dockerfile sem alteração ==="
 python3 deploy/wa-akg/preparar_fix_upload_rc9.py --source "$SRC" --dry-run
 if [[ "$MODE" == "--verificar" ]]; then
