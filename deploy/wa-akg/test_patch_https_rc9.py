@@ -52,6 +52,7 @@ class TestTransporteRc9(unittest.TestCase):
             self.assertIn("emecaHttpsUploadWithNode(url, filePath, {", after)
             self.assertNotIn("const response = await fetch(url, {", after)
             self.assertIn("MEDIA_SIZE_MISMATCH", after)
+            self.assertIn("text: async () => responseBody", after)
             second = self.patch(root)
             self.assertEqual(second.returncode, 0, second.stderr)
             self.assertEqual(target.read_text(), after)
