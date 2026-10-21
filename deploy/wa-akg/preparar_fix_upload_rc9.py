@@ -47,6 +47,18 @@ def preparar(source: Path, script: Path, dry_run: bool) -> list[str]:
     else:
         raise RuntimeError("Dockerfile desconhecido ou duplicado; nenhum arquivo alterado.")
 
+    # O Dockerfile do WA-AKG executa npm prune e npm install DEPOIS do build.
+    # O npm pode repor os arquivos de node_modules nesse passo. Reaplicamos
+    # o mesmo patch idempotente, garantindo que ele chegue à imagem runner.
+    prune_line = "RUN npm prune --omit=dev && npm install --no-save tsx typescript"
+    prune_patched = prune_line + "\nRUN node emeca-patches/patch-baileys-rc9.cjs"
+    if after.count(prune_patched) == 1:
+        pass
+    elif after.count(prune_line) == 1:
+        after = after.replace(prune_line, prune_patched, 1)
+    else:
+        raise RuntimeError("Etapa npm prune do Dockerfile desconhecida; nenhuma escrita.")
+
     source_patch = script.read_text(encoding="utf-8")
     if "EMECA_BAILEYS_RC9_UPLOAD_V1" not in source_patch:
         raise RuntimeError("Patch do Baileys inválido")
