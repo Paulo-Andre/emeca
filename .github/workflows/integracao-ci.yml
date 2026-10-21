@@ -47,6 +47,7 @@ jobs:
           bash -n deploy/wa-akg/ativar_https_v2_sem_build.sh
           bash -n deploy/wa-akg/ativar_https_v2_validada.sh
           bash -n deploy/wa-akg/diagnosticar_emeca_500_boletins.sh
+          python3 -m py_compile deploy/wa-akg/diagnosticar_correspondencia_boletins.py
           bash -n deploy/wa-akg/diagnosticar_rejeicao_400_sem_build.sh
           node --check deploy/wa-akg/patch-resposta-400.cjs
           python3 -m unittest discover -s deploy/wa-akg -p 'test_rejeicao_http400.py' -v
