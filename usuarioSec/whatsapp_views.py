@@ -1918,7 +1918,7 @@ def whatsapp_chats_api(request):
             request.user,
             _filtrar_conversas_excluidas_wa(
                 request.user,
-                _enriquecer_chats(_combinar_chats_e_grupos_wa(bruto)),
+                _enriquecer_chats(bruto if cursor else _combinar_chats_e_grupos_wa(bruto)),
             ),
         )
         meta = payload.get("meta") or {}
