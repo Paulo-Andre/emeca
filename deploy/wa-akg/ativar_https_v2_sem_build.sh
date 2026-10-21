@@ -42,7 +42,6 @@ mkdir -p -m 700 "$BACKUP"
 chmod 700 "$BACKUP"
 docker cp "$APP:$TARGET" "$BACKUP/original.js"
 docker cp "$APP:$BASE/package.json" "$BACKUP/package.json"
-docker image tag "$(docker inspect -f '{{.Image}}' "$APP")" "wa-akg-pre-https-v2:$STAMP"
 echo "Original preservado em: $BACKUP/original.js"
 
 # Executar tudo num diretório separado; o módulo real não é tocado.
@@ -85,6 +84,8 @@ if n: raise SystemExit("Existem boletins ativos: intervenção cancelada")
 '
 N="$(timeout -k 5s 25s docker exec wa-akg-db sh -c 'mysql -N -s -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SELECT COUNT(*) FROM BroadcastLog WHERE status = '\''running'\'';"' 2>/dev/null | tr -d '[:space:]')"
 [[ "$N" == "0" ]] || { echo "Campanhas ativas ou consulta inconclusiva; não modificar." >&2; exit 1; }
+
+docker image tag "$(docker inspect -f '{{.Image}}' "$APP")" "wa-akg-pre-https-v2:$STAMP"
 
 SWITCHED=0
 restore_if_failure() {
