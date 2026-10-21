@@ -62,14 +62,25 @@ def preparar(source: Path, script: Path, dry_run: bool) -> list[str]:
     source_patch = script.read_text(encoding="utf-8")
     if "EMECA_BAILEYS_RC9_UPLOAD_V1" not in source_patch:
         raise RuntimeError("Patch do Baileys inválido")
-    if patch_file.exists() and patch_file.read_text(encoding="utf-8") != source_patch:
-        raise RuntimeError("Existe patch diferente no WA-AKG; não sobrescrevendo")
+    # A compilação falha anterior pode ter deixado o patch inicial no disco.
+    # Reconhecer somente essa versão conhecida e preservar cópia antes de trocar.
+    previous_patch = patch_file.read_text(encoding="utf-8") if patch_file.exists() else None
+    if previous_patch is not None and previous_patch != source_patch:
+        previous_markers = (
+            "EMECA_BAILEYS_RC9_UPLOAD_V1",
+            "Estrutura inesperada (",
+            "if (result?.url || result?.directPath) {",
+            "directPath: result.direct_path || result.directPath,",
+            "WA-MEDIA-HTTP-DIAG",
+        )
+        if not all(marker in previous_patch for marker in previous_markers):
+            raise RuntimeError("Existe patch não reconhecido no WA-AKG; revisão manual necessária")
 
     changes = []
     if before != after:
         changes.append("Dockerfile: aplicar patch após npm ci")
-    if not patch_file.exists():
-        changes.append("emeca-patches/patch-baileys-rc9.cjs: criar patch")
+    if previous_patch != source_patch:
+        changes.append("emeca-patches/patch-baileys-rc9.cjs: atualizar patch")
     if not changes:
         print("Código WA-AKG já preparado; nenhuma alteração necessária")
         return []
@@ -81,8 +92,11 @@ def preparar(source: Path, script: Path, dry_run: bool) -> list[str]:
     backup_dir = source / ".emeca-backups" / ("uploader-rc9-" + dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ"))
     backup_dir.mkdir(parents=True, exist_ok=False)
     shutil.copy2(dockerfile, backup_dir / "Dockerfile")
+    if previous_patch is not None and previous_patch != source_patch:
+        shutil.copy2(patch_file, backup_dir / "patch-baileys-rc9.cjs")
     patch_file.parent.mkdir(parents=True, exist_ok=True)
-    patch_file.write_text(source_patch, encoding="utf-8")
+    if previous_patch != source_patch:
+        patch_file.write_text(source_patch, encoding="utf-8")
     dockerfile.write_text(after, encoding="utf-8")
     print("Preparação concluída. Backup do Dockerfile em:", backup_dir)
     print("Nenhum contêiner, volume, banco ou credencial foi alterado.")
