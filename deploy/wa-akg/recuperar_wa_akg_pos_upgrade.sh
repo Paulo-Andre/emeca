@@ -29,21 +29,9 @@ for name in ("emeca-web-1","wa-akg-app"):
     except Exception as e:
         print(name,":",type(e).__name__)
 PY
-echo "=== EMECA conseguindo acessar WA-AKG? ==="
-timeout 20s docker compose exec -T web python manage.py shell -c '
-from django.conf import settings
-from urllib.request import Request,urlopen
-from urllib.error import HTTPError
-try:
-    with urlopen(Request(settings.WA_AKG_BASE_URL.rstrip("/")+"/",method="GET"),timeout=5) as r:
-        print("HTTP EMECA->WA-AKG:",r.status)
-except HTTPError as err:
-    print("HTTP EMECA->WA-AKG:",err.code)
-except Exception as err:
-    print("EMECA não acessa WA-AKG:",type(err).__name__)
-' || true
+echo "Pulando a sonda interna EMECA->WA-AKG: não é necessária para recuperar um contêiner em restart loop."
 echo "=== Porta HTTP do WA-AKG no host ==="
-if python3 - <<'PY'
+if timeout -k 2s 10s python3 - <<'PY'
 import urllib.error, urllib.request
 url="http://127.0.0.1:3100/"
 try:
@@ -58,11 +46,11 @@ except Exception as err:
     raise SystemExit(1)
 PY
 then
-  echo "O serviço WA-AKG responde no host. Não é seguro forçar rollback sem verificar a comunicação com o EMECA."
+  echo "O WA-AKG já responde no host. Não será substituído automaticamente."
   exit 0
 fi
 
-echo "=== Imagens de rollback disponíveis ==="
+echo "=== Imagens de rollback disponíveis (sem reconstruir nada) ==="
 mapfile -t TAGS < <(docker images --format '{{.Repository}}:{{.Tag}}' | grep '^wa-akg-emeca-before-rc14:' | sort -r)
 if [[ "${#TAGS[@]}" -eq 0 ]]; then
   echo "ERRO: não há imagem anterior etiquetada. NÃO apagando nem reiniciando nada." >&2
