@@ -2125,6 +2125,9 @@
 
     renderChats();
     if (connected) {
+      // Primeiro renderizar a interface; buscar a caixa em segundo plano.
+      // Uma falha de carga não deve transformar a página inteira em erro 500.
+      refreshChats(true);
       refreshTimer = window.setInterval(() => refreshChats(false), 12000);
     }
   </script>
