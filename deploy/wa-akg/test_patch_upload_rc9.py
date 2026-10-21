@@ -100,6 +100,7 @@ class PatchRc9Tests(unittest.TestCase):
             source = Path(tmp)
             (source / "Dockerfile").write_text(
                 "FROM node:26-alpine\nCOPY . .\nRUN npx prisma generate && npm run build\n"
+                "RUN npm prune --omit=dev && npm install --no-save tsx typescript\n"
             )
             (source / "package.json").write_text(json.dumps({
                 "dependencies": {"@whiskeysockets/baileys": "7.0.0-rc.9"}
@@ -114,6 +115,7 @@ class PatchRc9Tests(unittest.TestCase):
             PREPARO.preparar(source, patch_file, dry_run=False)
             actual = (source / "Dockerfile").read_text()
             self.assertIn("RUN node emeca-patches/patch-baileys-rc9.cjs", actual)
+            self.assertEqual(actual.count("RUN node emeca-patches/patch-baileys-rc9.cjs"), 2)
             self.assertTrue((source / "emeca-patches" / "patch-baileys-rc9.cjs").exists())
             self.assertEqual(PREPARO.preparar(source, patch_file, dry_run=False), [])
 
