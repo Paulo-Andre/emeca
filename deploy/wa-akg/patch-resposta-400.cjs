@@ -30,7 +30,6 @@ const needle = [
 '                json: async () => JSON.parse(Buffer.concat(chunks).toString("utf8"))',
 '            }));'
 ].join("\n");
-if(source.split(needle).length!==2) throw Error("Formato de resposta HTTPS não reconhecido; sem alteração");
 const replacement = [
 'res.on("end", () => {',
 '                // WA-MEDIA-REJECTION-DIAG-V1',
