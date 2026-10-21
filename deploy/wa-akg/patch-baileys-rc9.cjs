@@ -26,7 +26,6 @@ if (part.includes(mark)) {
   const markers = [
     mark,
     "'Content-Length': emecaEncryptedFileSize",
-    'result?.direct_path',
     'WA-MEDIA-HTTP-DIAG'
   ];
   if (markers.some(x => !part.includes(x))) {
@@ -63,20 +62,29 @@ replaceOnce(
   'let parsed = undefined',
   'resposta HTTP'
 );
-// Compatibilidade com resposta que usa direct_path (snake_case).
-replaceOnce(
-  'if (result?.url || result?.directPath) {',
-  'if (result?.url || result?.direct_path || result?.directPath) {',
-  'campo de confirmação'
-);
-replaceOnce(
-  'directPath: result.direct_path,',
-  'directPath: result.direct_path || result.directPath,',
-  'campo direct_path'
-);
+// O módulo compilado da rc.9 pode usar um formato diferente do fonte TS.
+// NUNCA exigir uma expressão exata na condição se não existir no artefato.
+// A correção obrigatória é Content-Length; alterar a condição apenas quando
+// reconhecida de forma inequívoca.
+const originalCheck = 'if (result?.url || result?.directPath) {';
+if (part.includes(originalCheck)) {
+  replaceOnce(
+    originalCheck,
+    'if (result?.url || result?.direct_path || result?.directPath) {',
+    'campo de confirmação da versão original'
+  );
+}
+const originalDirectPath = 'directPath: result.direct_path,';
+if (part.includes(originalDirectPath)) {
+  replaceOnce(
+    originalDirectPath,
+    'directPath: result.direct_path || result.directPath,',
+    'campo direct_path da versão original'
+  );
+}
 const result = old.slice(0, start) + part + old.slice(end);
 if (result === old || !result.includes(mark)) {
   throw new Error('Nenhuma correção preparada. Nenhum arquivo alterado.');
 }
 fs.writeFileSync(target, result, 'utf8');
-console.log('Uploader Baileys rc.9 corrigido: Content-Length, direct_path, HTTP sanitizado.');
+console.log('Uploader Baileys rc.9: Content-Length adicionado e HTTP sanitizado; campos de resposta adaptados apenas quando reconhecidos.');
