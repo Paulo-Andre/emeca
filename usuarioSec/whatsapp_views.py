@@ -78,6 +78,7 @@ from .whatsapp_gateway import (
     excluir_historico_sessao,
     listar_agendamentos,
     listar_chats,
+    listar_chats_pagina,
     listar_contatos,
     listar_etiquetas,
     listar_grupos,
@@ -1895,22 +1896,40 @@ def whatsapp_chats_api(request):
             {"ok": False, "erro": "Integração ainda não configurada."},
             status=503,
         )
+
+    # A caixa pode ter milhares de conversas. Não solicitar as 25 páginas
+    # de 500 contatos na mesma requisição: usar uma página por chamada.
     try:
-        payload = listar_chats()
-        chats = payload.get("data") if isinstance(payload, dict) else []
+        tamanho = int(request.GET.get("limit") or "30")
+    except (ValueError, TypeError):
+        return JsonResponse({"ok": False, "erro": "Limite inválido."}, status=400)
+    tamanho = max(1, min(50, tamanho))
+    cursor = (request.GET.get("before") or "").strip()
+    if len(cursor) > 64 or (cursor and parse_datetime(cursor) is None):
+        return JsonResponse({"ok": False, "erro": "Cursor inválido."}, status=400)
+
+    try:
+        payload = listar_chats_pagina(limit=tamanho, before=cursor)
+        if not isinstance(payload, dict) or payload.get("status") is False:
+            raise WhatsAppGatewayError("A consulta de conversas não foi confirmada.")
+        bruto = payload.get("data")
+        bruto = bruto if isinstance(bruto, list) else []
         chats = _sincronizar_nao_lidas(
             request.user,
             _filtrar_conversas_excluidas_wa(
                 request.user,
-                _enriquecer_chats(_combinar_chats_e_grupos_wa(
-                    chats if isinstance(chats, list) else []
-                )),
+                _enriquecer_chats(_combinar_chats_e_grupos_wa(bruto)),
             ),
         )
+        meta = payload.get("meta") or {}
+        proximo = meta.get("nextBefore") if isinstance(meta, dict) else None
+        # Se não houver cursor, a API não tem mais páginas. Não adivinhar.
+        proximo = str(proximo) if isinstance(proximo, str) and proximo else None
         return JsonResponse({
             "ok": True,
             "chats": chats,
             "totalNaoLidas": sum(chat.get("naoLidas", 0) for chat in chats),
+            "nextBefore": proximo,
             "sessao_id": sessao_atual_id(),
         })
     except WhatsAppGatewayError as exc:
@@ -1918,6 +1937,13 @@ def whatsapp_chats_api(request):
             {"ok": False, "erro": str(exc)},
             status=exc.status_code or 502,
         )
+    except Exception as exc:
+        # Expor só o tipo do erro nos logs, nunca JID, payload ou token.
+        logger.error("Falha na listagem paginada do WhatsApp: %s", type(exc).__name__)
+        return JsonResponse({
+            "ok": False,
+            "erro": "Não foi possível carregar as conversas. Tente atualizar.",
+        }, status=503)
 
 
 @login_required
