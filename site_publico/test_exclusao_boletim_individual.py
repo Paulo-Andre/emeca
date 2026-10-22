@@ -45,10 +45,20 @@ class ExclusaoBoletimIndividualTests(TestCase):
         self.assertEqual(BoletimAluno.objects.get(pk=self.b2.pk).faltas_totais, 5)
         self.assertTrue(declaracao.objects.filter(pk=self.declaracao.pk).exists())
 
-    def test_publicado_nao_pode_excluir(self):
+    def test_publicado_pode_excluir_so_um_boletim(self):
         self.periodo.publicado = True
         self.periodo.save(update_fields=["publicado"])
-        self.client.post(self.url(), {"confirmar": "EXCLUIR"})
+        resposta = self.client.post(self.url(), {"confirmar": "EXCLUIR"})
+        self.assertEqual(resposta.status_code, 302)
+        self.assertFalse(BoletimAluno.objects.filter(pk=self.b1.pk).exists())
+        self.assertTrue(BoletimAluno.objects.filter(pk=self.b2.pk).exists())
+        self.assertTrue(declaracao.objects.filter(pk=self.declaracao.pk).exists())
+        self.periodo.refresh_from_db()
+        self.assertTrue(self.periodo.publicado)
+
+    def test_sem_confirmacao_nao_exclui(self):
+        resposta = self.client.post(self.url(), {"confirmar": ""})
+        self.assertEqual(resposta.status_code, 302)
         self.assertTrue(BoletimAluno.objects.filter(pk=self.b1.pk).exists())
 
     def test_get_nao_exclui(self):
