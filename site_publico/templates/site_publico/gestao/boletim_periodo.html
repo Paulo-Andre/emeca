@@ -108,7 +108,7 @@
           <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_boletim_aluno_editar' periodo.pk linha.boletim.pk %}">
             <i data-lucide="pencil"></i> Editar aluno e notas
           </a>
-          <form method="post" action="{% url 'site_publico:gestao_boletim_aluno_excluir' periodo.pk linha.boletim.pk %}" onsubmit="return confirm('Excluir APENAS o boletim deste aluno neste período, incluindo suas notas e faltas? O cadastro de Declarações não será alterado.');">
+          <form method="post" action="{% url 'site_publico:gestao_boletim_aluno_excluir' periodo.pk linha.boletim.pk %}" onsubmit="return confirm('ATENÇÃO: excluir APENAS o boletim deste aluno neste período, incluindo suas notas e faltas? {% if periodo.publicado %}O período está PUBLICADO: o boletim deste aluno deixará de estar disponível na consulta dos responsáveis. {% endif %}A Declaração e os boletins dos outros alunos serão preservados. Esta ação não desfaz PDFs já enviados pelo WhatsApp.');">
             {% csrf_token %}
             <input type="hidden" name="confirmar" value="EXCLUIR">
             <button type="submit" class="manager-btn bulletin-danger-btn" title="Excluir apenas este boletim"><i data-lucide="trash-2"></i> Excluir boletim</button>
