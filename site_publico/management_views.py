@@ -342,12 +342,6 @@ def gestao_boletim_aluno_excluir(request, periodo_pk, boletim_pk):
         pk=boletim_pk,
         periodo=periodo,
     )
-    if periodo.publicado:
-        messages.error(
-            request,
-            "Retire a publicação do período antes de excluir um boletim."
-        )
-        return redirect("site_publico:gestao_boletim_periodo", pk=periodo.pk)
     if request.POST.get("confirmar") != "EXCLUIR":
         messages.error(request, "Exclusão não confirmada.")
         return redirect("site_publico:gestao_boletim_periodo", pk=periodo.pk)
