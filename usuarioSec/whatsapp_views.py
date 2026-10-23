@@ -353,9 +353,18 @@ def whatsapp(request):
     if gateway_configurado():
         try:
             resposta = obter_sessao()
-            status = str(
-                resposta.get("data", {}).get("status") or "DESCONHECIDO"
-            ).upper()
+            if not isinstance(resposta, dict):
+                status = "INDISPONIVEL"
+                status_detalhe = "O WA-AKG retornou uma resposta de sessão inválida."
+            else:
+                dados = resposta.get("data")
+                if not isinstance(dados, dict):
+                    dados = {}
+                # Na remoção parcial do histórico, alguns gateways podem
+                # devolver data=null. Não derrubar toda a página com 500.
+                status = str(dados.get("status") or resposta.get("status") or "DESCONHECIDO").upper()
+                if status in {"TRUE", "FALSE", "NONE"}:
+                    status = "DESCONHECIDO"
         except WhatsAppGatewayError as exc:
             if exc.status_code == 404:
                 status = "NAO_CRIADA"
