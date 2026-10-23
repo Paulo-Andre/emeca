@@ -32,6 +32,24 @@ class PainelLimpezaPendenteTests(TestCase):
         obter.assert_not_called()
 
     @patch("usuarioSec.whatsapp_views.obter_sessao",
+           side_effect=TimeoutError("Timeout sintético"))
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
+    def test_timeout_imprevisto_nao_gera_500_na_pagina(self, _gateway, _obter):
+        resposta = self.client.get(reverse("whatsapp"))
+        self.assertEqual(resposta.status_code, 200)
+        self.assertContains(resposta, "WA-AKG indisponível")
+
+    @patch("usuarioSec.whatsapp_views.obter_sessao",
+           return_value={"data": ["resposta em formato inesperado"]})
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
+    def test_payload_remoto_invalido_nao_gera_500_na_pagina(
+        self, _gateway, _obter,
+    ):
+        resposta = self.client.get(reverse("whatsapp"))
+        self.assertEqual(resposta.status_code, 200)
+        self.assertContains(resposta, "WA-AKG indisponível")
+
+    @patch("usuarioSec.whatsapp_views.obter_sessao",
            side_effect=WhatsAppGatewayError("Timeout", 0))
     @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
     def test_gateway_lento_nao_retira_painel_do_ar(self, _gateway, _obter):
