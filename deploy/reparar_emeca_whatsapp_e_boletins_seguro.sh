@@ -1,29 +1,41 @@
 #!/usr/bin/env bash
-# Reparo conservador do EMECA (somente web + reposição seletiva de boletins).
-# Não toca wa-akg-app, wa-akg-db, credenciais ou sessão WhatsApp.
-set -euo pipefail
+# Reparo do painel EMECA sem alterações do WA-AKG e SEM RESTAURAR boletins
+# com vínculos de identidade não comprovados.
+set -Eeuo pipefail
 cd /srv/projetos/emeca
 
-erro() {
+fase="iniciando"
+falha() {
   echo ""
-  echo "REPARO INTERROMPIDO. Nenhum comando de limpeza WhatsApp foi executado."
-  echo "Se o erro ocorreu na reposição, o banco atual permanece íntegro ou a transação foi revertida."
+  echo "REPARO SUSPENSO NA ETAPA: ${fase}"
+  echo "Nenhum boletim foi restaurado ou excluído; nenhum WhatsApp foi desconectado."
+  echo "Backups e banco atual não foram substituídos."
 }
-trap erro ERR
+trap falha ERR
 
-echo "== 1/5: confirmar integridade do repositório =="
-git diff --quiet
-git diff --cached --quiet
-echo "== 2/5: compilar somente EMECA Web =="
-docker compose build web
-
-echo "== 3/5: testes isolados, sem banco e sem rede de produção =="
-img="$(docker compose images -q web | head -n 1)"
-if [[ -z "$img" ]]; then
-  echo "Imagem web do EMECA não encontrada."
+echo "== 1/5: garantir cópia íntegra do banco ANTES de qualquer atualização =="
+fase="backup atual"
+# A versão do container web já em execução conhece o caminho SQLite verdadeiro.
+# Não confiar apenas em 'docker cp' (pode ignorar o WAL).
+backup_log="$(docker exec -i emeca-web-1 python manage.py shell < deploy/backup_emeca_seguro.py)"
+if ! grep -q '^BACKUP_OK:' <<< "$backup_log"; then
+  echo "Backup não confirmado; não é seguro implantar o reparo."
   exit 1
 fi
+echo "$backup_log" | grep '^BACKUP_OK:'
+echo "Cópia preservada em /srv/backups/emeca; fonte original inalterada."
 
+echo "== 2/5: compilar somente o EMECA web =="
+fase="build web"
+docker compose build web
+
+echo "== 3/5: validações AUTOMÁTICAS na imagem nova (sem produção) =="
+fase="testes isolados"
+# docker compose images -q web pode devolver um digest de container ANTIGO
+# já removido pelo build, gerando 'No such image: sha256:...'.
+# A nova imagem foi publicada explicitamente como emeca-web:latest.
+imagem="emeca-web:latest"
+docker image inspect "$imagem" >/dev/null
 docker run --rm --network none --entrypoint python \
   -e DJANGO_DEBUG=1 \
   -e DJANGO_SECRET_KEY=chave-sintetica-so-para-teste-emeca-2026 \
@@ -33,20 +45,28 @@ docker run --rm --network none --entrypoint python \
   -e DJANGO_ALLOWED_HOSTS=localhost,testserver \
   -e DJANGO_RBAC_STRICT=0 \
   -e DJANGO_RATE_LIMIT_ENABLED=0 \
-  "$img" manage.py test \
+  "$imagem" manage.py test \
   usuarioSec.test_painel_whatsapp_pendente \
+  usuarioSec.test_qr_limpeza_pendente \
   site_publico.test_recuperacao_boletins_ausentes \
   site_publico.test_exclusao_boletim_individual --noinput
 
-echo "== 4/5: substituir somente o contêiner web do EMECA =="
+echo "== 4/5: atualizar somente a interface do EMECA =="
+fase="implantar web"
 docker compose up -d --no-deps web
 docker exec emeca-web-1 python manage.py check
 
-echo "== 5/5: repor APENAS boletins ausentes, com snapshot e transação =="
-docker exec emeca-web-1 python manage.py restaurar_boletins_ausentes --aplicar
+echo "== 5/5: auditar boletins antigos sem gravar nada =="
+fase="auditoria de vínculos"
+# A restauração antiga pressupunha IDs de alunos imutáveis; a reconciliação
+# mostrou que podem ter sido alterados. Não chamar --aplicar automaticamente.
+python3 deploy/comparar_boletins_atual_backups_readonly.py
+python3 deploy/auditar_correspondencia_24_boletins.py
+python3 deploy/auditar_identidade_24o_boletim.py
 
+trap - ERR
 echo ""
-echo "REPARO CONCLUÍDO. Os boletins devem voltar a totalizar 27."
-echo "A tela WhatsApp não faz mais consulta remota se a limpeza está pendente."
-echo "A limpeza do WA-AKG permanece BLOQUEADA para impedir perda de histórico."
-echo "WA-AKG NÃO foi reiniciado, reconstruído ou excluído neste procedimento."
+echo "INTERFACE EMECA ATUALIZADA SEM LIMPEZA WHATSAPP."
+echo "Os boletins permanecem intactos. Backups existentes foram preservados."
+echo "Restauração seletiva BLOQUEADA até todos os vínculos de alunos serem validados."
+echo "WA-AKG, sessões, mídia e MySQL não foram recriados nem alterados."
