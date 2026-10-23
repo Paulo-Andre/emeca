@@ -88,6 +88,8 @@ print("WA_LIMPEZA_PENDENTE:", SessaoWhatsAppAtiva.objects.filter(
 ).exists())
 '
 echo ""
+echo "== Verificação automática do erro HTTP 500 (sem ação destrutiva) =="
+python3 deploy/diagnosticar_whatsapp_500_e_boletins.py || true
 echo "IMPLANTACAO WEB CONCLUIDA. Nenhum serviço WA-AKG foi reiniciado."
 echo "A sessão com limpeza pendente NÃO é apagada ou liberada por este script:"
 echo "isso exige verificação da situação remota, para impedir perda de mensagens."
