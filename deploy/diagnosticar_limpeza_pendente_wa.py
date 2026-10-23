@@ -43,7 +43,7 @@ def log_failure_summary():
     for seq, idx in enumerate(indexes[-3:], 1):
         # Não imprimir mensagens completas, números, IDs nem nomes.
         trecho = "\n".join(lines[idx:min(idx + 20, len(lines))])
-        codigos = sorted(set(re.findall(r"\\bP20[0-9]{2}\\b", trecho)))
+        codigos = sorted(set(re.findall(r"\bP20[0-9]{2}\b", trecho)))
         tipos = sorted(set(re.findall(
             r"PrismaClient[A-Za-z]+Error|Transaction already closed|"
             r"Transaction API error|timed out|timeout|lock wait timeout|"
