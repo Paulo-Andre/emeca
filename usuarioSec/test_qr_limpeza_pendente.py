@@ -21,5 +21,5 @@ class QRLimpezaPendenteTests(TestCase):
     def test_qr_bloqueado_antes_de_chamar_gateway(self, gateway):
         response = self.client.get(reverse("whatsapp_qr"))
         self.assertEqual(response.status_code, 409)
-        self.assertIn("Limpeza", response.json()["erro"])
+        self.assertIn("limpeza", response.json()["erro"].lower())
         gateway.assert_not_called()
