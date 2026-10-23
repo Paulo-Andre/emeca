@@ -41,6 +41,7 @@
             {% elif gateway_status == "SCAN_QR" %}Aguardando leitura do QR
             {% elif gateway_status == "NAO_CONFIGURADO" %}Integração ainda não configurada
             {% elif gateway_status == "NAO_CRIADA" %}Sessão pronta para ser criada
+            {% elif gateway_status == "LIMPEZA_PENDENTE" %}Limpeza do WhatsApp pendente
             {% elif gateway_status == "INDISPONIVEL" %}WA-AKG indisponível
             {% else %}Status: {{ gateway_status }}
             {% endif %}
