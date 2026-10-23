@@ -71,3 +71,32 @@ class HistoricoFalhasWhatsAppTests(TestCase):
             response = self.client.get(reverse("whatsapp"))
         self.assertContains(response, "&lt;script&gt;alert(1)&lt;/script&gt;")
         self.assertNotContains(response, "<script>alert(1)</script>")
+
+    def test_status_data_nulo_do_gateway_nao_derruba_pagina(self):
+        # Pode ocorrer após falha parcial de limpeza/desvinculação.
+        # O GET nunca deve apagar a sessão nem enviar documentos.
+        with (
+            patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True),
+            patch("usuarioSec.whatsapp_views.obter_sessao",
+                  return_value={"status": True, "data": None}),
+            patch("usuarioSec.whatsapp_views.limpeza_historico_pendente",
+                  return_value=True),
+            patch("usuarioSec.whatsapp_views.enviar_documento") as enviar,
+            patch("usuarioSec.whatsapp_views.excluir_historico_sessao") as limpar,
+        ):
+            response = self.client.get(reverse("whatsapp"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "DESCONHECIDO")
+        enviar.assert_not_called()
+        limpar.assert_not_called()
+
+    def test_status_sessao_invalida_nao_derruba_pagina(self):
+        with (
+            patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True),
+            patch("usuarioSec.whatsapp_views.obter_sessao", return_value=[]),
+            patch("usuarioSec.whatsapp_views.enviar_documento") as enviar,
+        ):
+            response = self.client.get(reverse("whatsapp"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "WA-AKG indisponível")
+        enviar.assert_not_called()
