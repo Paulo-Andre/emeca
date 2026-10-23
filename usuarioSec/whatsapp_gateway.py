@@ -69,6 +69,14 @@ def _request(method, path, payload=None):
         raise WhatsAppGatewayError(
             "Não foi possível conectar ao serviço WA-AKG."
         ) from exc
+    except (TimeoutError, ConnectionError) as exc:
+        # urllib pode propagar timeout de socket diretamente, fora de URLError.
+        # Propagar o erro bruto causava HTTP 500 ao abrir /whatsapp/.
+        # Sem reenvio automático: POST pode ter sido aceito antes do timeout.
+        raise WhatsAppGatewayError(
+            "O serviço WhatsApp não respondeu no prazo. "
+            "Não repita envios nem exclusões sem verificar o estado."
+        ) from exc
     except OSError as exc:
         # TimeoutError/socket resets nem sempre vêm encapsulados em URLError.
         # Evita erro 500 na página e não tenta novamente POSTs de envio/purga.
@@ -242,6 +250,14 @@ def _request_multipart(path, fields, filename, content_type, content):
     except URLError as exc:
         raise WhatsAppGatewayError(
             "Não foi possível conectar ao serviço WA-AKG."
+        ) from exc
+    except (TimeoutError, ConnectionError) as exc:
+        # urllib pode propagar timeout de socket diretamente, fora de URLError.
+        # Propagar o erro bruto causava HTTP 500 ao abrir /whatsapp/.
+        # Sem reenvio automático: POST pode ter sido aceito antes do timeout.
+        raise WhatsAppGatewayError(
+            "O serviço WhatsApp não respondeu no prazo. "
+            "Não repita envios nem exclusões sem verificar o estado."
         ) from exc
     except OSError as exc:
         # TimeoutError/socket resets nem sempre vêm encapsulados em URLError.
