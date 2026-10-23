@@ -398,6 +398,15 @@ def whatsapp(request):
                 "O WA-AKG não respondeu. A conta e as mensagens não foram modificadas."
                 if status == "INDISPONIVEL" else ""
             )
+        except Exception as exc:
+            # A disponibilidade da tela não pode depender de parse de JSON,
+            # timeout de socket ou erro inesperado do gateway remoto.
+            logger.error("Consulta de estado WhatsApp indisponível: %s", type(exc).__name__)
+            status = "INDISPONIVEL"
+            status_detalhe = (
+                "Falha temporária na consulta do WhatsApp. "
+                "Nenhuma operação de conexão ou exclusão foi executada."
+            )
 
     return render(request, "whatsapp.html", {
         "turmas": turmas,
