@@ -147,12 +147,21 @@ try:
                     disc_refs={v[campos[N].index("disciplina_id")] for v in notas_ausentes.values()}
                     out["disciplinas_incompatíveis"]=sum(
                         i not in disciplinas_agora or i not in disciplina_backup
-                        or disciplinas_agora[i]!=disciplina_backup[i]
+                        or any(
+                            disciplinas_agora[i][campos[D].index(field)] !=
+                            disciplina_backup[i][campos[D].index(field)]
+                            for field in ("periodo_id","nome")
+                        )
                         for i in disc_refs
                     )
                     periodos_agora=ids(tmp,P)
-                    out["periodo_compativel"]=PID in periodos_agora and (
-                        PID in periodo_backup and periodos_agora[PID]==periodo_backup[PID]
+                    out["periodo_compativel"]=(
+                        PID in periodos_agora and PID in periodo_backup
+                        and all(
+                            periodos_agora[PID][campos[P].index(field)] ==
+                            periodo_backup[PID][campos[P].index(field)]
+                            for field in ("tipo","numero","ano","turma")
+                        )
                     )
                     declaracoes_agora=ids(tmp,DECL)
                     out["declaracoes_ausentes_do_backup"]=len(set(decl_backup)-set(declaracoes_agora))
