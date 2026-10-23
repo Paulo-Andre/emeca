@@ -50,7 +50,7 @@ def main():
     if q.returncode:
         # Reproduzir apenas códigos MySQL padronizados; erro bruto pode conter
         # host, arquivo interno, credencial ou JID.
-        code_match=re.search(r"(?:ERROR|Error)\\s+(\\d{3,4})",q.stderr or "")
+        code_match=re.search(r"(?:ERROR|Error)\s+(\d{3,4})",q.stderr or "")
         code=code_match.group(1) if code_match else "NAO_IDENTIFICADO"
         print("Consulta ao MySQL falhou. Código de processo:",q.returncode,
               "| código MySQL:",code)
