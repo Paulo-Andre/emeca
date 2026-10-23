@@ -6,7 +6,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from usuarioSec.models import SessaoWhatsAppAtiva
-from usuarioSec.whatsapp_gateway import WhatsAppGatewayError
+from usuarioSec.whatsapp_gateway import WhatsAppGatewayError, obter_sessao
 
 
 @override_settings(WA_AKG_SESSION_ID="wa-qa-producao")
@@ -56,3 +56,28 @@ class RecuperacaoWhatsAppTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(resp.json()["ok"])
         qr.assert_called_once_with()
+
+    @override_settings(
+        WA_AKG_BASE_URL="http://gateway-invalido.test",
+        WA_AKG_API_KEY="chave-sintetica-teste",
+    )
+    @patch("usuarioSec.whatsapp_gateway.urlopen", side_effect=TimeoutError("simulado"))
+    def test_timeout_da_rede_vira_erro_controlado(self, _request):
+        with self.assertRaises(WhatsAppGatewayError):
+            obter_sessao()
+
+    @patch("usuarioSec.whatsapp_views.obter_sessao",
+           side_effect=WhatsAppGatewayError("Consulta WhatsApp expirou"))
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
+    def test_pagina_whatsapp_abre_mesmo_com_timeout(self, _config, _sessao):
+        resposta = self.client.get(reverse("whatsapp"))
+        self.assertEqual(resposta.status_code, 200)
+        self.assertContains(resposta, "WhatsApp")
+        self.assertEqual(resposta.context["gateway_status"], "INDISPONIVEL")
+
+    @patch("usuarioSec.whatsapp_views.obter_sessao",
+           return_value={"data": None, "status": True})
+    @patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True)
+    def test_resposta_de_sessao_parcial_nao_gera_500(self, _config, _sessao):
+        resposta = self.client.get(reverse("whatsapp"))
+        self.assertEqual(resposta.status_code, 200)
