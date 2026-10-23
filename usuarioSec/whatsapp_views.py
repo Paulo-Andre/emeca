@@ -332,73 +332,85 @@ def _pode_desconectar_whatsapp(usuario):
 
 @login_required
 def whatsapp(request):
-    turmas = list(
-        declaracao.objects.exclude(turmaDoAluno__isnull=True)
-        .exclude(turmaDoAluno__exact="")
-        .order_by("turmaDoAluno")
-        .values_list("turmaDoAluno", flat=True)
-        .distinct()
-    )
-
-    anos_boletim = list(
-        PeriodoBoletim.objects
-        .filter(publicado=True, boletins__isnull=False)
-        .order_by("-ano")
-        .values_list("ano", flat=True)
-        .distinct()
-    )
-
-    status = "NAO_CONFIGURADO"
-    status_detalhe = ""
-    if gateway_configurado():
-        try:
-            resposta = obter_sessao()
-            if not isinstance(resposta, dict):
-                status = "INDISPONIVEL"
-                status_detalhe = "O WA-AKG retornou uma resposta de sessão inválida."
-            else:
-                dados = resposta.get("data")
-                if not isinstance(dados, dict):
-                    dados = {}
-                # Na remoção parcial do histórico, alguns gateways podem
-                # devolver data=null. Não derrubar toda a página com 500.
-                status = str(dados.get("status") or resposta.get("status") or "DESCONHECIDO").upper()
-                if status in {"TRUE", "FALSE", "NONE"}:
-                    status = "DESCONHECIDO"
-        except WhatsAppGatewayError as exc:
-            if exc.status_code == 404:
-                status = "NAO_CRIADA"
-            else:
-                status = "INDISPONIVEL"
-                status_detalhe = str(exc)
-
-    return render(
-        request,
-        "whatsapp.html",
-        {
-            "turmas": turmas,
-            "anos_boletim": anos_boletim,
-            "envios_boletim": EnvioBoletimWhatsApp.objects.filter(
-                sessao=sessao_atual_id()
-            ).annotate(
+    # Esta página é independente da disponibilidade do gateway remoto.
+    # Com limpeza pendente não consultar WA-AKG (que pode estar em purga,
+    # lento ou com banco bloqueado) apenas para desenhar a interface.
+    turmas = []
+    anos_boletim = []
+    envios = []
+    db_indisponivel = False
+    try:
+        turmas = list(
+            declaracao.objects.exclude(turmaDoAluno__isnull=True)
+            .exclude(turmaDoAluno__exact="")
+            .order_by("turmaDoAluno")
+            .values_list("turmaDoAluno", flat=True).distinct()
+        )
+        anos_boletim = list(
+            PeriodoBoletim.objects.filter(
+                publicado=True, boletins__isnull=False,
+            ).order_by("-ano").values_list("ano", flat=True).distinct()
+        )
+        sessao_id = sessao_atual_id()
+        limpeza_pendente = limpeza_historico_pendente()
+        # Materializar dentro do bloco try; erros de SQLite em QuerySet lazy
+        # anteriormente escapavam durante render() e retornavam erro 500.
+        envios = list(
+            EnvioBoletimWhatsApp.objects.filter(sessao=sessao_id).annotate(
                 primeiro_erro=Subquery(
                     ItemEnvioBoletimWhatsApp.objects.filter(
                         envio_id=OuterRef("pk"), status="ERRO",
                     ).exclude(erro="").order_by("id").values("erro")[:1]
-                )
-            ).select_related("usuario")[:8],
-            "gateway_configurado": gateway_configurado(),
-            "gateway_status": status,
-            "gateway_status_detalhe": status_detalhe,
-            "pode_desconectar": _pode_desconectar_whatsapp(request.user),
-            "limpeza_pendente": limpeza_historico_pendente(),
-            "wa_sessao_id": sessao_atual_id(),
-            "delay_segundos": round(
-                settings.WA_AKG_BROADCAST_DELAY_MS / 1000,
-                1,
-            ),
-        },
-    )
+                ),
+            ).select_related("usuario")[:8]
+        )
+    except DatabaseError as exc:
+        logger.error("Falha temporária em dados do painel WhatsApp: %s", type(exc).__name__)
+        db_indisponivel = True
+        # Estado conservador: não oferecer reconexão/desconexão enquanto
+        # não for possível confirmar a sessão e o estado de limpeza.
+        sessao_id = ""
+        limpeza_pendente = True
+
+    status = "NAO_CONFIGURADO"
+    status_detalhe = ""
+    if db_indisponivel:
+        status = "INDISPONIVEL"
+        status_detalhe = "Banco temporariamente indisponível. Nenhuma operação foi executada."
+    elif limpeza_pendente:
+        status = "LIMPEZA_PENDENTE"
+        status_detalhe = (
+            "A limpeza da sessão anterior ficou incompleta. "
+            "Não tente reconectar, repetir a exclusão ou trocar de conta "
+            "até confirmar o estado do histórico no WA-AKG."
+        )
+    elif gateway_configurado():
+        try:
+            resposta = obter_sessao()
+            if not isinstance(resposta, dict):
+                raise WhatsAppGatewayError("Resposta de sessão inválida.")
+            dados = resposta.get("data")
+            dados = dados if isinstance(dados, dict) else {}
+            status = str(dados.get("status") or "DESCONHECIDO").upper()
+        except WhatsAppGatewayError as exc:
+            status = "NAO_CRIADA" if exc.status_code == 404 else "INDISPONIVEL"
+            status_detalhe = (
+                "O WA-AKG não respondeu. A conta e as mensagens não foram modificadas."
+                if status == "INDISPONIVEL" else ""
+            )
+
+    return render(request, "whatsapp.html", {
+        "turmas": turmas,
+        "anos_boletim": anos_boletim,
+        "envios_boletim": envios,
+        "gateway_configurado": gateway_configurado(),
+        "gateway_status": status,
+        "gateway_status_detalhe": status_detalhe,
+        "pode_desconectar": _pode_desconectar_whatsapp(request.user),
+        "limpeza_pendente": limpeza_pendente,
+        "wa_sessao_id": sessao_id,
+        "delay_segundos": round(settings.WA_AKG_BROADCAST_DELAY_MS / 1000, 1),
+    })
 
 
 @login_required
