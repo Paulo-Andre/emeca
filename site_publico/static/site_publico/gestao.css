@@ -2256,29 +2256,6 @@
   border-bottom: 0;
 }
 
-/* Ações pertencem sempre à mesma linha do aluno. Nunca deslocar
-   a exclusão para a linha visual do próximo estudante. */
-.bulletin-student-manager-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 8px;
-  min-width: 0;
-}
-.bulletin-student-manager-actions form { margin: 0; }
-.bulletin-student-manager-actions .manager-btn { white-space: nowrap; }
-@media (max-width: 760px) {
-  .bulletin-student-manager-row > .bulletin-student-manager-actions {
-    grid-column: 1 / -1;
-    justify-content: flex-start;
-  }
-  .bulletin-student-manager-actions .manager-btn {
-    white-space: normal;
-  }
-}
-
-
 .bulletin-student-manager-row__number {
   width: 34px;
   height: 34px;
