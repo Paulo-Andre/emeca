@@ -29,7 +29,7 @@ def main():
     sql=(
         "SELECT s.status, "
         "(SELECT COUNT(*) FROM Message m WHERE m.sessionId = s.id), "
-        "(SELECT COUNT(*) FROM AuthState a WHERE a.sessionId = s.sessionId) "
+        "0 "
         "FROM Session s WHERE s.sessionId = '"+sid+"' LIMIT 1;"
     )
     shell=(
@@ -43,7 +43,7 @@ def main():
         valor=(estado.stdout or "").strip() if estado and estado.returncode==0 else "NAO_LOCALIZADO"
         print("Container",container+":",valor if valor in ("running","exited","created","restarting","paused","dead") else "NAO_LOCALIZADO")
 
-    q=cmd(["docker","exec","wa-akg-db","sh","-c",shell],timeout=25)
+    # A contagem de AuthState pode não existir no esquema instalado.\n    q=cmd(["docker","exec","wa-akg-db","sh","-c",shell],timeout=25)
     if q is None:
         print("Consulta ao banco WA-AKG indisponível ou excedeu o tempo.")
         return
@@ -80,7 +80,7 @@ def main():
         status=parts[0] if parts[0] in {"CONNECTED","CONNECTING","DISCONNECTED","LOGGED_OUT","STOPPED","SCAN_QR","STARTING"} else "OUTRO"
         print("Estado da sessão no banco WA-AKG:",status)
         print("Mensagens persistidas nessa sessão:",parts[1])
-        print("Registros de autenticação dessa sessão:",parts[2])
+        print("Registros de autenticação: não consultados nesta versão segura.")
     else:
         print("Resposta inesperada; saída omitida.")
     print("Somente SELECT. Nenhuma mensagem excluída, nenhuma sessão alterada.")
