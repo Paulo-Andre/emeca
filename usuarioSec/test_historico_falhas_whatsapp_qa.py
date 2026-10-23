@@ -127,3 +127,27 @@ class HistoricoFalhasWhatsAppTests(TestCase):
         ):
             response = self.client.get(reverse("whatsapp"))
         self.assertEqual(response.status_code, 200)
+
+    def test_timeout_de_gateway_e_tratado_sem_500(self):
+        from django.test import override_settings
+
+        with (
+            override_settings(
+                WA_AKG_BASE_URL="http://127.0.0.1:3100",
+                WA_AKG_API_KEY="credencial-sintetica-apenas-teste",
+                WA_AKG_SESSION_ID="emeca-qa-historico",
+                WA_AKG_TIMEOUT_SECONDS=2,
+            ),
+            patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True),
+            patch("usuarioSec.whatsapp_gateway.urlopen",
+                  side_effect=TimeoutError("tempo esgotado")),
+            patch("usuarioSec.whatsapp_views.limpeza_historico_pendente",
+                  return_value=True),
+            patch("usuarioSec.whatsapp_views.enviar_documento") as enviar,
+            patch("usuarioSec.whatsapp_views.excluir_historico_sessao") as limpar,
+        ):
+            response = self.client.get(reverse("whatsapp"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "WA-AKG indisponível")
+        enviar.assert_not_called()
+        limpar.assert_not_called()
