@@ -132,6 +132,28 @@ class ExclusaoBoletimIndividualTests(TestCase):
             self.assertTrue(BoletimAluno.objects.filter(pk=colega.pk).exists())
         self.assertTrue(declaracao.objects.filter(pk=self.declaracao.pk).exists())
 
+    def test_excluir_um_de_tres_alunos_do_mesmo_periodo_preserva_os_outros(self):
+        segundo = AlunoBoletim.objects.create(nome="ALUNO SINTETICO 2")
+        terceiro = AlunoBoletim.objects.create(nome="ALUNO SINTETICO 3")
+        b2 = BoletimAluno.objects.create(
+            periodo=self.periodo, aluno=segundo, faltas_totais=2,
+        )
+        b3 = BoletimAluno.objects.create(
+            periodo=self.periodo, aluno=terceiro, faltas_totais=7,
+        )
+        self.periodo.publicado = True
+        self.periodo.save(update_fields=["publicado"])
+        self.assertEqual(self.periodo.boletins.count(), 3)
+
+        resposta = self.client.post(self.url(), {"confirmar": "EXCLUIR"})
+
+        self.assertEqual(resposta.status_code, 302)
+        self.assertEqual(self.periodo.boletins.count(), 2)
+        self.assertFalse(BoletimAluno.objects.filter(pk=self.b1.pk).exists())
+        self.assertEqual(BoletimAluno.objects.get(pk=b2.pk).faltas_totais, 2)
+        self.assertEqual(BoletimAluno.objects.get(pk=b3.pk).faltas_totais, 7)
+        self.assertTrue(declaracao.objects.filter(pk=self.declaracao.pk).exists())
+
     def test_sem_confirmacao_nao_exclui(self):
         resposta = self.client.post(self.url(), {"confirmar": ""})
         self.assertEqual(resposta.status_code, 302)
