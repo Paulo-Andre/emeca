@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from site_publico.models import AlunoBoletim, BoletimAluno, PeriodoBoletim
+from site_publico.models import AlunoBoletim, BoletimAluno, PeriodoBoletim, DisciplinaBoletim, NotaBoletim
 from usuarioSec.models import declaracao
 
 
@@ -44,6 +44,52 @@ class ExclusaoBoletimIndividualTests(TestCase):
         self.assertFalse(BoletimAluno.objects.filter(pk=self.b1.pk).exists())
         self.assertEqual(BoletimAluno.objects.get(pk=self.b2.pk).faltas_totais, 5)
         self.assertTrue(declaracao.objects.filter(pk=self.declaracao.pk).exists())
+
+    def test_tres_alunos_mesmo_periodo_excluir_um_preserva_outros_dois(self):
+        outros = []
+        for indice in range(2):
+            registro = declaracao.objects.create(
+                nomeDoAluno=f"OUTRO ALUNO TESTE {indice}"
+            )
+            aluno = AlunoBoletim.objects.create(
+                nome=f"OUTRO ALUNO TESTE {indice}", declaracao=registro
+            )
+            outros.append(BoletimAluno.objects.create(
+                periodo=self.periodo, aluno=aluno, faltas_totais=indice + 1
+            ))
+        disciplinas = [
+            DisciplinaBoletim.objects.create(
+                periodo=self.periodo, nome=f"DISCIPLINA {indice}"
+            ) for indice in range(3)
+        ]
+        for disciplina in disciplinas:
+            NotaBoletim.objects.create(
+                boletim=self.b1, disciplina=disciplina, nota=8,
+            )
+
+        self.assertEqual(self.periodo.boletins.count(), 3)
+        self.assertEqual(self.b1.resultados.count(), 3)
+        resposta = self.client.post(self.url(), {"confirmar": "EXCLUIR"})
+
+        self.assertEqual(resposta.status_code, 302)
+        self.assertEqual(self.periodo.boletins.count(), 2)
+        self.assertFalse(BoletimAluno.objects.filter(pk=self.b1.pk).exists())
+        self.assertFalse(NotaBoletim.objects.filter(boletim_id=self.b1.pk).exists())
+        self.assertTrue(
+            all(BoletimAluno.objects.filter(pk=item.pk).exists() for item in outros)
+        )
+        self.assertTrue(declaracao.objects.filter(pk=self.declaracao.pk).exists())
+
+    def test_botao_excluir_associa_nome_e_id_corretos_na_pagina(self):
+        self.periodo.publicado = True
+        self.periodo.save(update_fields=["publicado"])
+        resposta = self.client.get(reverse(
+            "site_publico:gestao_boletim_periodo", args=[self.periodo.pk]
+        ))
+        self.assertEqual(resposta.status_code, 200)
+        self.assertContains(resposta, "bulletin-student-manager-actions")
+        self.assertContains(resposta, "Excluir o boletim de ALUNA TESTE")
+        self.assertContains(resposta, self.url())
 
     def test_publicado_pode_excluir_so_um_boletim(self):
         self.periodo.publicado = True
