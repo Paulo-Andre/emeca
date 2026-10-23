@@ -66,6 +66,13 @@ jobs:
       - name: Instalar dependências Python
         run: pip install -r requirements.txt
 
+      - name: Testar recuperação seletiva e painel WhatsApp antes da auditoria externa
+        run: |
+          python manage.py test \
+            usuarioSec.test_painel_whatsapp_pendente \
+            site_publico.test_recuperacao_boletins_ausentes \
+            site_publico.test_exclusao_boletim_individual --noinput
+
       - name: Auditar dependências Python
         run: |
           python -m pip install pip-audit
