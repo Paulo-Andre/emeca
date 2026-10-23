@@ -107,9 +107,9 @@ try:
                             ):
                                 motivo="BACKUP_NAO_CORRESPONDE_AOS_3_EXISTENTES"
                                 continue
-                            if any(i in atual and atual[i]!=v for i,v in antigos_p3.items()):
-                                motivo="ID_BOLETIM_REUTILIZADO"
-                                continue
+                            # IDs antigos podem ter sido reutilizados por outros
+                            # períodos; remapear novas PKs na cópia em memória.
+                            # A identidade do aluno/período é validada abaixo.
                             selecionado=path
                             nota_backup=ids(origem,N)
                             aluno_backup=ids(origem,A)
@@ -129,12 +129,25 @@ try:
                 if selecionado is None:
                     out["fase"]=motivo
                 else:
-                    ausentes={i:v for i,v in antigos_p3.items() if i not in atual}
-                    vinculados={v[campos[B].index("aluno_id")] for v in ausentes.values()}
+                    idx_a=campos[B].index("aluno_id")
+                    presentes_p3={
+                        i:v for i,v in atual.items()
+                        if v[campos[B].index("periodo_id")]==PID
+                    }
+                    alunos_presentes={v[idx_a] for v in presentes_p3.values()}
+                    ausentes={
+                        i:v for i,v in antigos_p3.items()
+                        if v[idx_a] not in alunos_presentes
+                    }
+                    vinculados={v[idx_a] for v in ausentes.values()}
                     notas_ausentes={
                         i:v for i,v in nota_backup.items()
                         if v[campos[N].index("boletim_id")] in ausentes
                     }
+                    out["ids_boletim_reutilizados"]=sum(
+                        i in atual for i in ausentes
+                    )
+                    out["ids_boletim_preservados"]=len(presentes_p3)
                     out["referencia"]=selecionado.name
                     out["boletins_no_backup"]=len(antigos_p3)
                     out["boletins_para_simular"]=len(ausentes)
@@ -146,8 +159,10 @@ try:
                         i not in alunos_agora for i in vinculados
                     )
                     out["alunos_id_reutilizado"]=sum(
-                        i in alunos_agora and i in aluno_backup
-                        and alunos_agora[i][col_aluno.index("nome")]!=aluno_backup[i][col_aluno.index("nome")]
+                        i in alunos_agora and i in aluno_backup and (
+                            alunos_agora[i][col_aluno.index("declaracao_id")] !=
+                            aluno_backup[i][col_aluno.index("declaracao_id")]
+                        )
                         for i in vinculados
                     )
                     out["notas_id_colidindo"]=len(set(notas_ausentes)&set(atuais_notas))
@@ -177,7 +192,7 @@ try:
                     blockers=[
                         out["alunos_referenciados_ausentes"],
                         out["alunos_id_reutilizado"],
-                        out["notas_id_colidindo"],
+                        out["fks_atuais_invalidas"],
                         out["disciplinas_incompatíveis"],
                         not out["periodo_compativel"],
                     ]
@@ -188,12 +203,30 @@ try:
                     else:
                         try:
                             tmp.execute("BEGIN")
-                            for row in ausentes.values():
+                            # Nunca reutilizar a PK de boletim/nota do backup:
+                            # outro registro pode ter recebido esse ID.
+                            novo_id_boletim=max(atual,default=0)+1
+                            mapa_de_ids={}
+                            idx_pk=campos[B].index("id")
+                            for antigo_id,row in sorted(ausentes.items()):
+                                novo=list(row)
+                                novo[idx_pk]=novo_id_boletim
+                                mapa_de_ids[antigo_id]=novo_id_boletim
                                 tmp.execute("INSERT INTO "+B+" VALUES ("+
-                                    ",".join("?" for _ in row)+")",row)
+                                    ",".join("?" for _ in novo)+")",novo)
+                                novo_id_boletim+=1
+                            novo_id_nota=max(atuais_notas,default=0)+1
+                            idx_pk_n=campos[N].index("id")
+                            idx_fk_n=campos[N].index("boletim_id")
                             for row in notas_ausentes.values():
+                                novo=list(row)
+                                novo[idx_pk_n]=novo_id_nota
+                                novo[idx_fk_n]=mapa_de_ids[row[idx_fk_n]]
                                 tmp.execute("INSERT INTO "+N+" VALUES ("+
-                                    ",".join("?" for _ in row)+")",row)
+                                    ",".join("?" for _ in novo)+")",novo)
+                                novo_id_nota+=1
+                            out["ids_boletins_remapeados"]=len(mapa_de_ids)
+                            out["ids_notas_remapeados"]=len(notas_ausentes)
                             out["apos_simulacao_boletins"]=count(
                                 tmp,B,"WHERE periodo_id=?",(PID,)
                             )
@@ -246,6 +279,8 @@ def main():
     for key in (
         "fase","referencia","periodo","boletins_atuais","boletins_no_backup",
         "boletins_para_simular","notas_para_simular","notas_ja_existentes",
+        "ids_boletim_reutilizados","ids_boletim_preservados",
+        "ids_boletins_remapeados","ids_notas_remapeados",
         "alunos_referenciados_ausentes","alunos_id_reutilizado",
         "notas_id_colidindo","disciplinas_incompatíveis","periodo_compativel",
         "declaracoes_ausentes_do_backup","fks_atuais_invalidas",
