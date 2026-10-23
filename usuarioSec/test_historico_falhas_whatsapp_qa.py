@@ -85,7 +85,7 @@ class HistoricoFalhasWhatsAppTests(TestCase):
         ):
             response = self.client.get(reverse("whatsapp"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "LIMPEZA_PENDENTE")
+        self.assertContains(response, "Limpeza do WhatsApp pendente")
         obter_sessao.assert_not_called()
         enviar.assert_not_called()
         limpar.assert_not_called()
