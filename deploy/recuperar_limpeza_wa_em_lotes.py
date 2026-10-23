@@ -89,7 +89,7 @@ def preflight():
 
 def backup_all():
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    root = Path("/srv/backups") / ("wa-p2028-" + stamp)
+    root = Path("/srv/backups/emeca") / ("wa-p2028-" + stamp)
     root.mkdir(parents=True, mode=0o700, exist_ok=False)
     os.chmod(root, 0o700)
     temporary = "/tmp/wa-emeca-backup-" + stamp + ".sqlite3"
