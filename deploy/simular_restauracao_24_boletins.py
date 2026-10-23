@@ -95,8 +95,16 @@ try:
                                 i:v for i,v in atual.items()
                                 if v[campos[B].index("periodo_id")]==PID
                             }
-                            if any(i not in antigos_p3 or antigos_p3[i]!=v
-                                   for i,v in presentes_p3.items()):
+                            # Dados/horários dos três boletins restantes podem
+                            # ter sido editados depois do backup; preservá-los.
+                            if any(
+                                i not in antigos_p3 or any(
+                                    antigos_p3[i][campos[B].index(chave)] !=
+                                    v[campos[B].index(chave)]
+                                    for chave in ("periodo_id","aluno_id")
+                                )
+                                for i,v in presentes_p3.items()
+                            ):
                                 motivo="BACKUP_NAO_CORRESPONDE_AOS_3_EXISTENTES"
                                 continue
                             if any(i in atual and atual[i]!=v for i,v in antigos_p3.items()):
