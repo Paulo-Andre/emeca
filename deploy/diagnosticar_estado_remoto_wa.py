@@ -25,65 +25,76 @@ def main():
         print("Sessão inesperada; consulta cancelada.")
         return
     sid=ids[0]
-    # ID validado permite escapar de qualquer interpolação SQL insegura.
-    sql=(
-        "SELECT s.status, "
-        "(SELECT COUNT(*) FROM Message m WHERE m.sessionId = s.id), "
-        "0 "
-        "FROM Session s WHERE s.sessionId = '"+sid+"' LIMIT 1;"
-    )
-    shell=(
-        'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -N -B -s -uroot '
-        '"$MYSQL_DATABASE" -e '+ "'"+sql+"'"
-    )
-    # Verificar se o processo está ativo antes da consulta SQL. Nunca imprimir
-    # variáveis de ambiente, IDs ou as mensagens de erro brutas do MySQL.
+    # Verificar os contêineres antes de qualquer consulta.
     for container in ("wa-akg-db", "wa-akg-app", "emeca-web-1"):
         estado=cmd(["docker","inspect","--format","{{.State.Status}}",container],timeout=8)
         valor=(estado.stdout or "").strip() if estado and estado.returncode==0 else "NAO_LOCALIZADO"
-        print("Container",container+":",valor if valor in ("running","exited","created","restarting","paused","dead") else "NAO_LOCALIZADO")
+        print("Container",container+":",valor if valor in
+              ("running","exited","created","restarting","paused","dead") else "NAO_LOCALIZADO")
 
-    # A contagem de AuthState pode não existir no esquema instalado.
-    q=cmd(["docker","exec","wa-akg-db","sh","-c",shell],timeout=25)
-    if q is None:
-        print("Consulta ao banco WA-AKG indisponível ou excedeu o tempo.")
-        return
-    if q.returncode:
-        # Reproduzir apenas códigos MySQL padronizados; erro bruto pode conter
-        # host, arquivo interno, credencial ou JID.
-        code_match=re.search(r"(?:ERROR|Error)\s+(\d{3,4})",q.stderr or "")
-        code=code_match.group(1) if code_match else "NAO_IDENTIFICADO"
-        print("Consulta ao MySQL falhou. Código de processo:",q.returncode,
-              "| código MySQL:",code)
-        if code=="NAO_IDENTIFICADO":
-            raw=(q.stderr or "").lower()
-            if "not found" in raw:
-                print("Classificação: executável/contêiner/comando não localizado.")
-            elif "not running" in raw:
-                print("Classificação: contêiner não está em execução.")
-            else:
-                print("Classificação: revisar disponibilidade ou autenticação do banco.")
-        elif code in ("1045","1698"):
-            print("Classificação: acesso ao MySQL recusado.")
-        elif code in ("2002","2003","2006","2013"):
-            print("Classificação: serviço MySQL indisponível ou conexão interrompida.")
-        elif code in ("1146","1054","1064"):
-            print("Classificação: consulta incompatível com esquema SQL atual.")
-        return
-    lines=q.stdout.strip().splitlines()
-    if not lines:
-        print("Sessão registrada no EMECA: NÃO encontrada na tabela Session do WA-AKG.")
-    elif len(lines)==1:
-        parts=lines[0].split("\t")
-        if len(parts)!=3 or not all(p.isdigit() for p in parts[1:]):
-            print("Resposta SQL inesperada; saída omitida por segurança.")
+    def sql_ro(query):
+        try:
+            # SQL via stdin e somente leitura. Não imprimir saída bruta.
+            return subprocess.run(
+                ["docker","exec","-i","wa-akg-db","sh","-c",
+                 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -N -B -s -uroot "$MYSQL_DATABASE"'],
+                input=query+"\n",capture_output=True,text=True,
+                timeout=24,check=False,
+            )
+        except (OSError,subprocess.TimeoutExpired):
+            return None
+
+    def tratar_erro(p):
+        if p is None:
+            print("Consulta ao banco WA-AKG indisponível ou excedeu o tempo.")
             return
-        status=parts[0] if parts[0] in {"CONNECTED","CONNECTING","DISCONNECTED","LOGGED_OUT","STOPPED","SCAN_QR","STARTING"} else "OUTRO"
-        print("Estado da sessão no banco WA-AKG:",status)
-        print("Mensagens persistidas nessa sessão:",parts[1])
-        print("Registros de autenticação: não consultados nesta versão segura.")
-    else:
-        print("Resposta inesperada; saída omitida.")
+        code_match=re.search(r"(?:ERROR|Error)\s+(\d{3,4})",p.stderr or "")
+        codigo=code_match.group(1) if code_match else "NAO_IDENTIFICADO"
+        print("Consulta MySQL não concluída. Código MySQL:",codigo,
+              "| código de processo:",p.returncode)
+
+    # A mesma consulta já usada pelo diagnóstico de limpeza funciona neste
+    # servidor. Evita JOIN/subconsulta até confirmar o esquema.
+    status=sql_ro("SELECT status FROM Session WHERE sessionId='"+sid+"' LIMIT 1;")
+    if status is None or status.returncode:
+        tratar_erro(status)
+        return
+    linhas=[x.strip() for x in status.stdout.splitlines() if x.strip()]
+    if not linhas:
+        print("Sessão registrada no EMECA: NÃO encontrada em Session WA-AKG.")
+        print("Não inicie nova sessão nem remova dados sem reconciliar a limpeza.")
+        return
+    st=linhas[0] if linhas[0] in (
+        "CONNECTED","CONNECTING","DISCONNECTED","LOGGED_OUT",
+        "STOPPED","SCAN_QR","STARTING"
+    ) else "OUTRO"
+    print("Estado da sessão no banco WA-AKG:",st)
+
+    # Checar colunas efetivamente existentes, sem assumir o esquema Prisma
+    # de outro commit. Não exibir a lista completa de tabelas/colunas.
+    cols=sql_ro("SHOW COLUMNS FROM Message;")
+    sess_cols=sql_ro("SHOW COLUMNS FROM Session;")
+    if (cols is None or cols.returncode or
+            sess_cols is None or sess_cols.returncode):
+        print("Contagem de mensagens não disponível: consulta de esquema falhou.")
+        return
+    campos={row.split("\t",1)[0] for row in cols.stdout.splitlines() if "\t" in row}
+    sess_fields={row.split("\t",1)[0] for row in sess_cols.stdout.splitlines() if "\t" in row}
+    if not {"sessionId"}.issubset(campos) or not {"id","sessionId"}.issubset(sess_fields):
+        print("Contagem de mensagens indisponível: campos divergem do modelo esperado.")
+        return
+    q=("SELECT COUNT(*) FROM Message WHERE sessionId="
+       "(SELECT id FROM Session WHERE sessionId='"+sid+"' LIMIT 1);")
+    total=sql_ro(q)
+    if total is None or total.returncode:
+        tratar_erro(total)
+        return
+    dado=total.stdout.strip()
+    if not dado.isdigit():
+        print("Contagem de mensagens inesperada; valor omitido.")
+        return
+    print("Mensagens persistidas nessa sessão:",dado)
+    print("Registros de autenticação: não consultados.")
     print("Somente SELECT. Nenhuma mensagem excluída, nenhuma sessão alterada.")
 
 if __name__=="__main__":
