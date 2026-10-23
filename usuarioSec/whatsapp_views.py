@@ -1871,15 +1871,28 @@ def _filtrar_conversas_excluidas_wa(usuario, chats):
 
 @login_required
 def whatsapp_mensagens(request):
+    # Não consultar o gateway quando uma limpeza destrutiva está incompleta.
+    # O usuário ainda consegue abrir a página e entender o bloqueio.
     status = "NAO_CONFIGURADO"
     status_detalhe = ""
     chats = []
+    db_indisponivel = False
+    try:
+        pendente = limpeza_historico_pendente()
+        sessao_id = sessao_atual_id()
+    except DatabaseError as exc:
+        logger.error("Estado da sessão WhatsApp indisponível: %s", type(exc).__name__)
+        pendente = True
+        sessao_id = ""
+        db_indisponivel = True
 
-    # A página deve abrir antes do carregamento da caixa de entrada.
-    # Consultar e enriquecer todas as conversas aqui bloqueava a requisição
-    # HTML e podia derrubar a tela inteira (erro 500/timeout) com histórico grande.
-    # O navegador usa whatsapp_chats_api para consultar as conversas depois.
-    if gateway_configurado():
+    if pendente:
+        status = "LIMPEZA_PENDENTE"
+        status_detalhe = (
+            "A limpeza anterior não foi concluída. Por segurança, não é possível "
+            "consultar mensagens nem alterar a conexão até reconciliar a sessão."
+        )
+    elif gateway_configurado():
         try:
             resposta = obter_sessao()
             data = resposta.get("data") if isinstance(resposta, dict) else {}
@@ -1887,23 +1900,19 @@ def whatsapp_mensagens(request):
             status = str(data.get("status") or (
                 resposta.get("status") if isinstance(resposta, dict) else ""
             ) or "DESCONHECIDO").upper()
-        except WhatsAppGatewayError as exc:
+        except WhatsAppGatewayError:
             status = "INDISPONIVEL"
-            status_detalhe = str(exc)
+            status_detalhe = "O WhatsApp está temporariamente indisponível."
 
-    return render(
-        request,
-        "whatsapp_mensagens.html",
-        {
-            "gateway_configurado": gateway_configurado(),
-            "gateway_status": status,
-            "gateway_status_detalhe": status_detalhe,
-            "pode_desconectar": _pode_desconectar_whatsapp(request.user),
-            "limpeza_pendente": limpeza_historico_pendente(),
-            "wa_sessao_id": sessao_atual_id(),
-            "chats_iniciais": chats[:50],
-        },
-    )
+    return render(request, "whatsapp_mensagens.html", {
+        "gateway_configurado": gateway_configurado() and not db_indisponivel,
+        "gateway_status": status,
+        "gateway_status_detalhe": status_detalhe,
+        "pode_desconectar": _pode_desconectar_whatsapp(request.user) and not pendente,
+        "limpeza_pendente": pendente,
+        "wa_sessao_id": sessao_id,
+        "chats_iniciais": chats,
+    })
 
 
 @login_required
