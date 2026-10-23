@@ -29,6 +29,31 @@ print("ESTADO_SEGURO:"+json.dumps({
 }))
 """
 
+def log_failure_summary():
+    """Somente indicadores de falha, sem texto bruto de logs do WhatsApp."""
+    q = run(["docker", "logs", "--since", "96h", "--tail", "4000",
+             "wa-akg-app"], timeout=15)
+    if not q or q.returncode:
+        print("Resumo de logs: indisponível.")
+        return
+    lines = (q.stdout + "\n" + q.stderr).splitlines()
+    indexes = [idx for idx, line in enumerate(lines)
+               if "[EMECA] Falha ao excluir histórico" in line]
+    print("Erros de purga encontrados nos últimos logs:", len(indexes))
+    for seq, idx in enumerate(indexes[-3:], 1):
+        # Não imprimir mensagens completas, números, IDs nem nomes.
+        trecho = "\n".join(lines[idx:min(idx + 20, len(lines))])
+        codigos = sorted(set(re.findall(r"\\bP20[0-9]{2}\\b", trecho)))
+        tipos = sorted(set(re.findall(
+            r"PrismaClient[A-Za-z]+Error|Transaction already closed|"
+            r"Transaction API error|timed out|timeout|lock wait timeout|"
+            r"foreign key constraint",
+            trecho, flags=re.I
+        )))
+        print("  Ocorrência", seq, "códigos:", ",".join(codigos) or "-",
+              "categorias:", ",".join(tipos) or "não identificadas")
+
+
 def main():
     print("=== Estado da limpeza WA-AKG e dos boletins: SOMENTE LEITURA ===")
     p=run(["docker","exec","emeca-web-1","python","manage.py","shell","-c",READ_DJANGO])
@@ -78,6 +103,7 @@ def main():
     q=run(["docker","inspect","--format","{{.State.Status}}","wa-akg-app"],timeout=5)
     if q and q.returncode==0:
         print("Contêiner WA-AKG:",q.stdout.strip()[:40])
+    log_failure_summary()
     print("SEM EXCLUSÃO, SEM RECONEXÃO, SEM DISPARO E SEM ALTERAÇÕES.")
 
 if __name__=="__main__":
