@@ -43,7 +43,8 @@ def main():
         valor=(estado.stdout or "").strip() if estado and estado.returncode==0 else "NAO_LOCALIZADO"
         print("Container",container+":",valor if valor in ("running","exited","created","restarting","paused","dead") else "NAO_LOCALIZADO")
 
-    # A contagem de AuthState pode não existir no esquema instalado.\n    q=cmd(["docker","exec","wa-akg-db","sh","-c",shell],timeout=25)
+    # A contagem de AuthState pode não existir no esquema instalado.
+    q=cmd(["docker","exec","wa-akg-db","sh","-c",shell],timeout=25)
     if q is None:
         print("Consulta ao banco WA-AKG indisponível ou excedeu o tempo.")
         return
