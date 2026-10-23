@@ -50,7 +50,7 @@ class HistoricoFalhasWhatsAppTests(TestCase):
                   return_value="emeca-qa-historico"),
             patch("usuarioSec.whatsapp_views.limpeza_historico_pendente",
                   return_value=False),
-            patch("usuarioSec.whatsapp_views.enviar_documento") as enviar,
+            patch("usuarioSec.management.commands.processar_envios_whatsapp.enviar_documento") as enviar,
         ):
             response = self.client.get(reverse("whatsapp"))
         self.assertEqual(response.status_code, 200)
@@ -81,7 +81,7 @@ class HistoricoFalhasWhatsAppTests(TestCase):
                   return_value={"status": True, "data": None}),
             patch("usuarioSec.whatsapp_views.limpeza_historico_pendente",
                   return_value=True),
-            patch("usuarioSec.whatsapp_views.enviar_documento") as enviar,
+            patch("usuarioSec.management.commands.processar_envios_whatsapp.enviar_documento") as enviar,
             patch("usuarioSec.whatsapp_views.excluir_historico_sessao") as limpar,
         ):
             response = self.client.get(reverse("whatsapp"))
@@ -94,7 +94,7 @@ class HistoricoFalhasWhatsAppTests(TestCase):
         with (
             patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True),
             patch("usuarioSec.whatsapp_views.obter_sessao", return_value=[]),
-            patch("usuarioSec.whatsapp_views.enviar_documento") as enviar,
+            patch("usuarioSec.management.commands.processar_envios_whatsapp.enviar_documento") as enviar,
         ):
             response = self.client.get(reverse("whatsapp"))
         self.assertEqual(response.status_code, 200)
@@ -143,7 +143,7 @@ class HistoricoFalhasWhatsAppTests(TestCase):
                   side_effect=TimeoutError("tempo esgotado")),
             patch("usuarioSec.whatsapp_views.limpeza_historico_pendente",
                   return_value=True),
-            patch("usuarioSec.whatsapp_views.enviar_documento") as enviar,
+            patch("usuarioSec.management.commands.processar_envios_whatsapp.enviar_documento") as enviar,
             patch("usuarioSec.whatsapp_views.excluir_historico_sessao") as limpar,
         ):
             response = self.client.get(reverse("whatsapp"))
