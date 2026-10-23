@@ -2,6 +2,18 @@
 # Reparo do painel EMECA sem alterações do WA-AKG, repondo APENAS boletins
 # com vínculos de identidade fortemente comprovados.
 set -Eeuo pipefail
+# Por padrão, o reparo não restaura dados antigos no banco. A recuperação
+# só será autorizada após simulação/inspeção usando --aplicar-restauracao.
+aplicar_restauracao=false
+case "${1:-}" in
+  "") ;;
+  --aplicar-restauracao) aplicar_restauracao=true ;;
+  *) echo "Uso: bash deploy/reparar_emeca_whatsapp_e_boletins_seguro.sh [--aplicar-restauracao]" >&2; exit 2 ;;
+esac
+if (( $# > 1 )); then
+  echo "Argumentos inesperados; nenhuma alteração." >&2
+  exit 2
+fi
 cd /srv/projetos/emeca
 
 fase="iniciando"
@@ -58,21 +70,26 @@ fase="implantar web"
 docker compose up -d --no-deps web
 docker exec emeca-web-1 python manage.py check
 
-echo "== 5/5: recuperação conservadora por identidade comprovada =="
-fase="reposição dos boletins"
-# O banco já possui backup íntegro. A origem histórica também precisa
-# corresponder à turma/ano, nome E data de nascimento. Nunca restaurar
-# boletins por mera igualdade de ID (IDs podem ter sido reutilizados).
+echo "== 5/5: inspeção conservadora dos boletins, sem recuperação automática =="
+fase="simulação dos boletins"
+# A reposição usa backup histórico e exige vínculo forte por nome/nascimento.
+# Não preencher o banco por mera igualdade de ID ou nomes coincidentes.
 if docker exec emeca-web-1 python manage.py recuperar_boletins_por_identidade; then
-  if docker exec emeca-web-1 python manage.py recuperar_boletins_por_identidade --aplicar; then
-    echo "REPOSICAO: verifique a contagem acima (boletins seguros restaurados)."
+  if [[ "$aplicar_restauracao" == "true" ]]; then
+    fase="reposição de boletins autorizada"
+    if docker exec emeca-web-1 python manage.py recuperar_boletins_por_identidade --aplicar; then
+      echo "REPOSICAO: confira as contagens; cópia anterior à restauração foi criada."
+    else
+      echo "REPOSICAO_NAO_APLICADA: condição insegura ou referência ausente."
+      echo "Os boletins atuais e backups permanecem preservados."
+    fi
   else
-    echo "REPOSICAO_NAO_APLICADA: o comando rejeitou uma condição insegura."
-    echo "Os boletins atuais e todos os backups permanecem preservados."
+    echo "REPOSICAO_NAO_SOLICITADA: simulação executada, nenhum dado restaurado."
+    echo "Após conferir a simulação, é possível pedir a reposição explicitamente."
   fi
 else
-  echo "REPOSICAO_NAO_APLICADA: sem referência histórica válida ou vínculo seguro."
-  echo "O painel foi atualizado, mas a recuperação de dados continua pendente."
+  echo "REPOSICAO_NAO_APLICADA: fonte histórica ausente, divergente ou incerta."
+  echo "O painel foi atualizado, mas os dados ainda exigem análise."
 fi
 
 echo "== Resumo final da instalação (somente leitura) =="
@@ -94,3 +111,4 @@ echo "IMPLANTACAO WEB CONCLUIDA. Nenhum serviço WA-AKG foi reiniciado."
 echo "A sessão com limpeza pendente NÃO é apagada ou liberada por este script:"
 echo "isso exige verificação da situação remota, para impedir perda de mensagens."
 echo "Se houver menos de 27 boletins no período 3, a recuperação permanece parcial."
+echo "Por padrão, nenhum boletim foi restaurado: use a opção explícita apenas após conferir vínculos."
