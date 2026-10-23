@@ -34,6 +34,7 @@ jobs:
       - name: Validar scripts da futura atualização única
         run: |
           bash -n deploy/atualizar_lote_seguro.sh
+          bash -n deploy/instalar_correcao_web_boletins_whatsapp_segura.sh
           bash -n deploy/instalar_cpfs_emeca.sh
           bash -n deploy/wa-akg/implantar_emeca.sh
           bash -n deploy/wa-akg/ativar_anexos_emeca.sh
