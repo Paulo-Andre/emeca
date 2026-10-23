@@ -105,14 +105,19 @@
           <span class="manager-badge {% if linha.acesso_pronto %}is-on{% else %}is-off{% endif %}">
             {% if linha.acesso_pronto %}Acesso pronto{% elif not linha.vinculado %}Vincular Declaração{% else %}Falta CPF/data na Declaração{% endif %}
           </span>
-          <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_boletim_aluno_editar' periodo.pk linha.boletim.pk %}">
-            <i data-lucide="pencil"></i> Editar aluno e notas
-          </a>
-          <form method="post" action="{% url 'site_publico:gestao_boletim_aluno_excluir' periodo.pk linha.boletim.pk %}" onsubmit="return confirm('ATENÇÃO: excluir APENAS o boletim deste aluno neste período, incluindo suas notas e faltas? {% if periodo.publicado %}O período está PUBLICADO: o boletim deste aluno deixará de estar disponível na consulta dos responsáveis. {% endif %}A Declaração e os boletins dos outros alunos serão preservados. Esta ação não desfaz PDFs já enviados pelo WhatsApp.');">
-            {% csrf_token %}
-            <input type="hidden" name="confirmar" value="EXCLUIR">
-            <button type="submit" class="manager-btn bulletin-danger-btn" title="Excluir apenas este boletim"><i data-lucide="trash-2"></i> Excluir boletim</button>
-          </form>
+          <div class="bulletin-student-manager-actions">
+            <a class="manager-btn manager-btn--secondary" href="{% url 'site_publico:gestao_boletim_aluno_editar' periodo.pk linha.boletim.pk %}">
+              <i data-lucide="pencil"></i> Editar aluno e notas
+            </a>
+            <form method="post" action="{% url 'site_publico:gestao_boletim_aluno_excluir' periodo.pk linha.boletim.pk %}"
+              onsubmit="return confirm('Excluir somente o boletim de {{ linha.boletim.aluno.nome|escapejs }} neste período? Serão removidas as notas e faltas deste boletim. {% if periodo.publicado %}O período continuará publicado, mas este boletim deixará de estar disponível para a família. {% endif %}Os demais alunos e Declarações permanecem intactos. PDFs já enviados por WhatsApp não serão apagados.');">
+              {% csrf_token %}
+              <input type="hidden" name="confirmar" value="EXCLUIR">
+              <button type="submit" class="manager-btn bulletin-danger-btn" title="Excluir o boletim de {{ linha.boletim.aluno.nome }}" aria-label="Excluir o boletim de {{ linha.boletim.aluno.nome }}">
+                <i data-lucide="trash-2"></i> Excluir boletim
+              </button>
+            </form>
+          </div>
         </article>
       {% endfor %}
     </div>
