@@ -58,20 +58,37 @@ fase="implantar web"
 docker compose up -d --no-deps web
 docker exec emeca-web-1 python manage.py check
 
-echo "== 5/5: reposição SOMENTE por identidade única (sem reutilizar IDs antigos) =="
-fase="simulação automática da correspondência de alunos"
-# O comando antigo restaurar_boletins_ausentes dependia de IDs antigos,
-# que podem estar reciclados. Não o utilizar.
-docker exec emeca-web-1 python manage.py recuperar_boletins_por_identidade
-fase="snapshot e reposição dos vínculos verificados"
-# O próprio comando cria segundo snapshot íntegro e faz tudo em transação.
-# Se houver menos de 23 vínculos comprovados, falha SEM restaurar.
-# A identidade não resolvida fica pendente para conferência.
-docker exec emeca-web-1 python manage.py recuperar_boletins_por_identidade --aplicar
+echo "== 5/5: recuperação conservadora por identidade comprovada =="
+fase="reposição dos boletins"
+# O banco já possui backup íntegro. A origem histórica também precisa
+# corresponder à turma/ano, nome E data de nascimento. Nunca restaurar
+# boletins por mera igualdade de ID (IDs podem ter sido reutilizados).
+if docker exec emeca-web-1 python manage.py recuperar_boletins_por_identidade; then
+  if docker exec emeca-web-1 python manage.py recuperar_boletins_por_identidade --aplicar; then
+    echo "REPOSICAO: verifique a contagem acima (boletins seguros restaurados)."
+  else
+    echo "REPOSICAO_NAO_APLICADA: o comando rejeitou uma condição insegura."
+    echo "Os boletins atuais e todos os backups permanecem preservados."
+  fi
+else
+  echo "REPOSICAO_NAO_APLICADA: sem referência histórica válida ou vínculo seguro."
+  echo "O painel foi atualizado, mas a recuperação de dados continua pendente."
+fi
 
-trap - ERR
+echo "== Resumo final da instalação (somente leitura) =="
+fase="resumo"
+docker exec emeca-web-1 python manage.py shell -c '
+from site_publico.models import BoletimAluno
+from usuarioSec.models import SessaoWhatsAppAtiva
+from django.conf import settings
+print("BOLETINS_PERIODO_3:", BoletimAluno.objects.filter(periodo_id=3).count())
+print("BOLETINS_TOTAL:", BoletimAluno.objects.count())
+print("WA_LIMPEZA_PENDENTE:", SessaoWhatsAppAtiva.objects.filter(
+    chave="secretaria", limpeza_pendente=True
+).exists())
+'
 echo ""
-echo "REPARO DO PAINEL E REPOSIÇÃO DE BOLETINS COM IDENTIDADE VERIFICADA CONCLUÍDOS."
-echo "Alunos sem correspondência forte NÃO foram restaurados nem ligados a notas de terceiros."
-echo "WA-AKG, sessão, mensagens e MySQL não foram recriados nem limpos."
-echo "Backups anteriores e snapshots novos foram preservados."
+echo "IMPLANTACAO WEB CONCLUIDA. Nenhum serviço WA-AKG foi reiniciado."
+echo "A sessão com limpeza pendente NÃO é apagada ou liberada por este script:"
+echo "isso exige verificação da situação remota, para impedir perda de mensagens."
+echo "Se houver menos de 27 boletins no período 3, a recuperação permanece parcial."
