@@ -8,11 +8,11 @@ import json
 import re
 import subprocess
 
-def command(args, timeout=9):
+def command(args, timeout=9, *, include_stderr=False):
     try:
         p = subprocess.run(args, capture_output=True, text=True,
                            timeout=timeout, check=False)
-        return p.returncode, p.stdout
+        return p.returncode, p.stdout + (p.stderr if include_stderr else "")
     except subprocess.TimeoutExpired:
         return "TIMEOUT", ""
     except OSError:
@@ -97,7 +97,7 @@ req.on('error',err=>console.log('WA_LOCAL_HTTP:'+(
     print("WA-AKG HTTP interno:",msg or "SEM_RESPOSTA " + str(rc))
 
 def check_log_signals():
-    rc,out=command(["docker","logs","--tail","180","wa-akg-app"],9)
+    rc,out=command(["docker","logs","--tail","180","wa-akg-app"],9,include_stderr=True)
     if rc != 0:
         print("Sinais de erro (logs): indisponíveis",rc)
         return
