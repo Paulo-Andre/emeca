@@ -102,6 +102,36 @@ class ExclusaoBoletimIndividualTests(TestCase):
         self.periodo.refresh_from_db()
         self.assertTrue(self.periodo.publicado)
 
+    def test_exclui_um_de_tres_boletins_do_mesmo_periodo(self):
+        # Regressão para o relato de vários alunos desaparecendo por um clique.
+        colegas = []
+        for idx in range(2):
+            registro = declaracao.objects.create(
+                nomeDoAluno=f"COLEGA SINTETICO {idx}",
+                dataNascimentoAluno=date(2018, 4, 3),
+            )
+            aluno = AlunoBoletim.objects.create(
+                nome=f"COLEGA SINTETICO {idx}",
+                declaracao=registro,
+            )
+            colegas.append(BoletimAluno.objects.create(
+                periodo=self.periodo, aluno=aluno, faltas_totais=idx + 1,
+            ))
+
+        self.periodo.publicado = True
+        self.periodo.save(update_fields=["publicado"])
+        self.assertEqual(self.periodo.boletins.count(), 3)
+
+        resposta = self.client.post(self.url(), {"confirmar": "EXCLUIR"})
+        self.assertEqual(resposta.status_code, 302)
+        self.assertEqual(self.periodo.boletins.count(), 2)
+        self.assertFalse(BoletimAluno.objects.filter(pk=self.b1.pk).exists())
+        for colega in colegas:
+            colega.refresh_from_db()
+            self.assertEqual(colega.periodo_id, self.periodo.pk)
+            self.assertTrue(BoletimAluno.objects.filter(pk=colega.pk).exists())
+        self.assertTrue(declaracao.objects.filter(pk=self.declaracao.pk).exists())
+
     def test_sem_confirmacao_nao_exclui(self):
         resposta = self.client.post(self.url(), {"confirmar": ""})
         self.assertEqual(resposta.status_code, 302)
