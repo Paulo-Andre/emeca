@@ -38,6 +38,12 @@ if configurado():
     except WhatsAppGatewayError as e:
         out["gateway_status"] = "ERRO_HTTP"
         out["gateway_http"] = e.status_code or 0
+        # Identificar falha de rede sem revelar URL, IP, senha ou corpo HTTP.
+        causa = getattr(e, "__cause__", None)
+        out["gateway_causa"] = type(causa).__name__ if causa else "NAO_INFORMADA"
+        motivo = getattr(causa, "reason", None)
+        if motivo is not None:
+            out["gateway_motivo"] = type(motivo).__name__
     except Exception as e:
         out["gateway_status"] = "ERRO_TECNICO"
         out["gateway_erro_classe"] = type(e).__name__
@@ -105,7 +111,9 @@ def main():
                       "função:",report.get("erro_funcao","-"),
                       "linha:",report.get("erro_linha","-"))
             print("WA-AKG:",report.get("gateway_status"),
-                  "HTTP:",report.get("gateway_http","-"))
+                  "HTTP:",report.get("gateway_http","-"),
+                  "causa:",report.get("gateway_causa","-"),
+                  "tipo de falha:",report.get("gateway_motivo","-"))
             print("Limpeza WhatsApp pendente:",report.get("limpeza_pendente"))
             print("Registro de sessão existente:",report.get("registro_de_sessao"))
             print("Períodos e números de boletins (sem dados pessoais):")
