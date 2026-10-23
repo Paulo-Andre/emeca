@@ -12,7 +12,8 @@ from urllib.parse import quote
 
 ROOTS = (Path("/srv/backups/emeca"), Path("/srv/backups"))
 SUFFIXES = (".sqlite3", ".sqlite", ".db", ".sqlite3.gz", ".db.gz",
-            ".zip", ".tar", ".tar.gz", ".tgz", ".bak", ".sql", ".dump")
+            ".zip", ".tar", ".tar.gz", ".tar.gz.enc", ".tgz", ".bak",
+            ".sql", ".sql.gz", ".dump", ".dump.gz", ".pgdump")
 
 def scan():
     found = {}
