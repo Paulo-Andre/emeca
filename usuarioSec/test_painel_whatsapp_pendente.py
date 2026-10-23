@@ -28,7 +28,7 @@ class PainelLimpezaPendenteTests(TestCase):
         )
         resposta = self.client.get(reverse("whatsapp"))
         self.assertEqual(resposta.status_code, 200)
-        self.assertContains(resposta, "LIMPEZA_PENDENTE")
+        self.assertContains(resposta, "Limpeza do WhatsApp pendente")
         obter.assert_not_called()
 
     @patch("usuarioSec.whatsapp_views.obter_sessao",
