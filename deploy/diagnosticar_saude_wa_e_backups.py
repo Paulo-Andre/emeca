@@ -99,8 +99,32 @@ print('WA_STATE:'+json.dumps({'id':s,'pendente':flag}))"""
                       "MySQL estado da sessão do EMECA")
         if session is not None:
             print("Sessão antiga:", session if session else "NAO_ENCONTRADA")
-        mysql("SELECT COUNT(*) FROM Message WHERE sessionId IN (SELECT id FROM Session WHERE sessionId='"+sid+"');",
-              "MySQL mensagens da sessão")
+        # COUNT(*) pode varrer muito histórico e exceder o tempo.
+        # Consultar apenas metadados de índices e a presença de um registro,
+        # sem ler payloads, nomes, telefones nem mensagens.
+        idx=mysql(
+            "SELECT COUNT(*) FROM information_schema.STATISTICS "
+            "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Message' "
+            "AND COLUMN_NAME='sessionId';",
+            "MySQL índice de sessão em Message"
+        )
+        if idx is not None and idx.strip().isdigit() and int(idx.strip())>0:
+            exists=mysql(
+                "SELECT EXISTS(SELECT 1 FROM Message WHERE sessionId=("
+                "SELECT id FROM Session WHERE sessionId='"+sid+"' LIMIT 1) LIMIT 1);",
+                "MySQL presença de mensagens desta sessão"
+            )
+            if exists is not None:
+                print("Mensagens anteriores ainda presentes:",exists.strip()=="1")
+        else:
+            print("MySQL presença de mensagens: NAO_CONSULTADA_SEM_INDICE")
+        approx=mysql(
+            "SELECT COALESCE(TABLE_ROWS,0) FROM information_schema.TABLES "
+            "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='Message' LIMIT 1;",
+            "MySQL contagem aproximada global de mensagens"
+        )
+        if approx is not None:
+            print("Linhas totais estimadas (todas as sessões):",approx or "indefinido")
         mysql("SELECT COUNT(*) FROM AuthState WHERE sessionId='"+sid+"';",
               "MySQL autenticações da sessão")
 
