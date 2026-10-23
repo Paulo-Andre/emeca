@@ -45,12 +45,19 @@ def _request(method, path, payload=None):
     try:
         with urlopen(request, timeout=settings.WA_AKG_TIMEOUT_SECONDS) as response:
             raw = response.read().decode("utf-8")
-            return json.loads(raw) if raw else {}
+            try:
+                return json.loads(raw) if raw else {}
+            except json.JSONDecodeError as exc:
+                raise WhatsAppGatewayError(
+                    "O WA-AKG retornou resposta inválida. Nenhuma ação será repetida automaticamente."
+                ) from exc
     except HTTPError as exc:
         raw = exc.read().decode("utf-8", errors="replace")
         try:
             data = json.loads(raw) if raw else {}
         except json.JSONDecodeError:
+            data = {}
+        if not isinstance(data, dict):
             data = {}
         message = (
             data.get("message")
@@ -61,6 +68,12 @@ def _request(method, path, payload=None):
     except URLError as exc:
         raise WhatsAppGatewayError(
             "Não foi possível conectar ao serviço WA-AKG."
+        ) from exc
+    except OSError as exc:
+        # TimeoutError/socket resets nem sempre vêm encapsulados em URLError.
+        # Evita erro 500 na página e não tenta novamente POSTs de envio/purga.
+        raise WhatsAppGatewayError(
+            "A conexão com o WA-AKG falhou ou expirou. Verifique o estado antes de repetir a operação."
         ) from exc
 
 
@@ -206,12 +219,19 @@ def _request_multipart(path, fields, filename, content_type, content):
     try:
         with urlopen(request, timeout=max(settings.WA_AKG_TIMEOUT_SECONDS, 30)) as response:
             raw = response.read().decode("utf-8")
-            return json.loads(raw) if raw else {}
+            try:
+                return json.loads(raw) if raw else {}
+            except json.JSONDecodeError as exc:
+                raise WhatsAppGatewayError(
+                    "O WA-AKG retornou resposta inválida. Nenhuma ação será repetida automaticamente."
+                ) from exc
     except HTTPError as exc:
         raw = exc.read().decode("utf-8", errors="replace")
         try:
             data = json.loads(raw) if raw else {}
         except json.JSONDecodeError:
+            data = {}
+        if not isinstance(data, dict):
             data = {}
         message = (
             data.get("message")
@@ -222,6 +242,12 @@ def _request_multipart(path, fields, filename, content_type, content):
     except URLError as exc:
         raise WhatsAppGatewayError(
             "Não foi possível conectar ao serviço WA-AKG."
+        ) from exc
+    except OSError as exc:
+        # TimeoutError/socket resets nem sempre vêm encapsulados em URLError.
+        # Evita erro 500 na página e não tenta novamente POSTs de envio/purga.
+        raise WhatsAppGatewayError(
+            "A conexão com o WA-AKG falhou ou expirou. Verifique o estado antes de repetir a operação."
         ) from exc
 
 
