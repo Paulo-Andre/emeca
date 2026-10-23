@@ -30,6 +30,7 @@ docker run --rm --network none --entrypoint python \
   -e DJANGO_RATE_LIMIT_ENABLED=0 \
   emeca-web manage.py test \
   site_publico.test_exclusao_boletim_individual \
+  site_publico.test_boletim_faltas_logo \
   usuarioSec.test_painel_whatsapp_pendente \
   usuarioSec.test_limpeza_sessao_whatsapp \
   usuarioSec.test_historico_falhas_whatsapp_qa \
