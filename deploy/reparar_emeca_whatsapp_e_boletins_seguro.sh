@@ -8,8 +8,9 @@ fase="iniciando"
 falha() {
   echo ""
   echo "REPARO SUSPENSO NA ETAPA: ${fase}"
-  echo "Nenhum boletim foi restaurado ou excluído; nenhum WhatsApp foi desconectado."
-  echo "Backups e banco atual não foram substituídos."
+  echo "Nenhum comando de exclusão, logout ou limpeza WhatsApp foi executado por este reparo."
+  echo "Nenhum backup existente foi substituído."
+  echo "Se a falha ocorreu na reposição, a transação corrente é revertida; consulte a contagem atual."
 }
 trap falha ERR
 
