@@ -390,7 +390,8 @@ def whatsapp(request):
             if not isinstance(resposta, dict):
                 raise WhatsAppGatewayError("Resposta de sessão inválida.")
             dados = resposta.get("data")
-            dados = dados if isinstance(dados, dict) else {}
+            if not isinstance(dados, dict):
+                raise WhatsAppGatewayError("Dados de sessão inválidos no gateway.")
             status = str(dados.get("status") or "DESCONHECIDO").upper()
         except WhatsAppGatewayError as exc:
             status = "NAO_CRIADA" if exc.status_code == 404 else "INDISPONIVEL"
