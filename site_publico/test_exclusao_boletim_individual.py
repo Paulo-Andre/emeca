@@ -207,6 +207,31 @@ class ExclusaoBoletimIndividualTests(TestCase):
         self.assertTrue(declaracao.objects.filter(pk=self.declaracao.pk).exists())
         self.assertTrue(BoletimAluno.objects.filter(pk=self.b2.pk).exists())
 
+    def test_excluir_um_em_turma_com_tres_preserva_outros_dois(self):
+        outro_cadastro = declaracao.objects.create(nomeDoAluno="ALUNA FICTICIA 2")
+        terceiro_cadastro = declaracao.objects.create(nomeDoAluno="ALUNA FICTICIA 3")
+        outro_aluno = AlunoBoletim.objects.create(
+            nome="ALUNA FICTICIA 2", declaracao=outro_cadastro
+        )
+        terceiro_aluno = AlunoBoletim.objects.create(
+            nome="ALUNA FICTICIA 3", declaracao=terceiro_cadastro
+        )
+        segundo = BoletimAluno.objects.create(
+            periodo=self.periodo, aluno=outro_aluno, faltas_totais=1
+        )
+        terceiro = BoletimAluno.objects.create(
+            periodo=self.periodo, aluno=terceiro_aluno, faltas_totais=2
+        )
+        self.periodo.publicado = True
+        self.periodo.save(update_fields=["publicado"])
+        self.assertEqual(self.periodo.boletins.count(), 3)
+        resposta = self.client.post(self.url(), {"confirmar": "EXCLUIR"})
+        self.assertEqual(resposta.status_code, 302)
+        self.assertEqual(self.periodo.boletins.count(), 2)
+        self.assertFalse(BoletimAluno.objects.filter(pk=self.b1.pk).exists())
+        self.assertTrue(BoletimAluno.objects.filter(pk=segundo.pk).exists())
+        self.assertTrue(BoletimAluno.objects.filter(pk=terceiro.pk).exists())
+
     def test_get_nao_exclui(self):
         self.assertEqual(self.client.get(self.url()).status_code, 405)
         self.assertTrue(BoletimAluno.objects.filter(pk=self.b1.pk).exists())
