@@ -346,7 +346,13 @@ def gestao_boletim_aluno_excluir(request, periodo_pk, boletim_pk):
         messages.error(request, "Exclusão não confirmada.")
         return redirect("site_publico:gestao_boletim_periodo", pk=periodo.pk)
     nome = boletim.aluno.nome
-    boletim.delete()
+    # A exclusão pode remover também notas e referências de envio por
+    # cascata, mas NUNCA deve alcançar outros BoletimAluno. Transação
+    # inteira revertida caso a contagem desse modelo não seja exatamente 1.
+    with transaction.atomic():
+        _, tipos_removidos = boletim.delete()
+        if tipos_removidos.get(BoletimAluno._meta.label, 0) != 1:
+            raise RuntimeError("Exclusão individual inesperada; operação revertida.")
     messages.success(
         request,
         f"Boletim de {nome} excluído somente deste período. "
