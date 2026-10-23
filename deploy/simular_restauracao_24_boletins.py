@@ -158,10 +158,16 @@ try:
                     out["alunos_referenciados_ausentes"]=sum(
                         i not in alunos_agora for i in vinculados
                     )
+                    idx_decl=col_aluno.index("declaracao_id")
+                    idx_aluno_nome=col_aluno.index("nome")
                     out["alunos_id_reutilizado"]=sum(
                         i in alunos_agora and i in aluno_backup and (
-                            alunos_agora[i][col_aluno.index("declaracao_id")] !=
-                            aluno_backup[i][col_aluno.index("declaracao_id")]
+                            alunos_agora[i][idx_decl] != aluno_backup[i][idx_decl]
+                            or (
+                                alunos_agora[i][idx_decl] is None
+                                and alunos_agora[i][idx_aluno_nome] !=
+                                aluno_backup[i][idx_aluno_nome]
+                            )
                         )
                         for i in vinculados
                     )
@@ -188,10 +194,30 @@ try:
                     )
                     declaracoes_agora=ids(tmp,DECL)
                     out["declaracoes_ausentes_do_backup"]=len(set(decl_backup)-set(declaracoes_agora))
+                    campos_decl=campos[DECL]
+                    idx_nome_decl=campos_decl.index("nomeDoAluno")
+                    idx_nasc_decl=campos_decl.index("dataNascimentoAluno")
+                    refs_decl={
+                        aluno_backup[i][idx_decl] for i in vinculados
+                        if i in aluno_backup and aluno_backup[i][idx_decl] is not None
+                    }
+                    out["declaracoes_referenciadas_ausentes"]=sum(
+                        i not in declaracoes_agora or i not in decl_backup
+                        for i in refs_decl
+                    )
+                    out["declaracoes_identidade_divergente"]=sum(
+                        i in declaracoes_agora and i in decl_backup
+                        and any(
+                            declaracoes_agora[i][k]!=decl_backup[i][k]
+                            for k in (idx_nome_decl,idx_nasc_decl)
+                        ) for i in refs_decl
+                    )
                     out["fks_atuais_invalidas"]=len(tmp.execute("PRAGMA foreign_key_check").fetchall())
                     blockers=[
                         out["alunos_referenciados_ausentes"],
                         out["alunos_id_reutilizado"],
+                        out["declaracoes_referenciadas_ausentes"],
+                        out["declaracoes_identidade_divergente"],
                         out["fks_atuais_invalidas"],
                         out["disciplinas_incompatíveis"],
                         not out["periodo_compativel"],
@@ -283,7 +309,8 @@ def main():
         "ids_boletins_remapeados","ids_notas_remapeados",
         "alunos_referenciados_ausentes","alunos_id_reutilizado",
         "notas_id_colidindo","disciplinas_incompatíveis","periodo_compativel",
-        "declaracoes_ausentes_do_backup","fks_atuais_invalidas",
+        "declaracoes_ausentes_do_backup","declaracoes_referenciadas_ausentes",
+        "declaracoes_identidade_divergente","fks_atuais_invalidas",
         "apos_simulacao_boletins","apos_simulacao_notas",
         "fks_apos_simulacao_invalidas","erro_classe"
     ):
