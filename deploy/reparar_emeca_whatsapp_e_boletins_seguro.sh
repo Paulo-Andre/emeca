@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Reparo do painel EMECA sem alterações do WA-AKG e SEM RESTAURAR boletins
-# com vínculos de identidade não comprovados.
+# Reparo do painel EMECA sem alterações do WA-AKG, repondo APENAS boletins
+# com vínculos de identidade fortemente comprovados.
 set -Eeuo pipefail
 cd /srv/projetos/emeca
 
@@ -49,6 +49,7 @@ docker run --rm --network none --entrypoint python \
   usuarioSec.test_painel_whatsapp_pendente \
   usuarioSec.test_qr_limpeza_pendente \
   site_publico.test_recuperacao_boletins_ausentes \
+  site_publico.test_recuperar_boletins_identidade \
   site_publico.test_exclusao_boletim_individual --noinput
 
 echo "== 4/5: atualizar somente a interface do EMECA =="
@@ -56,17 +57,20 @@ fase="implantar web"
 docker compose up -d --no-deps web
 docker exec emeca-web-1 python manage.py check
 
-echo "== 5/5: auditar boletins antigos sem gravar nada =="
-fase="auditoria de vínculos"
-# A restauração antiga pressupunha IDs de alunos imutáveis; a reconciliação
-# mostrou que podem ter sido alterados. Não chamar --aplicar automaticamente.
-python3 deploy/comparar_boletins_atual_backups_readonly.py
-python3 deploy/auditar_correspondencia_24_boletins.py
-python3 deploy/auditar_identidade_24o_boletim.py
+echo "== 5/5: reposição SOMENTE por identidade única (sem reutilizar IDs antigos) =="
+fase="simulação automática da correspondência de alunos"
+# O comando antigo restaurar_boletins_ausentes dependia de IDs antigos,
+# que podem estar reciclados. Não o utilizar.
+docker exec emeca-web-1 python manage.py recuperar_boletins_por_identidade
+fase="snapshot e reposição dos vínculos verificados"
+# O próprio comando cria segundo snapshot íntegro e faz tudo em transação.
+# Se houver menos de 23 vínculos comprovados, falha SEM restaurar.
+# A identidade não resolvida fica pendente para conferência.
+docker exec emeca-web-1 python manage.py recuperar_boletins_por_identidade --aplicar
 
 trap - ERR
 echo ""
-echo "INTERFACE EMECA ATUALIZADA SEM LIMPEZA WHATSAPP."
-echo "Os boletins permanecem intactos. Backups existentes foram preservados."
-echo "Restauração seletiva BLOQUEADA até todos os vínculos de alunos serem validados."
-echo "WA-AKG, sessões, mídia e MySQL não foram recriados nem alterados."
+echo "REPARO DO PAINEL E REPOSIÇÃO DE BOLETINS COM IDENTIDADE VERIFICADA CONCLUÍDOS."
+echo "Alunos sem correspondência forte NÃO foram restaurados nem ligados a notas de terceiros."
+echo "WA-AKG, sessão, mensagens e MySQL não foram recriados nem limpos."
+echo "Backups anteriores e snapshots novos foram preservados."
