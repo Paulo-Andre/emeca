@@ -107,6 +107,45 @@ class ExclusaoBoletimIndividualTests(TestCase):
         self.assertEqual(resposta.status_code, 302)
         self.assertTrue(BoletimAluno.objects.filter(pk=self.b1.pk).exists())
 
+    def test_excluir_um_entre_tres_preserva_outros_dois_e_notas(self):
+        from site_publico.models import DisciplinaBoletim, NotaBoletim
+
+        segundo_cadastro = declaracao.objects.create(nomeDoAluno="ALUNO B TESTE")
+        terceiro_cadastro = declaracao.objects.create(nomeDoAluno="ALUNO C TESTE")
+        segundo = AlunoBoletim.objects.create(
+            nome="ALUNO B TESTE", declaracao=segundo_cadastro,
+        )
+        terceiro = AlunoBoletim.objects.create(
+            nome="ALUNO C TESTE", declaracao=terceiro_cadastro,
+        )
+        boletim_b = BoletimAluno.objects.create(
+            periodo=self.periodo, aluno=segundo, faltas_totais=7,
+        )
+        boletim_c = BoletimAluno.objects.create(
+            periodo=self.periodo, aluno=terceiro, faltas_totais=8,
+        )
+        disciplina = DisciplinaBoletim.objects.create(
+            periodo=self.periodo, nome="Matemática", ordem=1,
+        )
+        NotaBoletim.objects.create(boletim=self.b1, disciplina=disciplina, nota=8)
+        NotaBoletim.objects.create(boletim=boletim_b, disciplina=disciplina, nota=7)
+        NotaBoletim.objects.create(boletim=boletim_c, disciplina=disciplina, nota=6)
+        self.periodo.publicado = True
+        self.periodo.save(update_fields=["publicado"])
+
+        antes = set(self.periodo.boletins.values_list("pk", flat=True))
+        self.assertEqual(len(antes), 3)
+        response = self.client.post(self.url(), {"confirmar": "EXCLUIR"})
+        self.assertEqual(response.status_code, 302)
+        depois = set(self.periodo.boletins.values_list("pk", flat=True))
+        self.assertEqual(depois, antes - {self.b1.pk})
+        self.assertEqual(NotaBoletim.objects.filter(boletim=self.b1).count(), 0)
+        self.assertEqual(NotaBoletim.objects.filter(
+            boletim_id__in=[boletim_b.pk, boletim_c.pk],
+        ).count(), 2)
+        self.assertTrue(declaracao.objects.filter(pk=self.declaracao.pk).exists())
+        self.assertTrue(BoletimAluno.objects.filter(pk=self.b2.pk).exists())
+
     def test_get_nao_exclui(self):
         self.assertEqual(self.client.get(self.url()).status_code, 405)
         self.assertTrue(BoletimAluno.objects.filter(pk=self.b1.pk).exists())
