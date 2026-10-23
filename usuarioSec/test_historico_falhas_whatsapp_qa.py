@@ -100,3 +100,30 @@ class HistoricoFalhasWhatsAppTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "WA-AKG indisponível")
         enviar.assert_not_called()
+
+    def test_tela_envios_abre_quando_gateway_retorna_data_nulo(self):
+        # Após uma limpeza parcial, a API pode responder 200 com data:null.
+        # O usuário deve continuar vendo a tela e os avisos, não HTTP 500.
+        with (
+            patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True),
+            patch("usuarioSec.whatsapp_views.obter_sessao",
+                  return_value={"status": True, "data": None}),
+            patch("usuarioSec.whatsapp_views.sessao_atual_id",
+                  return_value="emeca-qa-historico"),
+            patch("usuarioSec.whatsapp_views.limpeza_historico_pendente",
+                  return_value=True),
+        ):
+            response = self.client.get(reverse("whatsapp"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_tela_envios_abre_quando_gateway_retorna_resposta_invalida(self):
+        with (
+            patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True),
+            patch("usuarioSec.whatsapp_views.obter_sessao", return_value=None),
+            patch("usuarioSec.whatsapp_views.sessao_atual_id",
+                  return_value="emeca-qa-historico"),
+            patch("usuarioSec.whatsapp_views.limpeza_historico_pendente",
+                  return_value=True),
+        ):
+            response = self.client.get(reverse("whatsapp"))
+        self.assertEqual(response.status_code, 200)
