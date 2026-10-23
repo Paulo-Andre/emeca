@@ -2210,6 +2210,48 @@
   border-bottom: 1px solid #edf1eb;
 }
 
+.bulletin-student-manager-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.bulletin-student-manager-actions form { margin: 0; }
+.bulletin-student-manager-actions .manager-btn {
+  white-space: nowrap;
+  min-height: 35px;
+  justify-content: center;
+}
+@media (max-width: 950px) {
+  .bulletin-student-manager-row {
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+  }
+  .bulletin-student-manager-actions {
+    grid-column: 2 / -1;
+    justify-content: flex-start;
+  }
+}
+@media (max-width: 620px) {
+  .bulletin-student-manager-row {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+  .bulletin-student-manager-row > .manager-badge {
+    grid-column: 2;
+    justify-self: start;
+  }
+  .bulletin-student-manager-actions {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .bulletin-student-manager-actions form,
+  .bulletin-student-manager-actions .manager-btn {
+    width: 100%;
+  }
+}
+
 .bulletin-student-manager-row:last-child {
   border-bottom: 0;
 }
