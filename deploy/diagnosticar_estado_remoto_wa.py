@@ -36,12 +36,38 @@ def main():
         'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -N -B -s -uroot '
         '"$MYSQL_DATABASE" -e '+ "'"+sql+"'"
     )
+    # Verificar se o processo está ativo antes da consulta SQL. Nunca imprimir
+    # variáveis de ambiente, IDs ou as mensagens de erro brutas do MySQL.
+    for container in ("wa-akg-db", "wa-akg-app", "emeca-web-1"):
+        estado=cmd(["docker","inspect","--format","{{.State.Status}}",container],timeout=8)
+        valor=(estado.stdout or "").strip() if estado and estado.returncode==0 else "NAO_LOCALIZADO"
+        print("Container",container+":",valor if valor in ("running","exited","created","restarting","paused","dead") else "NAO_LOCALIZADO")
+
     q=cmd(["docker","exec","wa-akg-db","sh","-c",shell],timeout=25)
     if q is None:
         print("Consulta ao banco WA-AKG indisponível ou excedeu o tempo.")
         return
     if q.returncode:
-        print("Consulta ao MySQL falhou (código",q.returncode,"); resultado bruto omitido.")
+        # Reproduzir apenas códigos MySQL padronizados; erro bruto pode conter
+        # host, arquivo interno, credencial ou JID.
+        code_match=re.search(r"(?:ERROR|Error)\\s+(\\d{3,4})",q.stderr or "")
+        code=code_match.group(1) if code_match else "NAO_IDENTIFICADO"
+        print("Consulta ao MySQL falhou. Código de processo:",q.returncode,
+              "| código MySQL:",code)
+        if code=="NAO_IDENTIFICADO":
+            raw=(q.stderr or "").lower()
+            if "not found" in raw:
+                print("Classificação: executável/contêiner/comando não localizado.")
+            elif "not running" in raw:
+                print("Classificação: contêiner não está em execução.")
+            else:
+                print("Classificação: revisar disponibilidade ou autenticação do banco.")
+        elif code in ("1045","1698"):
+            print("Classificação: acesso ao MySQL recusado.")
+        elif code in ("2002","2003","2006","2013"):
+            print("Classificação: serviço MySQL indisponível ou conexão interrompida.")
+        elif code in ("1146","1054","1064"):
+            print("Classificação: consulta incompatível com esquema SQL atual.")
         return
     lines=q.stdout.strip().splitlines()
     if not lines:
