@@ -262,13 +262,34 @@ def _resolver_boletins_destinatarios(
     turma="",
     contato_id=None,
     tipos=None,
+    periodo_boletim_id=None,
 ):
     tipo, numero, ano = _validar_periodo(tipo, numero, ano)
+    periodo_selecionado = None
+    if modo == "turma_boletim":
+        # Diferentemente da turma informada em Declarações, o identificador
+        # aponta para UM período específico e publicado, sem depender de
+        # nomes de turmas que podem se repetir entre anos ou etapas.
+        try:
+            periodo_id = int(periodo_boletim_id)
+        except (TypeError, ValueError):
+            raise ValueError("Selecione uma turma cadastrada em Boletins.") from None
+        periodo_selecionado = PeriodoBoletim.objects.filter(
+            pk=periodo_id, publicado=True,
+            tipo=tipo, numero=numero, ano=ano,
+        ).first()
+        if periodo_selecionado is None:
+            raise ValueError(
+                "A turma selecionada não corresponde ao ano e período "
+                "publicados. Selecione novamente a turma do Boletim."
+            )
+
     contatos = _queryset_contatos(
         modo,
         turma=turma,
         contato_id=contato_id,
         tipos=tipos,
+        periodo_boletim_id=periodo_selecionado.pk if periodo_selecionado else None,
     )
 
     boletins = (
@@ -282,6 +303,8 @@ def _resolver_boletins_destinatarios(
         .select_related("aluno", "periodo")
         .prefetch_related("resultados__disciplina")
     )
+    if periodo_selecionado is not None:
+        boletins = boletins.filter(periodo_id=periodo_selecionado.pk)
 
     # O boletim só pode ser associado ao aluno da mesma Declaração.
     # Nunca enviar boletim por mera igualdade de nome (homônimos).
@@ -339,6 +362,7 @@ def _resolver_boletins_destinatarios(
         "tipo": tipo,
         "numero": numero,
         "ano": ano,
+        "turma_selecionada": periodo_selecionado.turma if periodo_selecionado else turma,
     }
 
 
@@ -600,6 +624,7 @@ def whatsapp_boletins_preview(request):
             turma=request.GET.get("turma") or "",
             contato_id=request.GET.get("contato_id") or None,
             tipos=_tipos_selecionados(request),
+            periodo_boletim_id=request.GET.get("periodo_boletim_id") or None,
         )
     except ValueError as exc:
         return JsonResponse({"ok": False, "erro": str(exc)}, status=400)
@@ -907,6 +932,7 @@ def _enfileirar_boletins(request):
             turma=request.POST.get("turma") or "",
             contato_id=request.POST.get("contato_id") or None,
             tipos=_tipos_selecionados(request),
+            periodo_boletim_id=request.POST.get("periodo_boletim_id") or None,
         )
     except ValueError as exc:
         messages.error(request, str(exc))
@@ -936,7 +962,7 @@ def _enfileirar_boletins(request):
                 numero_periodo=dados["numero"],
                 ano=dados["ano"],
                 modo=request.POST.get("modo") or "todos",
-                turma=(request.POST.get("turma") or "").strip(),
+                turma=dados["turma_selecionada"],
                 mensagem=(mensagem_com_anexo(mensagem_pdf, referencia_anexo)
                           if referencia_anexo else mensagem_pdf),
                 total=len(dados["itens"]),
