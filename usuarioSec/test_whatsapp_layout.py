@@ -40,6 +40,35 @@ class WhatsAppInboxDesignTests(TestCase):
             with self.subTest(elemento=elemento):
                 self.assertContains(resposta, f'id="{elemento}"')
 
+    def test_composer_anexos_estao_agrupados_sem_quebrar_campo(self):
+        resposta = self.client.get(reverse("whatsapp_mensagens"))
+        self.assertEqual(resposta.status_code, 200)
+        html = resposta.content.decode("utf-8")
+        inicio = html.index('<form class="wa-reply-form" id="replyForm">')
+        fim = html.index("</form>", inicio)
+        composer = html[inicio:fim]
+        self.assertIn('class="wa-compose-tools"', composer)
+        self.assertIn('id="attachButton"', composer)
+        self.assertIn('id="attachImageButton"', composer)
+        self.assertIn('id="attachPdfButton"', composer)
+        self.assertIn('id="replyMessage"', composer)
+        self.assertIn('id="sendReply"', composer)
+        # Os três botões de anexos são filhos do mesmo agrupamento.
+        self.assertLess(
+            composer.index('id="attachPdfButton"'),
+            composer.index('id="replyMessage"'),
+        )
+        self.assertIn("20261023-compose-tools-01", html)
+
+    def test_composer_responsivo_na_folha_estatica(self):
+        caminho = finders.find("css/whatsapp-inbox-redesign.css")
+        self.assertTrue(caminho)
+        with open(caminho, encoding="utf-8") as arquivo:
+            css = arquivo.read()
+        self.assertIn("grid-template-columns: max-content minmax(0, 1fr) max-content;", css)
+        self.assertIn(".wa-compose-tools .wa-attach-button", css)
+        self.assertIn("@media (max-width: 420px)", css)
+
     def test_sem_ids_html_duplicados(self):
         resposta = self.client.get(reverse("whatsapp_mensagens"))
         ids = re.findall(r'\bid="([^"]+)"', resposta.content.decode("utf-8"))
