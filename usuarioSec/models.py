@@ -70,6 +70,7 @@ class EnvioBoletimWhatsApp(models.Model):
     MODOS = [
         ("todos", "Todos"),
         ("turma", "Por turma"),
+        ("turma_boletim", "Turma cadastrada em Boletins"),
         ("individual", "Individual"),
     ]
 
@@ -83,7 +84,7 @@ class EnvioBoletimWhatsApp(models.Model):
     tipo_periodo = models.CharField(max_length=12)
     numero_periodo = models.PositiveSmallIntegerField()
     ano = models.PositiveSmallIntegerField()
-    modo = models.CharField(max_length=12, choices=MODOS)
+    modo = models.CharField(max_length=20, choices=MODOS)
     turma = models.CharField(max_length=160, blank=True)
     mensagem = models.TextField(blank=True)
     sessao = models.CharField(max_length=120, default="")
