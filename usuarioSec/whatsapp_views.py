@@ -974,6 +974,62 @@ def _enfileirar_boletins(request):
     return redirect("whatsapp")
 
 
+def _confirmar_destinatarios_turma_boletim(destinatarios):
+    """Valida TODOS os JIDs da turma antes de iniciar qualquer transmissão.
+
+    Corrige o nono dígito brasileiro usando a resposta oficial do WhatsApp,
+    sem aceitar JIDs LID não associados nem outros números. A consulta pode
+    ignorar números inexistentes, mas qualquer resposta ambígua bloqueia o
+    disparo inteiro. Nenhum documento escolar é usado nesta opção.
+    """
+    from .management.commands.processar_envios_whatsapp import (
+        _jid_eh_mesmo_numero_confirmado,
+    )
+
+    confirmados = []
+    vistos = set()
+    inexistentes = 0
+    for indice in range(0, len(destinatarios), 50):
+        bloco = destinatarios[indice:indice + 50]
+        numeros = [jid.split("@", 1)[0] for jid in bloco]
+        resposta = confirmar_operacao_wa(
+            verificar_numeros(numeros), "verificação de contatos da turma de Boletins",
+        )
+        dados = resposta.get("data")
+        resultados = dados.get("results") if isinstance(dados, dict) else None
+        if not isinstance(resultados, list) or len(resultados) != len(numeros):
+            raise WhatsAppGatewayError(
+                "O WhatsApp não confirmou todos os números da turma. Nenhum envio iniciado."
+            )
+        por_numero = {}
+        for entrada in resultados:
+            if not isinstance(entrada, dict):
+                raise WhatsAppGatewayError("Resposta inválida ao validar a turma. Nenhum envio iniciado.")
+            numero = str(entrada.get("number") or "")
+            if numero not in numeros or numero in por_numero:
+                raise WhatsAppGatewayError("Resposta ambígua ao validar a turma. Nenhum envio iniciado.")
+            por_numero[numero] = entrada
+        for jid, numero in zip(bloco, numeros):
+            entrada = por_numero.get(numero)
+            if entrada is None or type(entrada.get("exists")) is not bool:
+                raise WhatsAppGatewayError(
+                    "Não foi possível verificar um responsável. Nenhum envio iniciado."
+                )
+            if entrada["exists"] is False:
+                inexistentes += 1
+                continue
+            jid_confirmado = entrada.get("jid")
+            if not _jid_eh_mesmo_numero_confirmado(jid, jid_confirmado):
+                raise WhatsAppGatewayError(
+                    "O WhatsApp devolveu um destinatário diferente do cadastrado. "
+                    "Revise a turma antes de enviar; nenhuma mensagem foi transmitida."
+                )
+            if jid_confirmado not in vistos:
+                confirmados.append(jid_confirmado)
+                vistos.add(jid_confirmado)
+    return confirmados, inexistentes
+
+
 @login_required
 @require_POST
 def whatsapp_enviar(request):
@@ -982,6 +1038,14 @@ def whatsapp_enviar(request):
         return redirect("whatsapp")
     if (request.POST.get("conteudo") or "mensagem") == "boletim":
         return _enfileirar_boletins(request)
+
+    modo_envio = request.POST.get("modo") or "todos"
+    if modo_envio == "turma_boletim" and limpeza_historico_pendente():
+        messages.error(
+            request, "A limpeza da conexão WhatsApp está pendente. "
+            "Nenhuma mensagem será enviada até a sessão ser verificada.",
+        )
+        return redirect("whatsapp")
 
     mensagem = (request.POST.get("mensagem") or "").strip()
     anexo = request.FILES.get("anexo")
@@ -1020,6 +1084,18 @@ def whatsapp_enviar(request):
         return redirect("whatsapp")
 
     try:
+        nao_localizados = 0
+        if modo_envio == "turma_boletim":
+            destinatarios, nao_localizados = _confirmar_destinatarios_turma_boletim(
+                destinatarios
+            )
+            if not destinatarios:
+                messages.error(
+                    request,
+                    "Nenhum número dessa turma foi confirmado pelo WhatsApp. Nada foi enviado.",
+                )
+                return redirect("whatsapp")
+
         if len(destinatarios) == 1:
             jid = destinatarios[0]
             numero = jid.split("@")[0]
@@ -1074,6 +1150,10 @@ def whatsapp_enviar(request):
         if invalidos
         else ""
     )
+    if nao_localizados:
+        aviso_invalidos += (
+            f" {nao_localizados} número(s) não registrado(s) no WhatsApp foram ignorados."
+        )
     messages.success(
         request,
         (
