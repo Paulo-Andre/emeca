@@ -243,6 +243,102 @@ class WhatsAppBoletimTests(TestCase):
         self.assertEqual(dados["itens"], [])
         self.assertEqual(dados["sem_boletim"], 1)
 
+    def test_turma_do_boletim_pdf_seleciona_apenas_periodo_especifico(self):
+        # Mesmo ano e trimestre em turmas diferentes: não vazar PDFs
+        # para irmãos/turmas com telefone compartilhado.
+        outro_periodo = PeriodoBoletim.objects.create(
+            tipo="TRIMESTRE", numero=2, ano=2026,
+            turma="2º B", publicado=True,
+        )
+        outra_declaracao = declaracao.objects.create(
+            nomeDoAluno="ALUNO B", turmaDoAluno="2º B",
+        )
+        TelefoneDeclaracao.objects.create(
+            declaracao=outra_declaracao, tipo="MAE",
+            telefone="(38) 99999-1111",
+        )
+        outro_aluno = AlunoBoletim.objects.create(
+            nome="ALUNO B", declaracao=outra_declaracao,
+        )
+        outro_boletim = BoletimAluno.objects.create(
+            periodo=outro_periodo, aluno=outro_aluno,
+        )
+        dados = _resolver_boletins_destinatarios(
+            "turma_boletim", "TRIMESTRE", 2, 2026,
+            periodo_boletim_id=self.periodo_a.pk,
+            tipos=["MAE", "PAI"],
+        )
+        self.assertEqual(dados["alunos"], 1)
+        self.assertEqual(len(dados["itens"]), 2)
+        self.assertEqual(dados["turma_selecionada"], "1º A")
+        self.assertEqual({i["boletim_id"] if "boletim_id" in i else i["boletim"].pk
+                          for i in dados["itens"]}, {self.boletim_a.pk})
+        self.assertNotIn(outro_boletim.pk, {
+            item["boletim"].pk for item in dados["itens"]
+        })
+
+    def test_turma_do_boletim_rejeita_periodo_divergente_ou_nao_publicado(self):
+        with self.assertRaises(ValueError):
+            _resolver_boletins_destinatarios(
+                "turma_boletim", "TRIMESTRE", 1, 2026,
+                periodo_boletim_id=self.periodo_a.pk,
+            )
+        self.periodo_a.publicado = False
+        self.periodo_a.save(update_fields=["publicado"])
+        with self.assertRaises(ValueError):
+            _resolver_boletins_destinatarios(
+                "turma_boletim", "TRIMESTRE", 2, 2026,
+                periodo_boletim_id=self.periodo_a.pk,
+            )
+
+    def test_preview_por_turma_de_boletim_retorna_quantidade_correta(self):
+        usuario = get_user_model().objects.create_user(
+            username="preview_turma_pdf", password="senha-testes-sintetica",
+        )
+        autorizar_operador_whatsapp_teste(usuario)
+        self.client.force_login(usuario)
+        resposta = self.client.get(reverse("whatsapp_boletins_preview"), {
+            "modo": "turma_boletim",
+            "periodo_boletim_id": str(self.periodo_a.pk),
+            "boletim_tipo": "TRIMESTRE",
+            "boletim_numero": "2",
+            "boletim_ano": "2026",
+            "tipos": ["MAE", "PAI"],
+        })
+        self.assertEqual(resposta.status_code, 200)
+        self.assertEqual(resposta.json()["quantidade"], 2)
+        self.assertEqual(resposta.json()["alunos"], 1)
+
+    def test_post_turma_do_boletim_cria_fila_apenas_para_periodo_escolhido(self):
+        usuario = get_user_model().objects.create_user(
+            username="envio_turma_pdf", password="senha-testes-sintetica",
+        )
+        autorizar_operador_whatsapp_teste(usuario)
+        self.client.force_login(usuario)
+        with (
+            patch("usuarioSec.whatsapp_views.gateway_configurado", return_value=True),
+            patch("usuarioSec.whatsapp_views.obter_sessao",
+                  return_value={"data": {"status": "CONNECTED"}}),
+        ):
+            response = self.client.post(reverse("whatsapp_enviar"), {
+                "conteudo": "boletim",
+                "modo": "turma_boletim",
+                "periodo_boletim_id": str(self.periodo_a.pk),
+                "boletim_tipo": "TRIMESTRE",
+                "boletim_numero": "2",
+                "boletim_ano": "2026",
+                "tipos": ["MAE", "PAI"],
+            })
+        self.assertEqual(response.status_code, 302)
+        envio = EnvioBoletimWhatsApp.objects.get()
+        self.assertEqual(envio.modo, "turma_boletim")
+        self.assertEqual(envio.turma, "1º A")
+        self.assertEqual(envio.total, 2)
+        self.assertEqual(
+            set(envio.itens.values_list("boletim_id", flat=True)),
+            {self.boletim_a.pk},
+        )
+
     def test_post_coloca_pdf_personalizado_na_fila(self):
         usuario = get_user_model().objects.create_user(
             username="secretaria_whatsapp",
