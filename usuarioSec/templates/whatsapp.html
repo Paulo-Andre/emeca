@@ -10,7 +10,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
   <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-hover-overlay-06">
-  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261023-turmas-boletim-01">
+  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261024-turmas-boletim-pdf-01">
 </head>
 <body>
   {% include 'includes/sidebar.html' %}
@@ -214,7 +214,7 @@
           <select name="periodo_boletim_id" id="periodoBoletimId" disabled>
             <option value="">Selecione uma turma e o período</option>
             {% for item in turmas_boletim %}
-              <option value="{{ item.pk }}">{{ item.turma }} · {{ item.ano }} · {{ item.nome_periodo }}</option>
+              <option value="{{ item.pk }}" data-ano="{{ item.ano }}" data-tipo="{{ item.tipo }}" data-numero="{{ item.numero }}" data-publicado="{{ item.publicado|yesno:'1,0' }}">{{ item.turma }} · {{ item.ano }} · {{ item.nome_periodo }}{% if not item.publicado %} · não publicado{% endif %}</option>
             {% endfor %}
           </select>
           <small>Somente responsáveis dos alunos com boletim vinculado a esta turma. Sem correspondência apenas por nome.</small>
@@ -495,6 +495,18 @@
       }
     }
 
+    function sincronizarPeriodoBoletimSelecionado() {
+      if (modoAtual() !== "turma_boletim" || conteudoAtual() !== "boletim") return;
+      const opcao = periodoBoletimId.selectedOptions[0];
+      if (!opcao || !opcao.value || opcao.dataset.publicado !== "1") return;
+      // Usar turma, ano, organização e número do MESMO período registrado
+      // em Boletins. A view valida a associação antes de enfileirar PDFs.
+      boletimAno.value = opcao.dataset.ano || "";
+      boletimTipo.value = opcao.dataset.tipo || "TRIMESTRE";
+      atualizarNumerosPeriodo();
+      boletimNumero.value = opcao.dataset.numero || "1";
+    }
+
     async function atualizarPreviewBoletim() {
       if (conteudoAtual() !== "boletim") return;
       if (!boletimAno.value) {
@@ -517,6 +529,7 @@
         boletim_numero: boletimNumero.value,
       });
       if (modoAtual() === "turma") params.set("turma", turma.value);
+      if (modoAtual() === "turma_boletim") params.set("periodo_boletim_id", periodoBoletimId.value);
       if (modoAtual() === "individual") params.set("contato_id", contatoId.value);
       if (modoAtual() !== "individual") {
         document.querySelectorAll('input[name="tipos"]:checked').forEach(el => params.append("tipos", el.value));
@@ -542,15 +555,17 @@
 
     function atualizarConteudo() {
       const boletim = conteudoAtual() === "boletim";
-      opcaoTurmaBoletim.hidden = boletim;
+      // A seleção "Turmas do Boletim" também serve para boletins em PDF.
+      // Não trocar silenciosamente para "Por turma" das Declarações.
+      opcaoTurmaBoletim.hidden = false;
       const radioTurmaBoletim = opcaoTurmaBoletim.querySelector('input[name="modo"]');
-      radioTurmaBoletim.disabled = boletim;
-      if (boletim && radioTurmaBoletim.checked) {
-        // Boletim PDF já possui seleção própria por período e turma.
-        // Voltar ao modo por turma, que exige uma nova escolha explícita.
-        const radioTurma = modos.find(el => el.value === "turma");
-        if (radioTurma) radioTurma.checked = true;
-        atualizarCampos();
+      radioTurmaBoletim.disabled = false;
+      for (const opcao of periodoBoletimId.options) {
+        if (opcao.value) opcao.disabled = boletim && opcao.dataset.publicado !== "1";
+      }
+      if (boletim && modoAtual() === "turma_boletim") {
+        if (periodoBoletimId.selectedOptions[0]?.disabled) periodoBoletimId.value = "";
+        sincronizarPeriodoBoletimSelecionado();
       }
       painelMensagem.hidden = boletim;
       painelBoletim.hidden = !boletim;
@@ -568,6 +583,7 @@
 
     function atualizarCampos() {
       const modo = modoAtual();
+      if (modo === "turma_boletim") sincronizarPeriodoBoletimSelecionado();
       campoTurma.hidden = modo !== "turma";
       campoTurmaBoletim.hidden = modo !== "turma_boletim";
       periodoBoletimId.disabled = modo !== "turma_boletim";
@@ -615,7 +631,11 @@
       atualizarPreview();
       atualizarPreviewBoletim();
     });
-    periodoBoletimId.addEventListener("change", atualizarPreview);
+    periodoBoletimId.addEventListener("change", () => {
+      sincronizarPeriodoBoletimSelecionado();
+      atualizarPreview();
+      atualizarPreviewBoletim();
+    });
     document.querySelectorAll('input[name="tipos"]').forEach(el => el.addEventListener("change", () => {
       atualizarPreview();
       atualizarPreviewBoletim();
