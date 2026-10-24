@@ -659,3 +659,81 @@
 .whatsapp-inbox-main .wa-chat-load-more[hidden] { display: none; }
 .whatsapp-inbox-main .wa-chat-load-more:hover { background: #e4f2f8; }
 .whatsapp-inbox-main .wa-chat-load-more:disabled { cursor: wait; opacity: .65; }
+
+/* Composer: anexos agrupados, área de digitação expansível e Enviar alinhado.
+   Evita quebra automática dos 5 elementos em uma grade de 3 colunas. */
+.whatsapp-inbox-main .wa-reply-form {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  gap: 8px;
+  align-items: end;
+}
+.whatsapp-inbox-main .wa-compose-tools {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  grid-column: 1;
+}
+.whatsapp-inbox-main .wa-compose-tools .wa-attach-button {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 43px;
+  align-self: center;
+  margin: 0;
+}
+.whatsapp-inbox-main .wa-reply-form > textarea#replyMessage {
+  min-width: 0;
+  width: 100%;
+  grid-column: 2;
+  grid-row: 1;
+  box-sizing: border-box;
+}
+.whatsapp-inbox-main .wa-reply-form > button#sendReply {
+  grid-column: 3;
+  grid-row: 1;
+  margin: 0;
+  align-self: end;
+}
+@media (max-width: 620px) {
+  .whatsapp-inbox-main .wa-reply-form {
+    grid-template-columns: max-content minmax(0, 1fr) 42px;
+    gap: 6px;
+    padding-inline: 8px;
+  }
+  .whatsapp-inbox-main .wa-compose-tools { gap: 4px; }
+  .whatsapp-inbox-main .wa-compose-tools .wa-attach-button {
+    flex-basis: 35px;
+    width: 35px;
+    height: 40px;
+  }
+  .whatsapp-inbox-main .wa-reply-form > textarea#replyMessage { min-height: 40px; }
+  .whatsapp-inbox-main .wa-reply-form > button#sendReply { width: 42px; height: 40px; }
+}
+@media (max-width: 420px) {
+  .whatsapp-inbox-main .wa-reply-form {
+    grid-template-columns: minmax(0, 1fr) 42px;
+    grid-template-rows: 36px auto;
+    align-items: center;
+    row-gap: 5px;
+  }
+  .whatsapp-inbox-main .wa-compose-tools {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    justify-self: start;
+  }
+  .whatsapp-inbox-main .wa-compose-tools .wa-attach-button {
+    flex-basis: 35px;
+    width: 35px;
+    height: 35px;
+  }
+  .whatsapp-inbox-main .wa-reply-form > textarea#replyMessage {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .whatsapp-inbox-main .wa-reply-form > button#sendReply {
+    grid-column: 2;
+    grid-row: 2;
+  }
+}
