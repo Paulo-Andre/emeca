@@ -283,6 +283,10 @@ def _resolver_boletins_destinatarios(
                 "A turma selecionada não corresponde ao ano e período "
                 "publicados. Selecione novamente a turma do Boletim."
             )
+        # O campo "turma" das Declarações pode chegar preenchido mesmo oculto
+        # após a troca de modalidade no formulário. Ignorá-lo aqui: a seleção
+        # de PDFs deve depender apenas do período publicado, identificado por ID.
+        turma = ""
 
     contatos = _queryset_contatos(
         modo,
