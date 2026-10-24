@@ -181,6 +181,14 @@
               <small>Somente os responsáveis de uma turma</small>
             </span>
           </label>
+          <label class="mode-option" id="opcaoTurmaBoletim">
+            <input type="radio" name="modo" value="turma_boletim">
+            <span class="mode-content">
+              <i data-lucide="notebook-tabs"></i>
+              <strong>Turmas do Boletim</strong>
+              <small>Responsáveis dos alunos de uma turma registrada em Boletins</small>
+            </span>
+          </label>
           <label class="mode-option">
             <input type="radio" name="modo" value="individual">
             <span class="mode-content">
@@ -199,6 +207,17 @@
               <option value="{{ turma }}">{{ turma }}</option>
             {% endfor %}
           </select>
+        </div>
+
+        <div class="field-block" id="campoTurmaBoletim" hidden>
+          <label for="periodoBoletimId">Turma cadastrada na aba Boletins</label>
+          <select name="periodo_boletim_id" id="periodoBoletimId" disabled>
+            <option value="">Selecione uma turma e o período</option>
+            {% for item in turmas_boletim %}
+              <option value="{{ item.pk }}">{{ item.turma }} · {{ item.ano }} · {{ item.nome_periodo }}</option>
+            {% endfor %}
+          </select>
+          <small>Somente responsáveis dos alunos com boletim vinculado a esta turma. Sem correspondência apenas por nome.</small>
         </div>
 
         <div class="field-block" id="campoIndividual" hidden>
@@ -424,6 +443,9 @@
     const form = document.getElementById("formEnvio");
     const modos = [...document.querySelectorAll('input[name="modo"]')];
     const campoTurma = document.getElementById("campoTurma");
+    const campoTurmaBoletim = document.getElementById("campoTurmaBoletim");
+    const periodoBoletimId = document.getElementById("periodoBoletimId");
+    const opcaoTurmaBoletim = document.getElementById("opcaoTurmaBoletim");
     const campoIndividual = document.getElementById("campoIndividual");
     const tiposContato = document.getElementById("tiposContato");
     const turma = document.getElementById("turma");
@@ -480,7 +502,9 @@
         boletimHint.textContent = "Selecione o ano letivo.";
         return;
       }
-      if ((modoAtual() === "turma" && !turma.value) || (modoAtual() === "individual" && !contatoId.value)) {
+      if ((modoAtual() === "turma" && !turma.value) ||
+          (modoAtual() === "turma_boletim" && !periodoBoletimId.value) ||
+          (modoAtual() === "individual" && !contatoId.value)) {
         boletimCount.textContent = "0";
         boletimHint.textContent = "Complete a seleção dos destinatários.";
         return;
@@ -518,6 +542,16 @@
 
     function atualizarConteudo() {
       const boletim = conteudoAtual() === "boletim";
+      opcaoTurmaBoletim.hidden = boletim;
+      const radioTurmaBoletim = opcaoTurmaBoletim.querySelector('input[name="modo"]');
+      radioTurmaBoletim.disabled = boletim;
+      if (boletim && radioTurmaBoletim.checked) {
+        // Boletim PDF já possui seleção própria por período e turma.
+        // Voltar ao modo por turma, que exige uma nova escolha explícita.
+        const radioTurma = modos.find(el => el.value === "turma");
+        if (radioTurma) radioTurma.checked = true;
+        atualizarCampos();
+      }
       painelMensagem.hidden = boletim;
       painelBoletim.hidden = !boletim;
       mensagem.required = !boletim && !anexoMensagem.files.length;
@@ -535,6 +569,9 @@
     function atualizarCampos() {
       const modo = modoAtual();
       campoTurma.hidden = modo !== "turma";
+      campoTurmaBoletim.hidden = modo !== "turma_boletim";
+      periodoBoletimId.disabled = modo !== "turma_boletim";
+      periodoBoletimId.required = modo === "turma_boletim";
       campoIndividual.hidden = modo !== "individual";
       tiposContato.hidden = modo === "individual";
       atualizarPreview();
@@ -544,12 +581,15 @@
     async function atualizarPreview() {
       const params = new URLSearchParams({modo: modoAtual()});
       if (modoAtual() === "turma" && turma.value) params.set("turma", turma.value);
+      if (modoAtual() === "turma_boletim" && periodoBoletimId.value) params.set("periodo_boletim_id", periodoBoletimId.value);
       if (modoAtual() === "individual" && contatoId.value) params.set("contato_id", contatoId.value);
       if (modoAtual() !== "individual") {
         document.querySelectorAll('input[name="tipos"]:checked').forEach(el => params.append("tipos", el.value));
       }
 
-      if ((modoAtual() === "turma" && !turma.value) || (modoAtual() === "individual" && !contatoId.value)) {
+      if ((modoAtual() === "turma" && !turma.value) ||
+          (modoAtual() === "turma_boletim" && !periodoBoletimId.value) ||
+          (modoAtual() === "individual" && !contatoId.value)) {
         recipientCount.textContent = "0";
         recipientHint.textContent = "Complete a seleção para calcular os destinatários.";
         return;
@@ -575,6 +615,7 @@
       atualizarPreview();
       atualizarPreviewBoletim();
     });
+    periodoBoletimId.addEventListener("change", atualizarPreview);
     document.querySelectorAll('input[name="tipos"]').forEach(el => el.addEventListener("change", () => {
       atualizarPreview();
       atualizarPreviewBoletim();
@@ -677,6 +718,11 @@
       }
 
       const quantidade = Number(recipientCount.textContent);
+      if (modoAtual() === "turma_boletim" && quantidade > 0 &&
+          !confirm("Confirmar o envio para até " + quantidade + " responsáveis desta turma do Boletim? Os números serão validados pelo WhatsApp antes do disparo.")) {
+        event.preventDefault();
+        return;
+      }
       if (anexoMensagem.files.length && modoAtual() !== "individual" &&
           !confirm("Enviar este arquivo para " + quantidade + " contatos individualmente pelo WhatsApp?")) {
         event.preventDefault();
