@@ -149,6 +149,36 @@ class TurmasBoletimWhatsAppTests(TestCase):
         self.assertEqual(resposta.status_code, 302)
         broadcast.assert_not_called()
 
+    @patch(BASE + "gateway_configurado", return_value=True)
+    @patch(BASE + "enviar_documento")
+    def test_nova_modalidade_nao_envia_pdf_de_boletim(
+        self, enviar_pdf, _gateway,
+    ):
+        resposta = self.client.post(reverse("whatsapp_enviar"), {
+            "conteudo": "boletim",
+            "modo": "turma_boletim",
+            "periodo_boletim_id": str(self.periodo.pk),
+        })
+        self.assertEqual(resposta.status_code, 302)
+        enviar_pdf.assert_not_called()
+
+    @patch(BASE + "limpeza_historico_pendente", return_value=True)
+    @patch(BASE + "enviar_broadcast")
+    @patch(BASE + "verificar_numeros")
+    def test_limpeza_pendente_bloqueia_envio(
+        self, verificar, broadcast, _pendente,
+    ):
+        resposta = self.client.post(reverse("whatsapp_enviar"), {
+            "conteudo": "mensagem",
+            "modo": "turma_boletim",
+            "periodo_boletim_id": str(self.periodo.pk),
+            "tipos": ["MAE"],
+            "mensagem": "Teste sem entrega.",
+        })
+        self.assertEqual(resposta.status_code, 302)
+        verificar.assert_not_called()
+        broadcast.assert_not_called()
+
     @patch(BASE + "enviar_broadcast")
     def test_nao_envia_sem_escolher_turma_do_boletim(self, broadcast):
         resposta = self.client.post(reverse("whatsapp_enviar"), {
