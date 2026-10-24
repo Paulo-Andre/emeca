@@ -732,6 +732,15 @@
           alert("Nenhum boletim publicado foi encontrado para essa seleção.");
           return;
         }
+        if (modoAtual() === "turma_boletim") {
+          const turmaEscolhida = periodoBoletimId.selectedOptions[0]?.textContent?.trim() || "turma selecionada";
+          if (!confirm("Confirma colocar na fila " + quantidade +
+                       " boletim(ns) em PDF da turma " + turmaEscolhida +
+                       "? Cada PDF será enviado somente ao responsável cadastrado para o aluno correspondente.")) {
+            event.preventDefault();
+            return;
+          }
+        }
         document.getElementById("btnEnviar").disabled = true;
         btnEnviarTexto.textContent = "Registrando solicitação…";
         return;
