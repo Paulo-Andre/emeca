@@ -585,6 +585,9 @@
       const modo = modoAtual();
       if (modo === "turma_boletim") sincronizarPeriodoBoletimSelecionado();
       campoTurma.hidden = modo !== "turma";
+      // Não enviar uma turma antiga das Declarações ao alternar para Boletins.
+      turma.disabled = modo !== "turma";
+      turma.required = modo === "turma";
       campoTurmaBoletim.hidden = modo !== "turma_boletim";
       periodoBoletimId.disabled = modo !== "turma_boletim";
       periodoBoletimId.required = modo === "turma_boletim";
