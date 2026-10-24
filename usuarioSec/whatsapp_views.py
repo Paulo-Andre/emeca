@@ -887,11 +887,13 @@ def whatsapp_qr(request):
 
 
 def _enfileirar_boletins(request):
-    if request.POST.get("modo") == "turma_boletim":
+    # O modo turma_boletim é válido também para PDFs personalizados.
+    # Nunca enfileirar documentos enquanto a troca/limpeza da sessão está pendente.
+    if limpeza_historico_pendente():
         messages.error(
             request,
-            "Turmas do Boletim é uma opção para comunicados. "
-            "Para enviar os PDFs personalizados, selecione Por turma e o período.",
+            "A limpeza da conexão WhatsApp está pendente. Nenhum boletim "
+            "foi enfileirado. Verifique a sessão antes de continuar.",
         )
         return redirect("whatsapp")
     if not gateway_configurado():
