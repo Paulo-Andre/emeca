@@ -277,6 +277,23 @@ class WhatsAppBoletimTests(TestCase):
             item["boletim"].pk for item in dados["itens"]
         })
 
+    def test_turma_boletim_ignora_turma_residual_das_declaracoes(self):
+        # Após trocar "Por turma" por "Turmas do Boletim", a seleção antiga
+        # pode permanecer num campo oculto. Não deve limitar os PDFs.
+        dados = _resolver_boletins_destinatarios(
+            "turma_boletim", "TRIMESTRE", 2, 2026,
+            turma="OUTRA TURMA",
+            periodo_boletim_id=self.periodo_a.pk,
+            tipos=["MAE", "PAI"],
+        )
+        self.assertEqual(dados["alunos"], 1)
+        self.assertEqual(len(dados["itens"]), 2)
+        self.assertEqual(dados["turma_selecionada"], "1º A")
+        self.assertEqual(
+            {item["boletim"].pk for item in dados["itens"]},
+            {self.boletim_a.pk},
+        )
+
     def test_turma_do_boletim_rejeita_periodo_divergente_ou_nao_publicado(self):
         with self.assertRaises(ValueError):
             _resolver_boletins_destinatarios(
@@ -348,6 +365,7 @@ class WhatsAppBoletimTests(TestCase):
             response = self.client.post(reverse("whatsapp_enviar"), {
                 "conteudo": "boletim",
                 "modo": "turma_boletim",
+                "turma": "OUTRA TURMA",  # campo antigo oculto no navegador
                 "periodo_boletim_id": str(self.periodo_a.pk),
                 "boletim_tipo": "TRIMESTRE",
                 "boletim_numero": "2",
