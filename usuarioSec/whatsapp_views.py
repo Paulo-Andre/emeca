@@ -862,6 +862,13 @@ def whatsapp_qr(request):
 
 
 def _enfileirar_boletins(request):
+    if request.POST.get("modo") == "turma_boletim":
+        messages.error(
+            request,
+            "Turmas do Boletim é uma opção para comunicados. "
+            "Para enviar os PDFs personalizados, selecione Por turma e o período.",
+        )
+        return redirect("whatsapp")
     if not gateway_configurado():
         messages.error(request, "A integração com o WhatsApp ainda não está configurada.")
         return redirect("whatsapp")
