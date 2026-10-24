@@ -20,7 +20,7 @@
 .section-heading h3{margin:0}
 .step{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:9px;background:#e0f2fe;color:#0369a1;font-weight:800}
 .helper{font-size:.82rem;color:#64748b;text-align:right}
-.mode-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.mode-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:20px}
 .mode-option{position:relative;cursor:pointer}
 .mode-option input{position:absolute;opacity:0;pointer-events:none}
 .mode-content{height:100%;display:flex;flex-direction:column;gap:7px;border:1px solid #dbe3ee;border-radius:15px;padding:16px;background:#fff;transition:.18s}
