@@ -309,6 +309,31 @@ class WhatsAppBoletimTests(TestCase):
         self.assertEqual(resposta.json()["quantidade"], 2)
         self.assertEqual(resposta.json()["alunos"], 1)
 
+    def test_turma_boletim_nao_enfileira_durante_limpeza_pendente(self):
+        usuario = get_user_model().objects.create_user(
+            username="turma_pendente_pdf", password="senha-testes-sintetica",
+        )
+        autorizar_operador_whatsapp_teste(usuario)
+        self.client.force_login(usuario)
+        with (
+            patch("usuarioSec.whatsapp_views.limpeza_historico_pendente", return_value=True),
+            patch("usuarioSec.whatsapp_views.obter_sessao") as consultar_sessao,
+            patch("usuarioSec.whatsapp_views.enviar_documento") as enviar_pdf,
+        ):
+            resposta = self.client.post(reverse("whatsapp_enviar"), {
+                "conteudo": "boletim",
+                "modo": "turma_boletim",
+                "periodo_boletim_id": str(self.periodo_a.pk),
+                "boletim_tipo": "TRIMESTRE",
+                "boletim_numero": "2",
+                "boletim_ano": "2026",
+                "tipos": ["MAE", "PAI"],
+            })
+        self.assertEqual(resposta.status_code, 302)
+        self.assertEqual(EnvioBoletimWhatsApp.objects.count(), 0)
+        consultar_sessao.assert_not_called()
+        enviar_pdf.assert_not_called()
+
     def test_post_turma_do_boletim_cria_fila_apenas_para_periodo_escolhido(self):
         usuario = get_user_model().objects.create_user(
             username="envio_turma_pdf", password="senha-testes-sintetica",
