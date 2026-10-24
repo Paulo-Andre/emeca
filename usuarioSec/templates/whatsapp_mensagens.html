@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
   <link rel="stylesheet" href="{% static 'css/school-ui.css' %}?v=20261017-sidebar-hover-overlay-06">
   <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}?v=20261017-groups-21">
-  <link rel="stylesheet" href="{% static 'css/whatsapp-inbox-redesign.css' %}?v=20261021-chat-pagination-01">
+  <link rel="stylesheet" href="{% static 'css/whatsapp-inbox-redesign.css' %}?v=20261023-compose-tools-01">
 </head>
 <body>
   {% include 'includes/sidebar.html' %}
@@ -153,6 +153,7 @@
           <input type="hidden" name="wa_session_id" value="{{ wa_sessao_id }}">
             <input type="hidden" id="replyJid" name="jid">
             <input type="file" id="replyFile" hidden accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.odt,.ods,.zip">
+            <div class="wa-compose-tools" role="group" aria-label="Opções de anexos">
             <button type="button" class="wa-attach-button" id="attachButton" aria-label="Anexar arquivo" title="Anexar arquivo">
               <i data-lucide="paperclip"></i>
             </button>
@@ -162,6 +163,7 @@
             <button type="button" class="wa-attach-button" id="attachPdfButton" aria-label="Enviar documento PDF" title="Enviar documento PDF">
               <i data-lucide="file-text"></i>
             </button>
+            </div>
             <textarea id="replyMessage" name="mensagem" rows="1" maxlength="4000" placeholder="Escreva sua mensagem…" aria-label="Escreva sua mensagem"></textarea>
             <button type="submit" class="wa-send-reply" id="sendReply" aria-label="Enviar mensagem">
               <i data-lucide="send"></i>
