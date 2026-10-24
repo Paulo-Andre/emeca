@@ -1098,21 +1098,26 @@ def whatsapp_enviar(request):
 
         if len(destinatarios) == 1:
             jid = destinatarios[0]
-            numero = jid.split("@")[0]
-            check = verificar_numeros([numero])
-            resultados = (
-                check.get("data", {}).get("results", [])
-                if isinstance(check, dict)
-                else []
-            )
-            valido = next((item for item in resultados if item.get("exists")), None)
-            if not valido:
-                messages.error(
-                    request,
-                    "O número selecionado não foi localizado no WhatsApp.",
+            if modo_envio == "turma_boletim":
+                # Validado integralmente antes, não consultar outra vez no
+                # formato legado: isso poderia retornar um JID diferente.
+                jid_real = jid
+            else:
+                numero = jid.split("@")[0]
+                check = verificar_numeros([numero])
+                resultados = (
+                    check.get("data", {}).get("results", [])
+                    if isinstance(check, dict)
+                    else []
                 )
-                return redirect("whatsapp")
-            jid_real = valido.get("jid") or jid
+                valido = next((item for item in resultados if item.get("exists")), None)
+                if not valido:
+                    messages.error(
+                        request,
+                        "O número selecionado não foi localizado no WhatsApp.",
+                    )
+                    return redirect("whatsapp")
+                jid_real = valido.get("jid") or jid
             if anexo:
                 resposta = confirmar_operacao_wa(
                     enviar_midia(
