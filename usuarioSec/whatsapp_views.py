@@ -156,7 +156,7 @@ def _tipos_selecionados(request):
     return [tipo for tipo in tipos if tipo in TIPOS_CONTATO]
 
 
-def _queryset_contatos(modo, turma="", contato_id=None, tipos=None):
+def _queryset_contatos(modo, turma="", contato_id=None, tipos=None, periodo_boletim_id=None):
     queryset = TelefoneDeclaracao.objects.select_related("declaracao")
 
     if modo == "individual":
@@ -173,6 +173,22 @@ def _queryset_contatos(modo, turma="", contato_id=None, tipos=None):
         if not turma:
             raise ValueError("Selecione uma turma.")
         queryset = queryset.filter(declaracao__turmaDoAluno__iexact=turma)
+    elif modo == "turma_boletim":
+        # O período é um registro específico em Boletins (turma, ano e etapa).
+        # Nunca relacionar por nome: usar exclusivamente o vínculo com
+        # Declarações confirmado no cadastro do aluno.
+        try:
+            periodo_id = int(periodo_boletim_id)
+        except (TypeError, ValueError):
+            raise ValueError("Selecione uma turma cadastrada em Boletins.") from None
+        if periodo_id < 1 or not PeriodoBoletim.objects.filter(pk=periodo_id).exists():
+            raise ValueError("A turma de Boletins selecionada não existe.")
+        declaracoes_da_turma = (
+            BoletimAluno.objects.filter(
+                periodo_id=periodo_id, aluno__declaracao__isnull=False,
+            ).values("aluno__declaracao_id")
+        )
+        queryset = queryset.filter(declaracao_id__in=declaracoes_da_turma)
     elif modo == "individual":
         pass
     elif modo != "todos":
@@ -181,12 +197,13 @@ def _queryset_contatos(modo, turma="", contato_id=None, tipos=None):
     return queryset.order_by("declaracao__nomeDoAluno", "tipo", "id")
 
 
-def _resolver_destinatarios(modo, turma="", contato_id=None, tipos=None):
+def _resolver_destinatarios(modo, turma="", contato_id=None, tipos=None, periodo_boletim_id=None):
     queryset = _queryset_contatos(
         modo,
         turma=turma,
         contato_id=contato_id,
         tipos=tipos,
+        periodo_boletim_id=periodo_boletim_id,
     )
 
     destinatarios = []
@@ -336,6 +353,7 @@ def whatsapp(request):
     # Com limpeza pendente não consultar WA-AKG (que pode estar em purga,
     # lento ou com banco bloqueado) apenas para desenhar a interface.
     turmas = []
+    turmas_boletim = []
     anos_boletim = []
     envios = []
     db_indisponivel = False
@@ -350,6 +368,11 @@ def whatsapp(request):
             PeriodoBoletim.objects.filter(
                 publicado=True, boletins__isnull=False,
             ).order_by("-ano").values_list("ano", flat=True).distinct()
+        )
+        turmas_boletim = list(
+            PeriodoBoletim.objects.filter(
+                boletins__isnull=False,
+            ).distinct().order_by("-ano", "-numero", "turma", "pk")
         )
         sessao_id = sessao_atual_id()
         limpeza_pendente = limpeza_historico_pendente()
@@ -411,6 +434,7 @@ def whatsapp(request):
 
     return render(request, "whatsapp.html", {
         "turmas": turmas,
+        "turmas_boletim": turmas_boletim,
         "anos_boletim": anos_boletim,
         "envios_boletim": envios,
         "gateway_configurado": gateway_configurado(),
@@ -549,6 +573,7 @@ def whatsapp_destinatarios(request):
             turma=request.GET.get("turma") or "",
             contato_id=request.GET.get("contato_id") or None,
             tipos=_tipos_selecionados(request),
+            periodo_boletim_id=request.GET.get("periodo_boletim_id") or None,
         )
     except ValueError as exc:
         return JsonResponse({"ok": False, "erro": str(exc)}, status=400)
@@ -981,6 +1006,7 @@ def whatsapp_enviar(request):
             turma=request.POST.get("turma") or "",
             contato_id=request.POST.get("contato_id") or None,
             tipos=_tipos_selecionados(request),
+            periodo_boletim_id=request.POST.get("periodo_boletim_id") or None,
         )
     except ValueError as exc:
         messages.error(request, str(exc))
